@@ -1,0 +1,6 @@
+@Backend_TerraBeegle_HostAddress = http://localhost:5144
+
+GET {{Backend_TerraBeegle_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

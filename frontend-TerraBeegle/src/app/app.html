@@ -1,0 +1,56 @@
+<div class="app-layout">
+  <header class="hero">
+    <div class="badge-tag">42 Florence • Terranova Challenge</div>
+    <h1>🐾 TerraBeegle</h1>
+    <p class="subtitle">Fullstack Web App • Angular LTS + .NET 10 LTS + PostgreSQL</p>
+
+    <!-- Status Cards -->
+    <div class="status-grid">
+      <div class="status-pill" [class.online]="health()?.status === 'Healthy'">
+        <span class="indicator"></span>
+        <span>Backend: <strong>{{ health() ? health()?.framework : '.NET 10 LTS (In attesa)' }}</strong></span>
+      </div>
+
+      <div class="status-pill" [class.online]="health()?.status === 'Healthy'">
+        <span class="indicator"></span>
+        <span>Database: <strong>{{ health() ? health()?.database : 'PostgreSQL' }}</strong></span>
+      </div>
+
+      <div class="status-pill online">
+        <span class="indicator"></span>
+        <span>Frontend: <strong>Angular LTS</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="content-box">
+    <div class="section-header">
+      <h2>Dati dal Backend & PostgreSQL</h2>
+      <button (click)="loadChallenges(); checkHealth()" class="btn-refresh">Aggiorna Stato</button>
+    </div>
+
+    @if (error()) {
+      <div class="alert-box">
+        ⚠️ {{ error() }}
+      </div>
+    }
+
+    @if (challenges().length > 0) {
+      <ul class="challenge-list">
+        @for (item of challenges(); track item.id) {
+          <li class="challenge-card" [class.completed]="item.isCompleted">
+            <div class="card-title">
+              <span class="check-icon">{{ item.isCompleted ? '✓' : '○' }}</span>
+              <strong>{{ item.title }}</strong>
+            </div>
+            <p>{{ item.description }}</p>
+          </li>
+        }
+      </ul>
+    } @else if (!error()) {
+      <p class="empty-state">In attesa di risposta dal database PostgreSQL...</p>
+    }
+  </main>
+</div>
+
+<router-outlet />
