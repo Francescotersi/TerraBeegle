@@ -2,19 +2,28 @@
   "name": "terrabeegle",
   "version": "1.0.0",
   "description": "Web app made for the Terranova Challenge proposed in 42 Florence",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "npm run db:up && npx --yes concurrently -k -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "db:up": "docker compose up -d 2>/dev/null || (systemctl is-active --quiet postgresql 2>/dev/null || sudo systemctl start postgresql 2>/dev/null || true)",
+    "db:down": "docker compose down 2>/dev/null || true",
+    "backend": "dotnet run --project Backend-TerraBeegle",
+    "frontend": "npm start --prefix frontend-TerraBeegle",
+    "install:all": "npm install && npm --prefix frontend-TerraBeegle install && dotnet restore Backend-TerraBeegle"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Francescotersi/TerraBeegle.git"
   },
-  "keywords": [],
+  "keywords": [
+    "angular",
+    "dotnet",
+    "postgresql",
+    "42-florence",
+    "terranova"
+  ],
   "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Francescotersi/TerraBeegle/issues"
-  },
-  "homepage": "https://github.com/Francescotersi/TerraBeegle#readme"
+  "license": "ISC"
 }
