@@ -4,15 +4,17 @@ services:
     container_name: terrabeegle-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: terrabeegle
-      POSTGRES_PASSWORD: terrabeegle_secret
-      POSTGRES_DB: terrabeegle_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: TerraBeegle123!
+      POSTGRES_DB: TerraBeegle
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./database-TerraBeegle/init/01-create-tables.sql:/docker-entrypoint-initdb.d/01-create-tables.sql:ro
+      - ./database-TerraBeegle/seed/02_seed_data.sql:/docker-entrypoint-initdb.d/02_seed_data.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U terrabeegle -d terrabeegle_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d TerraBeegle"]
       interval: 5s
       timeout: 5s
       retries: 5
