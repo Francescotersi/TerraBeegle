@@ -12,8 +12,8 @@ public class User
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
     public UserStatus Status { get; set; } = UserStatus.Offline; // "online" | "offline" | "away" | "busy"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public List<User> Friends { get; set; } = [];
+    
+    public List<Friendship> Friendships { get; set; } = [];
     public List<Game> Favorites { get; set; } = [];
     public List<Game> WishlistItems { get; set; } = [];
 }
@@ -25,6 +25,9 @@ public class Friendship
     public long FriendId { get; set; }
     public FriendshipStatus Status { get; set; } = FriendshipStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public User User { get; set; } = null!;
+    public User Friend { get; set; } = null!;
 }
 
 public class Game
@@ -42,7 +45,4 @@ public class Game
     public string? Publisher { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    public long Favorites { get; set; }
-    public long WishlistItems { get; set; }
 }

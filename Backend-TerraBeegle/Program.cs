@@ -33,7 +33,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
-        context.Database.EnsureCreated();
+        context.Database.Migrate();
         app.Logger.LogInformation("Database PostgreSQL verificato e pronto.");
     }
     catch (Exception ex)
@@ -63,48 +63,6 @@ app.MapGet("/api/health", () => Results.Ok(new
     timestamp = DateTime.UtcNow
 }))
 .WithName("GetHealthStatus");
-
-// API CRUD per ChallengeItems
-app.MapGet("/api/challenges", async (AppDbContext db) =>
-    await db.ChallengeItems.OrderBy(c => c.Id).ToListAsync())
-.WithName("GetChallenges");
-
-app.MapGet("/api/challenges/{id:int}", async (int id, AppDbContext db) =>
-    await db.ChallengeItems.FindAsync(id) is ChallengeItem item
-        ? Results.Ok(item)
-        : Results.NotFound(new { message = $"Item {id} non trovato" }))
-.WithName("GetChallengeById");
-
-app.MapPost("/api/challenges", async (ChallengeItem item, AppDbContext db) =>
-{
-    item.CreatedAt = DateTime.UtcNow;
-    db.ChallengeItems.Add(item);
-    await db.SaveChangesAsync();
-    return Results.Created($"/api/challenges/{item.Id}", item);
-})
-.WithName("CreateChallenge");
-
-app.MapPut("/api/challenges/{id:int}/toggle", async (int id, AppDbContext db) =>
-{
-    var item = await db.ChallengeItems.FindAsync(id);
-    if (item is null) return Results.NotFound(new { message = $"Item {id} non trovato" });
-
-    item.IsCompleted = !item.IsCompleted;
-    await db.SaveChangesAsync();
-    return Results.Ok(item);
-})
-.WithName("ToggleChallengeStatus");
-
-app.MapDelete("/api/challenges/{id:int}", async (int id, AppDbContext db) =>
-{
-    var item = await db.ChallengeItems.FindAsync(id);
-    if (item is null) return Results.NotFound();
-
-    db.ChallengeItems.Remove(item);
-    await db.SaveChangesAsync();
-    return Results.NoContent();
-})
-.WithName("DeleteChallenge");
 
 // Endpoint template di default
 var summaries = new[]
