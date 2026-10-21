@@ -5,33 +5,25 @@ namespace Backend_TerraBeegle.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
     {
-    }
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Game> Games => Set<Game>();
+        public DbSet<Favorite> Favorites => Set<Favorite>();
+        public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
 
-    public DbSet<ChallengeItem> ChallengeItems => Set<ChallengeItem>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<ChallengeItem>().HasData(
-            new ChallengeItem
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>(e =>
             {
-                Id = 1,
-                Title = "Setup Ambiente & Database",
-                Description = ".NET 10 LTS + PostgreSQL + Angular LTS",
-                IsCompleted = true,
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-            },
-            new ChallengeItem
-            {
-                Id = 2,
-                Title = "Terranova Challenge (42 Florence)",
-                Description = "Sviluppo web application fullstack",
-                IsCompleted = false,
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-            }
-        );
+                e.Property(u => u.Name).HasMaxLength(100);
+                e.Property(u => u.FamilyName).HasMaxLength(100);
+                e.Property(u => u.Email).HasMaxLength(255);
+                e.Property(u => u.Username).HasMaxLength(100);
+                e.Property(u => u.PasswordHash).HasMaxLength(255);
+                e.Property(u => u.Theme).HasMaxLength(20).HasDefaultValue("light");
+                
+            });
+        }
     }
 }

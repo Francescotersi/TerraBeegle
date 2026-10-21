@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     email          VARCHAR(255) UNIQUE NOT NULL,
     image_profile  TEXT,
     username       VARCHAR(100) UNIQUE NOT NULL,
+    password       
     theme          VARCHAR(20) NOT NULL DEFAULT 'light'
     CHECK (theme IN ('light', 'dark')),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
