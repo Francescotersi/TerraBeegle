@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.Models;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 var app = builder.Build();
 
@@ -51,6 +54,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAngularDev");
 app.UseHttpsRedirection();
+app.MapControllers();
 
 // --- Endpoints API ---
 
