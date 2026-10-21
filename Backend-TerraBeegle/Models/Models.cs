@@ -9,11 +9,22 @@ public class User
     public string? ImageProfile { get; set; }          // URL imagine
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public string Theme { get; set; } = "light";       // "light" | "dark"
+    public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
+    public UserStatus Status { get; set; } = UserStatus.Offline; // "online" | "offline" | "away" | "busy"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public List<User> Friends { get; set; } = [];
     public List<Game> Favorites { get; set; } = [];
     public List<Game> WishlistItems { get; set; } = [];
+}
+
+public class Friendship
+{
+    public long Id { get; set; }
+    public long UserId { get; set; }
+    public long FriendId { get; set; }
+    public FriendshipStatus Status { get; set; } = FriendshipStatus.Pending;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Game
@@ -32,6 +43,6 @@ public class Game
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public long Favorites { get; set; };
-    public long WishlistItems { get; set; };
+    public long Favorites { get; set; }
+    public long WishlistItems { get; set; }
 }
