@@ -6,14 +6,6 @@ public enum Theme
     Dark
 }
 
-public enum UserStatus
-{
-    Online,
-    Offline,
-    Away,
-    Busy
-}
-
 public enum FriendshipStatus
 {
     Pending,
@@ -23,18 +15,25 @@ public enum FriendshipStatus
 
 public enum GameGenre
 {
-    Action,
-    Adventure,
-    RPG,
-    Strategy,
-    Simulation,
-    Sports,
-    Puzzle,
-    Racing,
-    Fighting,
-    Horror,
-    Platformer,
-    Shooter
+    Action = 4,
+    Adventure = 3,
+    Arcade = 11,
+    BoardGames = 28,
+    Card = 17,
+    Casual = 40,
+    Educational = 34,
+    Family = 19,
+    Fighting = 6,
+    Indie = 51,
+    MassivelyMultiplayer = 59,
+    Platformer = 83,
+    Puzzle = 7,
+    Racing = 1,
+    RPG = 5,
+    Shooter = 2,
+    Simulation = 14,
+    Sports = 15,
+    Strategy = 10,
 }
 
 public enum GamePlatform

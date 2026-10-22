@@ -7,11 +7,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Game> Games => Set<Game>();
-    
+
     public DbSet<Friendship> Friendships => Set<Friendship>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // USERS
         modelBuilder.Entity<User>(e =>
         {
             e.Property(u => u.Id).ValueGeneratedOnAdd();
@@ -38,56 +39,49 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.Property(u => u.Theme)
                 .HasConversion<string>()
-                .HasMaxLength(20)
+                .HasMaxLength(10)
                 .HasDefaultValue(Theme.Light);
 
-            e.Property(u => u.Status)
-                .HasConversion<string>()
-                .HasMaxLength(20);
-
             e.Property(u => u.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            e.Property(u => u.UpdatedAt)
                 .HasDefaultValueSql("NOW()");
 
             e.HasIndex(u => u.Email).IsUnique();
             e.HasIndex(u => u.Username).IsUnique();
 
             e.HasMany(u => u.Favorites)
-                .WithMany()
-                .UsingEntity<Dictionary<string, object>>(
-                    "favorites",
-                    r => r.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
-                    l => l.HasOne<User>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade),
-                    j =>
-                    {
-                        j.HasKey("UserId", "GameId");
-                        j.Property<DateTime>("AddedAt").HasDefaultValueSql("NOW()");
-                    });
+                .WithMany(g => g.FavoritedByUsers)
+                .UsingEntity(j => j.ToTable("favorite_games"));
 
             e.HasMany(u => u.WishlistItems)
-                .WithMany()
-                .UsingEntity<Dictionary<string, object>>(
-                    "wishlist_items",
-                    r => r.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
-                    l => l.HasOne<User>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade),
-                    j =>
-                    {
-                        j.HasKey("UserId", "GameId");
-                        j.Property<DateTime>("AddedAt").HasDefaultValueSql("NOW()");
-                    });
-        });
-        
-        modelBuilder.Entity<Friendship>(e =>
-        {
-            e.HasOne(f => f.User).WithMany(u => u.Friendships)
-                .HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(f => f.Friend).WithMany()
-                .HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Restrict); // două cascade spre users = conflict
-            e.HasIndex(f => new { f.UserId, f.FriendId }).IsUnique();
-            e.Property(f => f.Status).HasConversion<string>();
-            e.Property(f => f.CreatedAt).HasDefaultValueSql("NOW()");
-            e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
+                .WithMany(g => g.WishlistedByUsers)
+                .UsingEntity(j => j.ToTable("wishlist_games"));
+
+            e.HasMany(u => u.Friendships)
+                .WithOne(f => f.User)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // FRIENDSHIPS
+        modelBuilder.Entity<Friendship>(e =>
+        {
+            e.Property(f => f.Status).HasConversion<string>();
+            e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
+            e.Property(f => f.CreatedAt).HasDefaultValueSql("NOW()");
+
+            e.HasIndex(f => new { f.UserId, f.FriendId }).IsUnique();
+
+            e.HasOne(f => f.User).WithMany(u => u.Friendships)
+                .HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(f => f.Friend).WithMany()
+                .HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Restrict); // cascade towards users = conflict
+        });
+
+        // GAMES
         modelBuilder.Entity<Game>(e =>
         {
             e.Property(g => g.Id).ValueGeneratedOnAdd();
@@ -124,6 +118,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
             e.HasIndex(g => g.RawgGameId).IsUnique();
+        });
+
+        // GENRES
+        modelBuilder.Entity<Genre>(e =>
+        {
+            e.Property(g => g.Id).ValueGeneratedOnAdd();
+
+            e.Property(g => g.RawgGenreId)
+                .IsRequired();
+
+            e.Property(g => g.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(g => g.RawgGenreId).IsUnique();
+
+            e.HasMany(g => g.Games)
+                .WithMany(g => g.Genres)
+                .UsingEntity(j => j.ToTable("game_genres"));
+        });
+
+        // PLATFORMS
+        modelBuilder.Entity<Platform>(e =>
+        {
+            e.Property(p => p.Id).ValueGeneratedOnAdd();
+
+            e.Property(p => p.RawgPlatformId)
+                .IsRequired();
+
+            e.Property(p => p.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(p => p.RawgPlatformId).IsUnique();
+
+            e.HasMany(p => p.Games)
+                .WithMany(g => g.Platforms)
+                .UsingEntity(j => j.ToTable("game_platforms"));
         });
     }
 }
