@@ -1,4 +1,4 @@
-namespace Backend_TerraBeegle.Models;
+namespace Backend_TerraBeegle.Enums;
 
 public enum Theme
 {
@@ -34,6 +34,24 @@ public enum GameGenre
     Simulation = 14,
     Sports = 15,
     Strategy = 10,
+}
+
+public enum GameParentPlatform
+{
+    PC = 1,
+    PlayStation = 2,
+    Xbox = 3,
+    iOS = 4,
+    Android = 8,
+    AppleMacintosh = 5,
+    Linux = 6,
+    Nintendo = 7,
+    Atari = 9,
+    CommodoreAmiga = 10,
+    SEGA = 11,
+    _3DO = 12,
+    NeoGeo = 13,
+    Web = 14
 }
 
 public enum GamePlatform

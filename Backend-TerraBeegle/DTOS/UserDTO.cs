@@ -1,4 +1,6 @@
-namespace Backend_TerraBeegle.Models;
+using Backend_TerraBeegle.Enums;
+
+namespace Backend_TerraBeegle.DTOS;
 
 public class RegisterDTO
 {
@@ -24,14 +26,14 @@ public class UserResponseDTO
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
     public Theme Theme { get; set; }
-    public UserStatus Status { get; set; }
 }
 
 public class UpdateUserDto
 {
     public string? Name { get; set; }
     public string? FamilyName { get; set; }
+    public string? Email { get; set; }
+    public string? Username { get; set; }
     public string? ImageProfile { get; set; }
     public Theme? Theme { get; set; }
-    public UserStatus? Status { get; set; }
 }

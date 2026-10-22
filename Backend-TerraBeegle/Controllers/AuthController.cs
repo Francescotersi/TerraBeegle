@@ -1,4 +1,5 @@
 using Backend_TerraBeegle.Models;
+using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;

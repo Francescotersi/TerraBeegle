@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Models;
+using Backend_TerraBeegle.Enums;
 
 namespace Backend_TerraBeegle.Data;
 
@@ -74,11 +75,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasIndex(f => new { f.UserId, f.FriendId }).IsUnique();
 
-            e.HasOne(f => f.User).WithMany(u => u.Friendships)
-                .HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.User)
+                .WithMany(u => u.Friendships)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasOne(f => f.Friend).WithMany()
-                .HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Restrict); // cascade towards users = conflict
+            e.HasOne(f => f.Friend)
+                .WithMany(u => u.Friendships)
+                .HasForeignKey(f => f.FriendId)
+                .OnDelete(DeleteBehavior.Restrict); // cascade towards users = conflict
         });
 
         // GAMES
@@ -156,6 +161,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(p => p.Games)
                 .WithMany(g => g.Platforms)
                 .UsingEntity(j => j.ToTable("game_platforms"));
+        });
+
+        // PARENT PLATFORMS
+        modelBuilder.Entity<ParentPlatform>(e =>
+        {
+            e.Property(pp => pp.Id).ValueGeneratedOnAdd();
+
+            e.Property(pp => pp.RawgPlatformId)
+                .IsRequired();
+
+            e.Property(pp => pp.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(pp => pp.RawgPlatformId).IsUnique();
+
+            e.HasMany(pp => pp.Platforms)
+                .WithOne(p => p.ParentPlatform)
+                .HasForeignKey(p => p.ParentPlatform)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

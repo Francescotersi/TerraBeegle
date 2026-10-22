@@ -1,3 +1,5 @@
+using Backend_TerraBeegle.Enums;
+
 namespace Backend_TerraBeegle.Models;
 
 public class User
