@@ -41,10 +41,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(20)
                 .HasDefaultValue(Theme.Light);
 
-            e.Property(u => u.Status)
-                .HasConversion<string>()
-                .HasMaxLength(20);
-
             e.Property(u => u.CreatedAt)
                 .HasDefaultValueSql("NOW()");
 
@@ -83,7 +79,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(f => f.Friend).WithMany()
                 .HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Restrict); // două cascade spre users = conflict
             e.HasIndex(f => new { f.UserId, f.FriendId }).IsUnique();
-            e.Property(f => f.Status).HasConversion<string>();
             e.Property(f => f.CreatedAt).HasDefaultValueSql("NOW()");
             e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
         });

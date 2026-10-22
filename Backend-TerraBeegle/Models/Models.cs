@@ -10,9 +10,7 @@ public class User
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
-    public UserStatus Status { get; set; } = UserStatus.Offline; // "online" | "offline" | "away" | "busy"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
     public List<Friendship> Friendships { get; set; } = [];
     public List<Game> Favorites { get; set; } = [];
     public List<Game> WishlistItems { get; set; } = [];

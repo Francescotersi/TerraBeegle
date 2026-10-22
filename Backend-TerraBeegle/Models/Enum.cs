@@ -6,14 +6,6 @@ public enum Theme
     Dark
 }
 
-public enum UserStatus
-{
-    Online,
-    Offline,
-    Away,
-    Busy
-}
-
 public enum FriendshipStatus
 {
     Pending,
