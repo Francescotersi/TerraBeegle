@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BackgroundComponent } from './ui/background/background.component';
-import { HeaderComponent } from './ui/header/header.component';
+import { HeaderComponent } from './header/header.component';
 
 @Component({
 	imports: [RouterOutlet, BackgroundComponent, HeaderComponent],

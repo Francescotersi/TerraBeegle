@@ -5,9 +5,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   selector: 'app-header',
   imports: [RouterLink, RouterLinkActive],
   template: `
-    <nav class="navbar navbar-expand-lg bg-body-tertiary sticky-top border-bottom">
+    <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container justify-content-center">
-        <a class="navbar-brand me-3" routerLink="/">
+        <a class="navbar-brand me-4" routerLink="/">
           <img
             src="./Logo.ico"
             alt="TerraBeegle"
@@ -33,7 +33,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             <!-- struttura item per menu a tendina mobile -->
             <li class="nav-item">
               <a
-                class="nav-link"
+                class="nav-link ms-4"
                 routerLink="/"
                 routerLinkActive="active"
                 (click)="isMenuOpen.set(false)"
@@ -44,7 +44,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             <!-- da implemetare Immagine profilo -->
             <li class="nav-item">
               <a
-                class="nav-link"
+                class="nav-link ms-4"
                 (click)="isMenuOpen.set(false)"
               >
                 Profile
@@ -52,7 +52,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             </li>
             <li class="nav-item">
               <a
-                class="nav-link"
+                class="nav-link ms-4"
                 (click)="isMenuOpen.set(false)"
               >
                 Wishlist
@@ -60,7 +60,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             </li>
             <li class="nav-item">
               <a
-                class="nav-link"
+                class="nav-link ms-4"
                 (click)="isMenuOpen.set(false)"
               >
                 Favorites
@@ -68,7 +68,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
             </li>
           </ul>
           <form
-            class="d-flex ms-lg-3"
+            class="d-flex ms-4"
             role="search"
             (submit)="$event.preventDefault(); onSearch()"
           >
