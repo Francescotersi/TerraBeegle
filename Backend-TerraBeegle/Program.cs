@@ -3,6 +3,10 @@ using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.Models;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Backend_TerraBeegle.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,13 +26,37 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// 3. Configurazione JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"]
+             ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // implicit authentication method header is Authorization: Bearer....
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false; // disable renaming of claims
+        options.TokenValidationParameters = new TokenValidationParameters // list of validation paramters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+
+            ValidateLifetime = true,
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)) //transforms the key in symmetric bytes
+        };
+    });
+
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 // Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Aggiunge IHttpClientFactory per le chiamate HTTP esterne
 builder.Services.AddHttpClient("RawgAPI", client =>
@@ -66,6 +94,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAngularDev");
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 // --- Endpoints API ---

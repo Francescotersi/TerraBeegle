@@ -58,3 +58,9 @@ public class UpdatePasswordDTO
 {
     public string Password { get; set; } = string.Empty;
 }
+
+public class AuthResponseDTO
+{
+    public string Token { get; set; } = string.Empty;
+    public UserResponseDTO User { get; set; } = null!;
+}

@@ -3,7 +3,8 @@ using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity; 
+using Microsoft.AspNetCore.Identity;
+using Backend_TerraBeegle.Services;
 
 using Mapster;
 
@@ -11,10 +12,10 @@ namespace Backend_TerraBeegle.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher) : ControllerBase
+public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher, ITokenService tokenService) : ControllerBase
 {
     [HttpPost("register")]
-    public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
+    public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
         var email = dto.Email.Trim().ToLowerInvariant();
@@ -37,11 +38,13 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id},  user.Adapt<UserResponseDTO>());
+        string token = tokenService.CreateToken(user);
+        
+        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id},  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<UserResponseDTO>> Login(LoginDTO dto)
+    public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {
         var email = dto.EmailOrUsername.Trim().ToLowerInvariant();
         var username = dto.EmailOrUsername.Trim();
@@ -52,6 +55,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
 
-        return Ok(user.Adapt<UserResponseDTO>());
+        string token = tokenService.CreateToken(user);
+        return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 }
