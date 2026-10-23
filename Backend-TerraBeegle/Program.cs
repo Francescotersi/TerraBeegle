@@ -28,8 +28,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // 3. Configurazione JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (jwtKey is null || jwtKey.Length < 32)
+{
+    Console.Error.WriteLine("Jwt:Key must be at least 32 characters long for security reasons.");
+    Environment.Exit(1);
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // implicit authentication method header is Authorization: Bearer....
     .AddJwtBearer(options =>
     {
@@ -61,10 +67,10 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Lipește token-ul de la login (fără \"Bearer \")."
     });
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("bearer", document)] = []
-    });
+    // options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    // {
+    //     [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    // });
 });
 
 // Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
@@ -76,7 +82,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // Aggiunge IHttpClientFactory per le chiamate HTTP esterne
 builder.Services.AddHttpClient("RawgAPI", client =>
 {
-    client.BaseAddress = new Uri("https://api.rawg.io/api");
+    client.BaseAddress = new Uri("https://api.rawg.io/api/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 }); 
 
