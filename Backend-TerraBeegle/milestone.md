@@ -4,18 +4,18 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 
 ## Securitate
 
-- [ ] **1. Autentificare cu JWT + autorizare**
+- [x] **1. Autentificare cu JWT + autorizare**
   Acum oricine poate face `PATCH` / `DELETE` pe orice id. La login, clientul primește un token
   pe care îl trimite la fiecare request (`Authorization: Bearer ...`). Serverul află din token cine e
   userul și îi permite să modifice doar contul lui.
   - [x] pachetul `Microsoft.AspNetCore.Authentication.JwtBearer` (10.0.13)
   - [x] secțiunea `Jwt` în `appsettings.json` (`Issuer`, `Audience`, `ExpiresInMinutes`)
-  - [ ] cheia secretă în user-secrets, nu în `appsettings`
-  - [ ] `AddAuthentication().AddJwtBearer(...)` + `UseAuthentication()` / `UseAuthorization()` în `Program.cs`
-  - [ ] serviciu care generează token-ul
-  - [ ] login-ul returnează token-ul (DTO nou de răspuns)
-  - [ ] `[Authorize]` pe PATCH și DELETE + verificare că id-ul din token = id-ul din URL
-  - [ ] Swagger configurat să trimită token-ul
+  - [x] cheia secretă în user-secrets, nu în `appsettings`
+  - [x] `AddAuthentication().AddJwtBearer(...)` + `UseAuthentication()` / `UseAuthorization()` în `Program.cs`
+  - [x] serviciu care generează token-ul
+  - [x] login-ul returnează token-ul (DTO nou de răspuns)
+  - [x] `[Authorize]` pe PATCH și DELETE + verificare că id-ul din token = id-ul din URL
+  - [x] Swagger configurat să trimită token-ul
 
 - [ ] **2. Rate limiting pe login**
   Acum se pot încerca mii de parole pe secundă. Folosim rate limiter-ul inclus în ASP.NET Core

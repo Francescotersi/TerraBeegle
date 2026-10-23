@@ -49,9 +49,13 @@ public class UpdateUserDTO
     public string? Name { get; set; }
     public string? Username { get; set; }
     public string? FamilyName { get; set; }
-    public string? Email { get; set; }
     public string? ImageProfile { get; set; }
     public Theme? Theme { get; set; }
+}
+
+public class UpdateEmailDTO
+{
+    public string? Email { get; set; } = string.Empty;
 }
 
 public class UpdatePasswordDTO

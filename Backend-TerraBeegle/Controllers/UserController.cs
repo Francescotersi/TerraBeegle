@@ -2,6 +2,9 @@ using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;                 // pentru FindFirstValue
+using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
 
 using Mapster;
 
@@ -32,10 +35,12 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserResponseDTO>();
     }
 
-    
+    [Authorize]
     [HttpPatch("{id:long}")]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser(long id, UpdateUserDTO dto)
     {
+        if(!IsCurrentUser(id))
+            return Forbid();
         // Patch which does not allow empty string or whitespaces.
         var user = await db.Users.FindAsync(id);
         if (user is null)
@@ -90,9 +95,13 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserResponseDTO>();
     }
 
+    [Authorize]
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
     {
+        if(!IsCurrentUser(id))
+            return Forbid();
+        
         var user = await db.Users.FindAsync(id);
         if(user is null)
             return NotFound();
@@ -103,6 +112,12 @@ public class UserController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private bool IsCurrentUser(long id)
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
     }
 
     private static bool IsHttpUrl(string value)
