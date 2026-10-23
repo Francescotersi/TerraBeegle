@@ -211,7 +211,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasMany(pp => pp.Platforms)
                 .WithOne(p => p.ParentPlatform)
-                .HasForeignKey(p => p.ParentPlatform)
+                .HasForeignKey(p => p.ParentPlatformId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

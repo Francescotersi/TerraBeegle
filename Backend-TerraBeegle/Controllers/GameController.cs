@@ -9,7 +9,7 @@ namespace Backend_TerraBeegle.Controllers;
 
 [ApiController]
 [Route("api/games")]
-public class GameController(AppDbContext db, IHttpClientFactory httpClientFactory) : ControllerBase
+public class GameController(AppDbContext db, IHttpClientFactory httpClientFactory, string ApiKey) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<GameResponseDTO>>> GetAll()
@@ -29,32 +29,27 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             var client = httpClientFactory.CreateClient("RawgAPI");
             try
             {
-                var url = $"games/{id}?key={Environment.GetEnvironmentVariable("RAWG_API_KEY")}";
+                var url = $"games/{id}?key={ApiKey}";
+                Console.WriteLine($"Fetching game with ID {id} from RAWG API.");
+                Console.WriteLine($"Request URL: {url}");
                 var response = await client.GetFromJsonAsync<RawgResponseDTO>(url);
                 if (response is null)
-                {
                     return NotFound();
-                }
 
-                // var gameData = new GameResponseDTO
-                // {
-                //     RawgGameId = response.id,
-                //     Name = response.name,
-                //     Description = response.description,
-                //     BackgroundImage = response.background_image,
-                //     Released = response.released,
-                //     Tba = response.tba,
-                //     Website = response.website,
-                //     Rating = response.rating,
-                //     Metacritic = response.metacritic,
-                //     Platforms = [.. response.platforms.Select(p => new PlatformDTO
-                //     {
-                //         RawgGenreId = p.RawgGenreId,
-                //         Name = p.Name
-                //     })]
-                // };
+                var gameData = new GameResponseDTO
+                {
+                    RawgGameId = response.id,
+                    Name = response.name,
+                    Description = response.description,
+                    BackgroundImage = response.background_image,
+                    Released = response.released,
+                    Tba = response.tba,
+                    Website = response.website,
+                    Rating = response.rating,
+                    Metacritic = response.metacritic,
+                };
 
-                return response.Adapt<GameResponseDTO>();
+                return Ok(gameData);
             } 
             catch (HttpRequestException)
             {

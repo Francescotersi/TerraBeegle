@@ -37,6 +37,8 @@ builder.Services.AddHttpClient("RawgAPI", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 }); 
 
+var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
+
 var app = builder.Build();
 
 // Inizializza automaticamente il DB in sviluppo se PostgreSQL è attivo

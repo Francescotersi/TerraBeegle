@@ -16,19 +16,3 @@ public class GameResponseDTO
     public List<GenreDTO> Genres { get; set; } = [];
     public List<PlatformDTO> Platforms { get; set; } = [];
 }
-
-public class RawgResponseDTO
-{
-    public int id;
-    public string slug = null!;
-    public string name = null!;
-    public string name_original = null!;
-    public string description = null!;
-    public int? metacritic;
-    public string? released;
-    public bool tba;
-    public string? background_image;
-    public double rating;
-    public string website = null!;
-    public IEnumerable<PlatformDTO> platforms = null!;
-}
