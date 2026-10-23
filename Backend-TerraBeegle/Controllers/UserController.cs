@@ -48,7 +48,7 @@ public class UserController(AppDbContext db) : ControllerBase
             return BadRequest("Name cannot be empty.");
         
         if(dto.FamilyName is not null && string.IsNullOrWhiteSpace(dto.FamilyName))
-            return BadRequest("Family name cannot be empty.");
+            return BadRequest("Surname cannot be empty.");
         
         // Empty ImageProfile is for removing the picture
         if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) && !IsHttpUrl(dto.ImageProfile.Trim()))
@@ -97,7 +97,7 @@ public class UserController(AppDbContext db) : ControllerBase
         if(user is null)
             return NotFound();
         
-        await db.Friendships.Where(f => f.FriendId == id).ExecuteDeleteAsync();
+        await db.Friendships.Where(f => f.User1Id == id || f.User2Id == id).ExecuteDeleteAsync();
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();

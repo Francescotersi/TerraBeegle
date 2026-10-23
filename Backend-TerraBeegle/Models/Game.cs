@@ -6,11 +6,12 @@ public class Game
 {
     public long Id { get; set; }
     public int RawgGameId { get; set; }                // RAWG Id
-    public string Title { get; set; } = string.Empty;
-    public string? Slug { get; set; }
-    public string? Description { get; set; }
+    public string Title { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+    public string Description { get; set; } = null!;
     public string? CoverImageUrl { get; set; }
     public DateOnly? ReleaseDate { get; set; }
+    public bool Tba { get; set; }
     public decimal? Rating { get; set; }
     public int? Metacritic { get; set; }
     public string? Developer { get; set; }

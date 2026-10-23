@@ -5,17 +5,18 @@ namespace Backend_TerraBeegle.Models;
 public class User
 {
     public long Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string FamilyName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
+    public string FamilyName { get; set; } = null!;
+    public string Email { get; set; } = null!;
     public string? ImageProfile { get; set; }          // URL imagine
-    public string Username { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
+    public string PasswordHash { get; set; } = null!;
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
-    public ICollection<Friendship> Friendships { get; set; } = [];
+    public ICollection<Friendship> FriendRequestsAsUser1 { get; set; } = [];
+    public ICollection<Friendship> FriendRequestsAsUser2 { get; set; } = [];
     public ICollection<Game> Favorites { get; set; } = [];
     public ICollection<Game> WishlistItems { get; set; } = [];
 }

@@ -8,8 +8,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Game> Games => Set<Game>();
-
     public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<Genre> Genres => Set<Genre>();
+    public DbSet<Platform> Platforms => Set<Platform>();
+    public DbSet<ParentPlatform> ParentPlatforms => Set<ParentPlatform>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,31 +62,43 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(g => g.WishlistedByUsers)
                 .UsingEntity(j => j.ToTable("wishlist_games"));
 
-            e.HasMany(u => u.Friendships)
-                .WithOne(f => f.User)
-                .HasForeignKey(f => f.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(u => u.FriendRequestsAsUser1)
+                .WithOne(f => f.User1)
+                .HasForeignKey(f => f.User1Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(u => u.FriendRequestsAsUser2)
+                .WithOne(f => f.User2)
+                .HasForeignKey(f => f.User2Id)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // FRIENDSHIPS
         modelBuilder.Entity<Friendship>(e =>
         {
-            e.Property(f => f.Status).HasConversion<string>();
-            e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
-            e.Property(f => f.CreatedAt).HasDefaultValueSql("NOW()");
+            e.Property(f => f.Id).ValueGeneratedOnAdd();
 
-            e.HasIndex(f => new { f.UserId, f.FriendId }).IsUnique();
+            e.Property(f => f.Status)
+                .HasConversion<string>();
+            
+            //e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
+            
+            e.Property(f => f.CreatedAt)
+                .HasDefaultValueSql("NOW()");
 
-            e.HasOne(f => f.User)
-                .WithMany(u => u.Friendships)
-                .HasForeignKey(f => f.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(f => new { f.User1Id, f.User2Id }).IsUnique();
 
-            e.HasOne(f => f.Friend)
-                .WithMany(u => u.Friendships)
-                .HasForeignKey(f => f.FriendId)
-                .OnDelete(DeleteBehavior.Restrict); // cascade towards users = conflict
+            e.HasOne(f => f.User1)
+                .WithMany(u => u.FriendRequestsAsUser1)
+                .HasForeignKey(f => f.User1Id)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(f => f.User2)
+                .WithMany(u => u.FriendRequestsAsUser2)
+                .HasForeignKey(f => f.User2Id)
+                .OnDelete(DeleteBehavior.Restrict);
         });
+
 
         // GAMES
         modelBuilder.Entity<Game>(e =>
@@ -99,9 +113,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(255);
 
             e.Property(g => g.Slug)
+                .IsRequired()
                 .HasMaxLength(255);
 
             e.Property(g => g.Description)
+                .IsRequired()
                 .HasColumnType("text");
 
             e.Property(g => g.CoverImageUrl)
@@ -123,6 +139,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
             e.HasIndex(g => g.RawgGameId).IsUnique();
+
+            e.HasMany(g => g.Genres)
+                .WithMany(g => g.Games)
+                .UsingEntity(j => j.ToTable("game_genres"));
+            
+            e.HasMany(g => g.Platforms)
+                .WithMany(g => g.Games)
+                .UsingEntity(j => j.ToTable("game_platforms"));
+            
+            e.HasMany(g => g.FavoritedByUsers)
+                .WithMany(u => u.Favorites)
+                .UsingEntity(j => j.ToTable("favorite_games"));
+            
+            e.HasMany(g => g.WishlistedByUsers)
+                .WithMany(u => u.WishlistItems)
+                .UsingEntity(j => j.ToTable("wishlist_games"));
         });
 
         // GENRES
@@ -180,7 +212,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(pp => pp.Platforms)
                 .WithOne(p => p.ParentPlatform)
                 .HasForeignKey(p => p.ParentPlatform)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

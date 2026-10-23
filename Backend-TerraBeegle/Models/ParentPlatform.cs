@@ -6,7 +6,7 @@ public class ParentPlatform
 {
     public long Id { get; set; }
     public GameParentPlatform RawgPlatformId { get; set; }             // RAWG Id
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
     public string? Image { get; set; }
     public ICollection<Platform> Platforms { get; set; } = [];
 }

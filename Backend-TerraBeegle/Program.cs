@@ -29,7 +29,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-builder.Services.AddHttpClient(); // Aggiunge IHttpClientFactory per le chiamate HTTP esterne
+
+// Aggiunge IHttpClientFactory per le chiamate HTTP esterne
+builder.Services.AddHttpClient("RawgAPI", client =>
+{
+    client.BaseAddress = new Uri("https://api.rawg.io/api");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+}); 
 
 var app = builder.Build();
 
