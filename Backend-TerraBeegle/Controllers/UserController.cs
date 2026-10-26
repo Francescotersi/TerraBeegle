@@ -15,15 +15,15 @@ namespace Backend_TerraBeegle.Controllers;
 public class UserController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetAll()
+    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> GetAll()
     {
-        // Retrieving all users from the database and projecting them to UserResponseDTO
-        var users = await db.Users.ProjectToType<UserResponseDTO>().ToListAsync();
+        // Retrieving all users from the database and projecting them to UserPublicResponseDTO
+        var users = await db.Users.ProjectToType<UserPublicResponseDTO>().ToListAsync();
         return users;
     }
     
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<UserResponseDTO>> GetById(long id)
+    public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
     {
         // Searching for the user by ID
         var user = await db.Users.FindAsync(id);
@@ -32,6 +32,22 @@ public class UserController(AppDbContext db) : ControllerBase
             return NotFound();
         }
 
+        return user.Adapt<UserPublicResponseDTO>();
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ActionResult<UserResponseDTO>> GetMe()
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if(!long.TryParse(sub, out var tokenUserId))
+            return Unauthorized();
+            
+        var user = await db.Users.FindAsync(tokenUserId);
+        
+        if(user is null)
+            return NotFound();
+        
         return user.Adapt<UserResponseDTO>();
     }
 
