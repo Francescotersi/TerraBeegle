@@ -40,7 +40,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         string token = tokenService.CreateToken(user);
         
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id},  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
     [HttpPost("login")]

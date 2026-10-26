@@ -14,7 +14,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users")]
 public class UserController(AppDbContext db) : ControllerBase
 {
-    [HttpGet]
+    [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetAll()
     {
         // Retrieving all users from the database and projecting them to UserResponseDTO
@@ -22,6 +22,7 @@ public class UserController(AppDbContext db) : ControllerBase
         return users;
     }
     
+    [Authorize]
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserResponseDTO>> GetById(long id)
     {
@@ -41,6 +42,7 @@ public class UserController(AppDbContext db) : ControllerBase
     {
         if(!IsCurrentUser(id))
             return Forbid();
+
         // Patch which does not allow empty string or whitespaces.
         var user = await db.Users.FindAsync(id);
         if (user is null)

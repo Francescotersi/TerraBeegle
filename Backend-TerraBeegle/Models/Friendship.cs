@@ -10,6 +10,7 @@ public class Friendship
     public long ReceiverId { get; set; }
     public FriendshipStatus Status { get; set; } = FriendshipStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public User User1 { get; set; } = null!;
     public User User2 { get; set; } = null!;
