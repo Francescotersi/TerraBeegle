@@ -1,4 +1,5 @@
 import { Component, signal, computed } from '@angular/core';
+import { LiquidGlassComponent } from '../ui/LiquidGlass/liquid-glass.component';
 
 interface GridComponentProps {
   rawgGameId: number;
@@ -18,17 +19,18 @@ interface GridComponentProps {
 }
 
 @Component({
-  imports: [],
+  imports: [LiquidGlassComponent],
   selector: 'app-grid-component',
   template: `
-    <div class="py-4">
+  <app-liquid-glass [borderWidth]="0.20" [borderWidth]="10">
+    <div class="py-4 grid-wrapper mx-auto">
       <h2 class="h3 fw-bold mb-4 text-center">super</h2>
 
       <div
-        class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-4
-        justify-content-start"
+        class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3
+        justify-content-center"
       >
-        @for (game of paginatedGames(); track game.rawgGameId) {
+        @for (game of visibleGames(); track game.rawgGameId) {
           
           <div class="col">
             <div class="card h-100 shadow-sm game-card">
@@ -59,26 +61,25 @@ interface GridComponentProps {
           </div>
         }       
       </div>
-      <nav class="mt-5" aria-label="Choose page">
-        <ul class="pagination justify-content-center">
-          <li class="page-item" [class.disabled]="currentPage() === 1">
-            <a class="page-link" (click)="goToPage(currentPage() - 1)">Previous</a>
-          </li>
-
-          @for (page of pageNumbers(); track page) {
-            <li class="page-item" [class.active]="currentPage() === page">
-              <a class="page-link" (click)="goToPage(page)">{{ page }}</a>
-            </li>
-          }
-
-          <li class="page-item" [class.disabled]="currentPage() === totalPages()">
-            <a class="page-link" (click)="goToPage(currentPage() + 1)">Next</a>
-          </li>
-        </ul>
-      </nav>
+      @if (hasMoreGames()) {
+        <div class="text-center mt-5">
+          <button 
+            class="btn btn-primary px-4 py-2 fw-semibold shadow-sm" 
+            type="button"
+            (click)="showMore()"
+          >
+            Show More
+          </button>
+        </div>
+      }
     </div>
+  </app-liquid-glass>
   `,
   styles: `
+    .grid-wrapper {
+      max-width: 1000px;
+    }
+
     .game-card {
       aspect-ratio: 16 / 9;
       border-radius: 12px;
@@ -135,27 +136,19 @@ interface GridComponentProps {
 })
 export class GridComponent {
 
-  protected readonly pageSize = 20;
-  protected readonly currentPage = signal(1);
+  private readonly step = 20;
+  protected readonly visibleCount = signal(20);
 
-  protected readonly totalPages = computed(() => {
-    return Math.ceil(this.props.length / this.pageSize);
+  protected readonly visibleGames = computed(() => {
+    return this.props.slice(0, this.visibleCount());
   });
 
-  protected readonly pageNumbers = computed(() => {
-    return Array.from({ length: this.totalPages() }, (_, i) => i + 1);
+  protected readonly hasMoreGames = computed(() => {
+    return this.visibleCount() < this.props.length;
   });
 
-  protected readonly paginatedGames = computed(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    const end = start + this.pageSize;
-    return this.props.slice(start, end);
-  });
-
-  protected goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages()) {
-      this.currentPage.set(page);
-    }
+  protected showMore(): void {
+    this.visibleCount.update((count) => count + this.step);
   }
 
 

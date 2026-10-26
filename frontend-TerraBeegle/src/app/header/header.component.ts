@@ -1,9 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { LiquidGlassComponent } from '../ui/LiquidGlass/liquid-glass.component';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LiquidGlassComponent],
   template: `
     <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container justify-content-center">
@@ -31,15 +32,17 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         >
           <ul class="navbar-nav align-items-center text-center mb-2 mb-lg-0">
             <!-- struttura item per menu a tendina mobile -->
-            <li class="nav-item">
-              <a
-                class="nav-link ms-4"
-                routerLink="/"
-                routerLinkActive="active"
-                (click)="isMenuOpen.set(false)"
-              >
-                Home
-              </a>
+            <li class="nav-item ms-lg-3">
+              <app-liquid-glass [borderRadius]="20" [borderWidth]="0.12" [distortionScale]="-160">
+                <a
+                  class="nav-link p-0"
+                  routerLink="/"
+                  routerLinkActive="active"
+                  (click)="isMenuOpen.set(false)"
+                >
+                  Home
+                </a>
+              </app-liquid-glass>
             </li>
             <!-- da implemetare Immagine profilo -->
             <li class="nav-item">
