@@ -4,18 +4,33 @@ services:
     container_name: terrabeegle-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: TerraBeegle123!
-      POSTGRES_DB: TerraBeegle
+      POSTGRES_USER: ${USER_POSTGRES}
+      POSTGRES_PASSWORD: ${PASSWORD_POSTGRES}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d TerraBeegle"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
+      
+  backend:
+    build: ./Backend-TerraBeegle
+    container_name: terrabeegle-backend
+    restart: unless-stopped
+    ports:
+      - "5144:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${DB_NAME};Username=${USER_POSTGRES};Password=${PASSWORD_POSTGRES}
+      EnvironmentVariables__RAWG_API_KEY: ${RAWG_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
