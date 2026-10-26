@@ -21,7 +21,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   Acum se pot încerca mii de parole pe secundă. Folosim rate limiter-ul inclus în ASP.NET Core
   (ex: max 5 încercări pe minut).
 
-- [ ] **3. `GET /api/users` expune email-urile tuturor**
+- [x] **3. `GET /api/users` expune email-urile tuturor**
   De decis cine are voie să vadă lista de useri și ce câmpuri.
 
 - [x] **4. Secretele din `appsettings`**
@@ -30,12 +30,12 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 
 ## Corectitudine
 
-- [ ] **5. Race condition la username / email unic**
+- [x] **5. Race condition la username / email unic**
   `AnyAsync` urmat de `SaveChangesAsync` nu e atomic: două register-uri simultane cu același
   username pot trece amândouă de verificare, iar al doilea crapă cu 500.
   Soluție: prinzi `DbUpdateException` și returnezi 409.
 
-- [ ] **6. Tranzacție la DELETE**
+- [x] **6. Tranzacție la DELETE**
   `ExecuteDeleteAsync` (prieteniile) și `SaveChangesAsync` (userul) sunt operații separate.
   Dacă a doua eșuează, prieteniile sunt deja șterse. Soluție: le pui într-o tranzacție.
 

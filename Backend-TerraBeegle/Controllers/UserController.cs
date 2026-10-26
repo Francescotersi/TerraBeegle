@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;                 // pentru FindFirstValue
 using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
-
+using Npgsql;
 using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
@@ -106,7 +106,14 @@ public class UserController(AppDbContext db) : ControllerBase
             user.FamilyName = familyName;
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Conflict("Username already exists.");
+        }
         
         return user.Adapt<UserResponseDTO>();
     }
@@ -122,10 +129,15 @@ public class UserController(AppDbContext db) : ControllerBase
         if(user is null)
             return NotFound();
         
+        // Friendships and users are deleted at the same time using a transaction or they are not deleted at all
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        
         await db.Friendships.Where(f => f.User1Id == id || f.User2Id == id).ExecuteDeleteAsync();
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();
+        
+        await transaction.CommitAsync();
 
         return NoContent();
     }
