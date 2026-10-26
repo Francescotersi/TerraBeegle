@@ -8,6 +8,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Backend_TerraBeegle.Services;
 using Microsoft.OpenApi;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +21,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .WithExposedHeaders("Retry-After");
     });
 });
 
@@ -58,13 +62,56 @@ builder.Services.AddSwaggerGen(options =>
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
-        Description = "Lipește token-ul de la login (fără \"Bearer \")."
+        Description = "Put login token (without \"Bearer \")."
     });
 
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         [new OpenApiSecuritySchemeReference("bearer", document)] = []
     });
+});
+
+// Aggiungi rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    // 429 = "Too Many Requests", codice per rate limiting
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+        
+        await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too many requests",
+            Detail = "Too many requests. Try again in a minute."
+        }, cancellationToken);
+    };
+
+    // policy "login": ogni IP a un singolo contor
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,                    // max 5 request
+                Window = TimeSpan.FromMinutes(1),   // per minut
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("register", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions()
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    // qui si potrebbe aggiungere un altro policy
 });
 
 // Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
@@ -78,7 +125,7 @@ builder.Services.AddHttpClient("RawgAPI", client =>
 {
     client.BaseAddress = new Uri("https://api.rawg.io/api");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-}); 
+});
 
 var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
@@ -108,6 +155,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAngularDev");
+app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

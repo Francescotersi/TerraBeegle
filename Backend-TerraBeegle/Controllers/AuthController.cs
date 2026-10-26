@@ -5,6 +5,7 @@ using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
+using Microsoft.AspNetCore.RateLimiting;
 
 using Mapster;
 
@@ -14,6 +15,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher, ITokenService tokenService) : ControllerBase
 {
+    [EnableRateLimiting("register")]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
     {
@@ -42,7 +44,8 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id},  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
-
+    
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {

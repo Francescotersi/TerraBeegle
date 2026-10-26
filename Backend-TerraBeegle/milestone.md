@@ -17,14 +17,14 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   - [x] `[Authorize]` pe PATCH și DELETE + verificare că id-ul din token = id-ul din URL
   - [x] Swagger configurat să trimită token-ul
 
-- [ ] **2. Rate limiting pe login**
+- [x] **2. Rate limiting pe login**
   Acum se pot încerca mii de parole pe secundă. Folosim rate limiter-ul inclus în ASP.NET Core
   (ex: max 5 încercări pe minut).
 
 - [ ] **3. `GET /api/users` expune email-urile tuturor**
   De decis cine are voie să vadă lista de useri și ce câmpuri.
 
-- [ ] **4. Secretele din `appsettings`**
+- [x] **4. Secretele din `appsettings`**
   Parola de PostgreSQL e în `appsettings.Development.json`, care e în git. Cheia JWT și parola DB
   se mută în user-secrets / variabile de mediu.
 
