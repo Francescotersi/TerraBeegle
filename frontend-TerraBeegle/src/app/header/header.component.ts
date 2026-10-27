@@ -88,6 +88,24 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
                 Search
               </button>
             </form>
+
+            <!-- Pulsanti Login e Register a destra sulla stessa row -->
+            <div class="d-flex align-items-center gap-2 ms-lg-3 header-auth-group">
+              <a
+                class="btn btn-sm auth-btn btn-login text-decoration-none"
+                routerLink="/login"
+                (click)="isMenuOpen.set(false)"
+              >
+                Log In
+              </a>
+              <a
+                class="btn btn-sm auth-btn btn-register text-decoration-none"
+                routerLink="/register"
+                (click)="isMenuOpen.set(false)"
+              >
+                Register
+              </a>
+            </div>
           </div>
         </div>
       </nav>
@@ -105,7 +123,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
     }
 
     .header-wrapper {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 0 1rem;
       pointer-events: auto;
@@ -169,6 +187,46 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
       white-space: nowrap;
     }
 
+    .header-auth-group {
+      flex-shrink: 0;
+    }
+
+    .auth-btn {
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.95rem;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .btn-login {
+      color: #0284c7;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-login:hover {
+      background: rgba(56, 189, 248, 0.15);
+      color: #0369a1;
+      border-color: rgba(56, 189, 248, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .btn-register {
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+    }
+
+    .btn-register:hover {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      transform: translateY(-1px);
+      color: #ffffff;
+    }
+
     @media (max-width: 991px) {
       .navbar-nav {
         flex-direction: column !important;
@@ -182,6 +240,15 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
       .search-input {
         width: 100% !important;
       }
+      .header-auth-group {
+        width: 100%;
+        margin-top: 0.75rem;
+        justify-content: center;
+      }
+      .auth-btn {
+        flex: 1;
+        text-align: center;
+      }
     }
   `,
 })
@@ -194,4 +261,6 @@ export class HeaderComponent {
 
   // Da implementare
   protected onSearch(): void { }
+  protected onLogin(): void { }
+  protected onRegister(): void { }
 }
