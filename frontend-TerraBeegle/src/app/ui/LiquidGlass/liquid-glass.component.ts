@@ -14,13 +14,49 @@ import {
   PLATFORM_ID
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import {
-  DisplacementChannel,
-  GlassRendererMode,
-  ShapeArt,
-  ShapeTrace,
-  WebGLSettings
-} from './glass-surface.types';
+
+export type DisplacementChannel = 'R' | 'G' | 'B' | 'A';
+export type GlassRendererMode = 'auto' | 'webgl' | 'svg';
+
+export interface ShapeBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ShapeTrace {
+  image: HTMLImageElement;
+  width: number;
+  height: number;
+  ratio: number;
+  box: ShapeBox;
+  depth: Float32Array;
+  w: number;
+  h: number;
+  line: string;
+  glow: string;
+}
+
+export interface ShapeArt {
+  src: string;
+  box?: ShapeBox;
+  line?: string;
+  glow?: string;
+  failed?: boolean;
+}
+
+export interface WebGLSettings {
+  backdrop: any;
+  displace: number;
+  saturation: number;
+  distortionScale: number;
+  redOffset: number;
+  greenOffset: number;
+  blueOffset: number;
+  xChannel: DisplacementChannel;
+  yChannel: DisplacementChannel;
+}
 
 const FAR = 1e20;
 
@@ -335,7 +371,7 @@ export class LiquidGlassComponent implements OnInit, AfterViewInit, OnChanges, O
   @Input() height?: number | string;
   @Input() borderRadius: number = 20;
   @Input() borderWidth: number = 0.07;
-  @Input() brightness: number = 50;
+  @Input() brightness: number = 500;
   @Input() opacity: number = 0.93;
   @Input() blur: number = 11;
   @Input() displace: number = 0;
@@ -1004,4 +1040,3 @@ export class LiquidGlassComponent implements OnInit, AfterViewInit, OnChanges, O
 
 
 export { LiquidGlassComponent as GlassSurfaceComponent };
-export * from './glass-surface.types';

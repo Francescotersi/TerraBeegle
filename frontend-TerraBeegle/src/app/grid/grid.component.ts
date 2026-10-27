@@ -22,7 +22,7 @@ interface GridComponentProps {
   imports: [LiquidGlassComponent],
   selector: 'app-grid-component',
   template: `
-  <app-liquid-glass [borderWidth]="0.20" [borderWidth]="10">
+  <app-liquid-glass [borderWidth]="0.10" [borderWidth]="19">
     <div class="py-4 grid-wrapper mx-auto">
       <h2 class="h3 fw-bold mb-4 text-center">super</h2>
 
@@ -86,12 +86,26 @@ interface GridComponentProps {
       overflow: hidden;
       cursor: pointer;
       position: relative;    
+      border: none;
       transform: translateZ(0);
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       will-change: transform;
       transform-origin: bottom center;
       transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.25s ease;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      border-radius: inherit;
+      pointer-events: none;
+      -webkit-box-shadow: inset 2px 2px 0px -2px rgba(255, 255, 255, 0.7), 
+                          inset 0 0 3px 1px rgba(255, 255, 255, 0.7);
+      box-shadow: inset 6px 6px 0px -6px rgba(255, 255, 255, 0.7), 
+                  inset 0 0 8px 1px rgba(255, 255, 255, 0.7);
     }
 
     .game-card:hover {
