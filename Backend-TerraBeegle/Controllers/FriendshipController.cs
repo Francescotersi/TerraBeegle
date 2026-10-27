@@ -40,7 +40,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         };
 
         if (filter is null)
-            return Problem(detail: "Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.");
 
         var friendships = await db.Friendships
             .Where(filter)
@@ -58,19 +58,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Forbid();
         
         if (dto.SenderId != userId)
-            return Problem(detail: "SenderId must match the authenticated user's ID.", statusCode: StatusCodes.Status403Forbidden);
+            return BadRequest("SenderId must match the authenticated user's ID.");
 
         if (dto.SenderId == dto.ReceiverId)
-            return Problem(detail: "Cannot create friendship with oneself.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest("Cannot create friendship with oneself.");
 
         var senderExists = await db.Users.AnyAsync(u => u.Id == dto.SenderId);
         var receiverExists = await db.Users.AnyAsync(u => u.Id == dto.ReceiverId);
 
         if (!senderExists)
-            return Problem(detail: "Sender user not found.", statusCode: StatusCodes.Status404NotFound);
+            return NotFound("Sender user not found.");
 
         if (!receiverExists)
-            return Problem(detail: "Receiver user not found.", statusCode: StatusCodes.Status404NotFound);
+            return NotFound("Receiver user not found.");
 
         var User1Id = Math.Min(dto.SenderId, dto.ReceiverId);
         var User2Id = Math.Max(dto.SenderId, dto.ReceiverId);
@@ -86,7 +86,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
                 friendship.UpdatedAt = DateTime.UtcNow;
             }
             else
-                return Problem(detail: "Friendship already exists.", statusCode: StatusCodes.Status409Conflict);
+                return Conflict("Friendship already exists.");
         }
         else {
             friendship = new Friendship {
@@ -105,7 +105,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
-            return Problem(detail: "Cannot create friendship due to database constraints.", statusCode: StatusCodes.Status409Conflict);
+            return Conflict("Cannot create friendship due to database constraints.");
         }
 
         // Location points to the list of sent requests, where the new one appears
@@ -120,18 +120,18 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Forbid();
         
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
-            return Problem(detail: "Invalid status. Only 'Accepted' or 'Rejected' are allowed.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
 
         var friendship = await db.Friendships.FindAsync(dto.Id);
         if (friendship is null)
-            return Problem(detail: "Friendship not found.", statusCode: StatusCodes.Status404NotFound);
+            return NotFound("Friendship not found.");
 
         if (friendship.User1Id != userId && friendship.User2Id != userId)
-            return Problem(detail: "Only the users involved in the friendship can update it.", statusCode: StatusCodes.Status403Forbidden);
+            return Forbid("Only the users involved in the friendship can update it.");
 
         // 409: the user is allowed, but the friendship is not in a state that allows it
         if (friendship.Status != FriendshipStatus.Pending)
-            return Problem(detail: "Only pending friendships can be updated.", statusCode: StatusCodes.Status409Conflict);
+            return Conflict("Only pending friendships can be updated.");
 
         if (friendship.ReceiverId != userId)
             return Problem(detail: "Only the receiver can update the friendship status.", statusCode: StatusCodes.Status403Forbidden);
