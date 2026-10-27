@@ -44,6 +44,12 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 - [x] **7. Format de eroare consistent**
   Validările automate returnează `ProblemDetails` (JSON structurat), dar `BadRequest("...")` /
   `Conflict("...")` returnează doar un string. Frontend-ul ar trebui să trateze un singur format.
+  **Decizie (27.10.2026):** erorile cu mesaj scrise de noi sunt string-uri — `BadRequest("...")`, `NotFound("...")`,
+  `Conflict("...")`, `Unauthorized("...")`, iar pentru 403 / 503 `StatusCode(StatusCodes.Status403Forbidden, "...")`.
+  Nu se mai folosește `Problem(...)`. Rămân `ProblemDetails` (JSON) doar cele generate de ASP.NET: validările
+  automate din DTO-uri, `ValidationProblem(ModelState)` din `ModifyUser`, 500-urile din `GlobalExceptionHandler`
+  și răspunsurile goale (`NotFound()`, `Forbid()`, 401 de la `[Authorize]`) prin `UseStatusCodePages`.
+  Frontend-ul: dacă răspunsul e JSON citește `detail` / `errors`, altfel afișează textul.
 
 - [x] **8. Handler global de excepții**
   Orice excepție neprinsă dă acum 500 cu stack trace în Development. În producție: răspuns curat
@@ -101,7 +107,8 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 - [x] **16. `Forbid("mesaj")` dă 500 în `FriendshipController`**
   Parametrul lui `Forbid(string)` e numele unei **scheme de autentificare**, nu un mesaj. ASP.NET caută schema
   „SenderId must match...”, nu o găsește și aruncă excepție. Apare la liniile 81, 149, 152, 155, 184, 187, 190.
-  Soluție: `Problem(detail: "...", statusCode: StatusCodes.Status403Forbidden)`.
+  Soluție (după decizia de la punctul 7): `StatusCode(StatusCodes.Status403Forbidden, "...")`, sau `Forbid()`
+  fără argument dacă nu e nevoie de mesaj. **Niciodată `Forbid("mesaj")`.**
 
 - [x] **17. `CreateFriendship` dă (probabil) 500 după ce salvează**
   `CreatedAtAction(nameof(GetFriendships), new { id = friendship.Id }, ...)`: ruta cere `userId`, iar
@@ -133,6 +140,8 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 - [x] **22. Erori ca string în codul nou**
   `Search` și tot `FriendshipController` folosesc `BadRequest("...")` / `NotFound("...")` / `Conflict("...")` →
   nu respectă formatul `ProblemDetails` de la punctul 7. Soluție: `Problem(detail: ..., statusCode: ...)`.
+  **Înlocuit de decizia de la punctul 7:** s-a făcut invers — toate `Problem(...)` din controllere au devenit
+  string-uri, ca tot codul nostru să folosească același format.
 
 - [ ] **23. `Search` fără paginare și case-sensitive**
   Întoarce toți userii găsiți și „vlad” nu-l găsește pe „Vlad”. Soluție: `PaginationDTO` ca la `GetAll` +

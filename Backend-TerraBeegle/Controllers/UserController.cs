@@ -45,7 +45,7 @@ public class UserController(AppDbContext db) : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Problem(detail: "Query cannot be empty.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest("Query cannot be empty.");
         }
 
         var trimmedQuery = query.Trim();
@@ -129,7 +129,7 @@ public class UserController(AppDbContext db) : ControllerBase
             var username = dto.Username.Trim();
             bool duplicate = await db.Users.AnyAsync(u => u.Username == username && u.Id != id);
             if(duplicate)
-                return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
+                return Conflict("Username already exists.");
             user.Username = username;
         }
 
@@ -151,7 +151,7 @@ public class UserController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
+            return Conflict("Username already exists.");
         }
         
         return user.Adapt<UserResponseDTO>();

@@ -72,7 +72,7 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             } 
             catch (HttpRequestException)
             {
-                return Problem(detail: "External API is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
             }
         }
 
