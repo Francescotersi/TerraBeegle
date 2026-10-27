@@ -32,6 +32,15 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend-TerraBeegle
+    container_name: terrabeegle-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
     driver: local
