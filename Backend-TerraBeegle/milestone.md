@@ -168,17 +168,20 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 Acum nu se văd pentru că tabela `Games` e (probabil) goală și totul vine de la RAWG. Apar când începeți să
 salvați jocuri.
 
-- [ ] **28. ID-urile se amestecă în `GET /api/games/{id}`**
+- [x] **28. ID-urile se amestecă în `GET /api/games/{id}`**
   `db.Games.FindAsync(id)` caută după `Game.Id` (ID-ul intern), dar dacă nu găsește cere RAWG cu același `id`
   ca ID RAWG. `GET /api/games/3498` caută jocul cu `Id = 3498` din baza voastră, nu pe cel cu `RawgGameId = 3498`.
   Soluție: `db.Games.FirstOrDefaultAsync(g => g.RawgGameId == id)` (de decis împreună ce ID primește
   frontend-ul — cel mai simplu e mereu ID-ul RAWG).
 
-- [ ] **29. Numele nu se potrivesc între `Game` și `GameResponseDTO`**
+- [x] **29. Numele nu se potrivesc între `Game` și `GameResponseDTO`**
   Modelul are `Title` și `ReleaseDate` (`DateOnly?`), DTO-ul are `Name` și `Released` (`string?`).
   `game.Adapt<GameResponseDTO>()` și `ProjectToType<GameResponseDTO>()` din `GetAll` le lasă goale → un joc din
   baza de date vine fără nume și fără dată. Soluție: configurare Mapster (`TypeAdapterConfig`) cu
   `.Map(d => d.Name, s => s.Title)` etc., sau mapare manuală.
+  Rezolvat altfel: în `GameResponseDTO` câmpurile au fost redenumite ca în model (`Title`, `ReleaseDate` de tip
+  `DateOnly?`), deci Mapster le potrivește singur. Fără migrație (modelul nu s-a schimbat). În JSON cheile sunt
+  acum `title` și `releaseDate` (nu `name` / `released`) — de anunțat frontend-ul.
 
 - [ ] **30. `Genres` și `Platforms` lipsesc pentru jocurile din baza de date**
   `FindAsync` nu încarcă relațiile → `Genres` și `Platforms` vin goale.
@@ -211,3 +214,63 @@ salvați jocuri.
   - [ ] `package.json` (`start`, `dev`) și `angular.json` (`proxyConfig`) arată spre `proxy.conf.js`
   - [ ] în `docker-compose.yml`, la serviciul `frontend`: `environment: API_URL: http://backend:8080`
   - [ ] de vorbit cu colegul care a făcut imaginea Docker a frontend-ului
+
+## Verificare email
+
+- [ ] **34. Verificarea email-ului cu un cod de 8 caractere**
+  La register contul are `EmailVerified = false` și primește pe email un cod random de 8 caractere. Userul
+  introduce codul → `EmailVerified = true`.
+  **Decizii (27.10.2026):**
+  - în development emailurile merg în **Mailpit** (nu se trimit emailuri reale)
+  - un cont neverificat **poate face login** (register întoarce în continuare token-ul)
+  - un cont neverificat e **șters automat după 2 zile**
+
+  **Pasul 1 — Mailpit + serviciul de email**
+  - [ ] serviciu `mailpit` în `docker-compose.yml` (imaginea `axllent/mailpit`, porturile `1025` SMTP și
+        `8025` interfața web → emailurile se văd la `http://localhost:8025`)
+  - [ ] la serviciul `backend`: `Smtp__Host: mailpit`, `Smtp__Port: 1025`, `Smtp__From: ...`
+        (și în `.env.example`, ca restul variabilelor)
+  - [ ] pachetul `MailKit`
+  - [ ] `IEmailService` + `EmailService` cu `SendAsync(to, subject, body)`, înregistrat în `Program.cs`
+        (la fel ca `ITokenService` / `TokenService`)
+  - [ ] testat că un email ajunge în Mailpit
+
+  **Pasul 2 — modelul + migrația**
+  - [ ] în `User`: `EmailVerified` (`bool`), `EmailVerificationCodeHash` (`string?`),
+        `EmailVerificationExpiresAt` (`DateTime?`), `EmailVerificationAttempts` (`int`)
+  - [ ] migrația + `UPDATE "Users" SET "EmailVerified" = true;` în `Up()` → userii existenți nu sunt considerați
+        neverificați (și nu sunt șterși de pasul 6)
+  - [ ] `EmailVerified` în `UserResponseDTO`, ca frontend-ul să poată afișa „Verifică-ți email-ul” (`GET /me`)
+
+  **Pasul 3 — generarea și trimiterea codului la register**
+  - [ ] cod cu `RandomNumberGenerator.GetString(alfabet, 8)` (nu `Random`), alfabet fără caractere care se
+        confundă (`0/O`, `1/I/L`)
+  - [ ] în baza de date se salvează doar hash-ul codului (`SHA256`), nu codul
+  - [ ] expirare după 15 minute, `EmailVerificationAttempts = 0`
+  - [ ] emailul se trimite după `SaveChangesAsync`; dacă trimiterea eșuează, contul rămâne creat și userul
+        cere un cod nou (pasul 5)
+
+  **Pasul 4 — `POST /api/auth/verify-email`**
+  - [ ] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
+  - [ ] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
+  - [ ] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
+  - [ ] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
+
+  **Pasul 5 — `POST /api/auth/resend-verification`**
+  - [ ] `[Authorize]`; deja verificat → 409
+  - [ ] cod nou, expirare nouă, `Attempts = 0`, email trimis
+  - [ ] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
+
+  **Pasul 6 — ștergerea conturilor neverificate după 2 zile**
+  - [ ] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
+        `!EmailVerified && CreatedAt < UtcNow - 2 zile`
+  - [ ] ca la `DeleteUser`: prieteniile au `DeleteBehavior.Restrict`, deci se șterg întâi prieteniile, apoi userii,
+        într-o tranzacție (favoritele / wishlist-ul se șterg automat, cascade pe tabelele de legătură)
+  - [ ] `DbContext` se ia dintr-un scope nou (`IServiceScopeFactory`), pentru că `BackgroundService` e singleton
+  - [ ] log cu câți useri au fost șterși
+
+  **De decis mai târziu**
+  - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot
+  - [ ] furnizorul de email pentru producție (Gmail cu „App Password”, Brevo etc.)
+  - [ ] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
+        codul trimis pe el e confirmat

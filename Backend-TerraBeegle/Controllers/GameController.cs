@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
 using System.Text.Json;
+using System.Globalization;
 
 using Mapster;
 
@@ -20,18 +21,18 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
         return games;
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<GameResponseDTO>> GetById(long id)
+    [HttpGet("{rawgGameId:int}")]
+    public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
     {
-        // Searching for the game by ID
-        var game = await db.Games.FindAsync(id);
+        // Searching by the RAWG id, the same one used for the RAWG request below
+        var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
         if (game is null)
         {
             var client = httpClientFactory.CreateClient("RawgAPI");
             try
             {
                 var ApiKey = config["EnvironmentVariables:RAWG_API_KEY"];
-                var url = $"games/{id}?key={ApiKey}";
+                var url = $"games/{rawgGameId}?key={ApiKey}";
                 var response = await client.GetFromJsonAsync<RawgResponseDTO>(url, RawgJsonOptions);
                 if (response is null)
                     return NotFound();
@@ -39,12 +40,13 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
                 var gameData = new GameResponseDTO
                 {
                     RawgGameId = response.Id,
-                    Name = response.Name,
+                    Title = response.Name,
                     Slug = response.Slug,
                     NameOriginal = response.NameOriginal,
                     Description = response.Description,
                     BackgroundImage = response.BackgroundImage,
-                    Released = response.Released,
+                    // RAWG sends the date as text ("2013-09-17"); null if it is missing or invalid
+                    ReleaseDate = DateOnly.TryParse(response.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
                     Tba = response.Tba,
                     Website = response.Website,
                     Rating = response.Rating,
