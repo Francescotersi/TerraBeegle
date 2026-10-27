@@ -133,7 +133,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   spațiu etc. (ex: `Parola#2026`), deși mesajul de eroare spune altceva. Soluție: păstrezi lookahead-urile și
   înlocuiești partea de final cu `.{8,}`.
 
-- [ ] **21. `GetById` are acum `[Authorize]`**
+- [x] **21. `GetById` are acum `[Authorize]`**
   La punctul 3 s-a decis că profilul public e accesibil oricui, iar `GetAll` a rămas public → reguli
   inconsistente. De decis împreună: ori ambele publice, ori ambele cu `[Authorize]`.
 
@@ -153,14 +153,14 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   `Friends` se mapează din `FriendshipDTO`, care nu are `SenderId`. Pentru prietenii acceptate ar fi mai util
   id-ul celuilalt user.
 
-- [ ] **25. `Blocked` redenumit în `Rejected` în enum**
+- [x] **25. `Blocked` redenumit în `Rejected` în enum**
   `Status` e salvat ca string; rândurile existente cu `"Blocked"` nu mai pot fi citite. De verificat dacă există
   în baza de date (sau un `UPDATE` în migrația de la punctul 15).
 
-- [ ] **26. `UpdateEmailDTO` fără `[MaxLength(255)]`**
+- [x] **26. `UpdateEmailDTO` fără `[MaxLength(255)]`**
   Coloana `Email` are 255 de caractere → un email mai lung dă excepție de la Postgres (500) în loc de 400.
 
-- [ ] **27. Mesajul de la regex-ul pentru username nu corespunde**
+- [x] **27. Mesajul de la regex-ul pentru username nu corespunde**
   `^[-a-zA-Z0-9_]+$` permite și `-`, dar mesajul spune doar litere, cifre și underscore. De ales unul.
 
 ## GameController — jocuri din baza de date
@@ -199,3 +199,15 @@ salvați jocuri.
     de 20 de useri aduce și toate jocurile lor favorite. De confirmat cu un request.
   - De decis împreună: un DTO separat pentru profil (`GetById`) sau endpoint-uri separate
     (`GET /api/users/{id}/favorites`, `.../wishlist`), iar `UserPublicResponseDTO` rămâne mic pentru liste.
+
+## Frontend ↔ backend
+
+- [ ] **33. În Docker frontend-ul nu poate ajunge la backend**
+  `frontend-TerraBeegle/proxy.conf.json` trimite `/api` către `http://localhost:5144`. Local (`npm start`) merge,
+  dar în containerul `terrabeegle-frontend` `localhost` e chiar containerul frontend-ului → orice apel `/api/...`
+  dă eroare de conexiune. Nu se vede încă pentru că frontend-ul nu face niciun apel HTTP.
+  În rețeaua Docker backend-ul e la `http://backend:8080` (numele serviciului + portul intern, nu 5144).
+  - [ ] `proxy.conf.json` → `proxy.conf.js` cu `target: process.env.API_URL || "http://localhost:5144"`
+  - [ ] `package.json` (`start`, `dev`) și `angular.json` (`proxyConfig`) arată spre `proxy.conf.js`
+  - [ ] în `docker-compose.yml`, la serviciul `frontend`: `environment: API_URL: http://backend:8080`
+  - [ ] de vorbit cu colegul care a făcut imaginea Docker a frontend-ului

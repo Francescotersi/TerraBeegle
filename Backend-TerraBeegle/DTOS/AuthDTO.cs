@@ -14,7 +14,7 @@ public class RegisterDTO
     
     [Required]
     [MaxLength(100)]
-    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores.")]
+    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores or dashes.")]
     public string Username { get; set; } = string.Empty;
     
     [Required]
