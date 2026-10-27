@@ -49,6 +49,14 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
                     Website = response.Website,
                     Rating = response.Rating,
                     Metacritic = response.Metacritic,
+                    ParentPlatforms = [
+                        .. response.Platforms.Select(p => new PlatformDTO
+                        {
+                            Name = p.Platform.Name,
+                            RawgPlatformId = p.Platform.Id,
+                            Slug = p.Platform.Slug,
+                        })
+                    ],
                     Platforms = [
                         .. response.Platforms.Select(p => new PlatformDTO
                         {
@@ -72,7 +80,7 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             } 
             catch (HttpRequestException)
             {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+                return StatusCode(503,"External API is unavailable.");
             }
         }
 

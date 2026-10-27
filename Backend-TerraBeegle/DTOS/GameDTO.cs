@@ -16,5 +16,6 @@ public class GameResponseDTO
     public string? Developer { get; set; }
     public string? Publisher { get; set; }
     public List<GenreDTO> Genres { get; set; } = [];
+    public List<PlatformDTO> ParentPlatforms { get; set; } = [];
     public List<PlatformDTO> Platforms { get; set; } = [];
 }

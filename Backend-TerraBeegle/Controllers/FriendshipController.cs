@@ -20,7 +20,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users/{userId:long}/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
-    // GET api/users/5/friendship?query=friends|sent|received (without query => friends)
+    // GET api/users/{userId}/friendship?query=friends|sent|received (without query => friends)
     [Authorize]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] string query = "friends")
@@ -136,11 +136,11 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         if (friendship.ReceiverId != userId)
             return StatusCode(StatusCodes.Status403Forbidden, "Only the receiver can update the friendship status.");
-        
+
         friendship.Status = dto.Status.Adapt<FriendshipStatus>();
         friendship.UpdatedAt = DateTime.UtcNow;
 
-        try 
+        try
         {
             await db.SaveChangesAsync();
         }
@@ -162,7 +162,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         var friendship = await db.Friendships.FindAsync(id);
         if (friendship is null)
             return NotFound("Friendship not found.");
-
+        
         if (friendship.Status == FriendshipStatus.Rejected)
             return Conflict("Cannot delete a rejected friendship.");
 
@@ -195,6 +195,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         Status = f.Status.ToString(),
         UpdatedAt = f.UpdatedAt
     };
+
     private static readonly Func<Friendship, FriendshipResponseDTO> ToResponseDTOCompiled = ToResponseDTO.Compile();
 
     private bool IsCurrentUser(long id)

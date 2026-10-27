@@ -15,6 +15,7 @@ public class RawgResponseDTO
     public string? BackgroundImage { get; set; }
     public double Rating { get; set; }
     public string Website { get; set; } = null!;
+    public IEnumerable<RawgParentPlatformListDTO> ParentPlatforms { get; set; } = [];
     public IEnumerable<RawgPlatformListDTO> Platforms { get; set; } = [];
     public IEnumerable<RawgGenreDTO> Genres { get; set; } = [];
 }
@@ -26,6 +27,12 @@ public class RawgPlatformListDTO
 
     [JsonPropertyName("released_at")]
     public string? ReleasedAt { get; set; }
+}
+
+public class RawgParentPlatformListDTO
+{
+    [JsonPropertyName("platform")]
+    public RawgPlatformDTO Platform { get; set; } = null!;
 }
 
 public class RawgPlatformDTO
