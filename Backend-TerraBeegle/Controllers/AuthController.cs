@@ -28,9 +28,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
         if(EmailExists)
-            return Conflict("Email already exists.");
+            return Problem(detail: "Email already exists.", statusCode: StatusCodes.Status409Conflict);
         if(UsernameExists)
-            return Conflict("Username already exists.");
+            return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();
@@ -49,8 +49,8 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         {
             // Checks if the unique constraint was violated
             return pg.ConstraintName == "IX_Users_Email"
-                ? Conflict("Email already exists.")
-                : Conflict("Username already exists.");
+                ? Problem(detail: "Email already exists.", statusCode: StatusCodes.Status409Conflict)
+                : Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
         }
 
         string token = tokenService.CreateToken(user);
@@ -66,10 +66,10 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
         if(user == null)
-            return Unauthorized("Invalid credentials.");
-        
+            return Problem(detail: "Invalid credentials.", statusCode: StatusCodes.Status401Unauthorized);
+
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid credentials.");
+            return Problem(detail: "Invalid credentials.", statusCode: StatusCodes.Status401Unauthorized);
 
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });

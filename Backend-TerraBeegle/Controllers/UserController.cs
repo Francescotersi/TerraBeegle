@@ -15,11 +15,28 @@ namespace Backend_TerraBeegle.Controllers;
 public class UserController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> GetAll()
+    public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
-        // Retrieving all users from the database and projecting them to UserPublicResponseDTO
-        var users = await db.Users.ProjectToType<UserPublicResponseDTO>().ToListAsync();
-        return users;
+        // Ordering is required, otherwise Postgres can return the rows in a different order on each page
+        var query = db.Users.OrderBy(u => u.Id);
+
+        var totalCount = await query.CountAsync();
+
+        // Retrieving only the users from the requested page and projecting them to UserPublicResponseDTO
+        var users = await query
+            .Skip((pagination.Page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ProjectToType<UserPublicResponseDTO>()
+            .ToListAsync();
+
+        return new PagedResponseDTO<UserPublicResponseDTO>
+        {
+            Items = users,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = totalCount,
+            TotalPages = (totalCount + pagination.PageSize - 1) / pagination.PageSize
+        };
     }
 
     [Authorize]
@@ -82,22 +99,25 @@ public class UserController(AppDbContext db) : ControllerBase
             return NotFound();
         
         if(dto.Username is not null && string.IsNullOrWhiteSpace(dto.Username))
-            return BadRequest("Username cannot be empty.");
+            ModelState.AddModelError(nameof(dto.Username), "Username cannot be empty.");
 
         if(dto.Name is not null && string.IsNullOrWhiteSpace(dto.Name))
-            return BadRequest("Name cannot be empty.");
-        
+            ModelState.AddModelError(nameof(dto.Name), "Name cannot be empty.");
+
         if(dto.FamilyName is not null && string.IsNullOrWhiteSpace(dto.FamilyName))
-            return BadRequest("Surname cannot be empty.");
-        
+            ModelState.AddModelError(nameof(dto.FamilyName), "Surname cannot be empty.");
+
         // Empty ImageProfile is for removing the picture
         if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) && !IsHttpUrl(dto.ImageProfile.Trim()))
-            return BadRequest("Image profile must be a valid http or https URL.");
+            ModelState.AddModelError(nameof(dto.ImageProfile), "Image profile must be a valid http or https URL.");
 
         if(dto.Theme is not null && !Enum.IsDefined(dto.Theme.Value))
-            return BadRequest("Invalid theme.");
+            ModelState.AddModelError(nameof(dto.Theme), "Invalid theme.");
 
-        
+        // Same format as the automatic validations, with all the field errors at once
+        if(!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
         if(dto.ImageProfile is not null)
             user.ImageProfile = string.IsNullOrWhiteSpace(dto.ImageProfile) ? null : dto.ImageProfile.Trim();
 
@@ -109,7 +129,7 @@ public class UserController(AppDbContext db) : ControllerBase
             var username = dto.Username.Trim();
             bool duplicate = await db.Users.AnyAsync(u => u.Username == username && u.Id != id);
             if(duplicate)
-                return Conflict("Username already exists.");
+                return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
             user.Username = username;
         }
 
@@ -131,7 +151,7 @@ public class UserController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Conflict("Username already exists.");
+            return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
         }
         
         return user.Adapt<UserResponseDTO>();

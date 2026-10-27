@@ -123,6 +123,9 @@ builder.Services.AddRateLimiter(options =>
 // Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// All the errors (including empty 401/403/404) are returned as ProblemDetails
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
@@ -154,12 +157,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+// First middleware, so it catches the exceptions from everything after it
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseStatusCodePages();
 app.UseCors("AllowAngularDev");
 app.UseRateLimiter();
 app.UseHttpsRedirection();
