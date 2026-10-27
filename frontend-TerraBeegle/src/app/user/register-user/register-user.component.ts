@@ -202,7 +202,7 @@ export class RegisterUser {
       if (this.registerForm().valid()) {
       const data = this.userModel();
       console.log('Dati di register pronti per il backend .NET:', data);
-
+        // send stuff to backend
     }
   }
 }

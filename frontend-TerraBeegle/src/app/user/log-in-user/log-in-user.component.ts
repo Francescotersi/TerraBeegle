@@ -166,7 +166,7 @@ export class LogInUser {
     if (this.loginForm().valid()) {
       const data = this.loginModel();
       console.log('Dati di login pronti per il backend .NET:', data);
-
+      // send stuff to backend
     }
   }
 }

@@ -1,0 +1,23 @@
+# Dipendenze e cache (fondamentale per non copiare i file del tuo computer nel container)
+node_modules
+.angular
+dist
+
+# File di controllo versione e log
+.git
+.gitignore
+*.log
+npm-debug.log*
+
+# File del container stesso
+Dockerfile
+.dockerignore
+
+# Configurazioni dell'editor e formattazione
+.editorconfig
+.prettierrc
+.vscode
+.idea
+
+# Documentazione
+README.md
