@@ -224,19 +224,27 @@ salvați jocuri.
   La register contul are `EmailVerified = false` și primește pe email un cod random de 8 caractere. Userul
   introduce codul → `EmailVerified = true`.
   **Decizii (27.10.2026):**
-  - în development emailurile merg în **Mailpit** (nu se trimit emailuri reale)
+  - se trimit **emailuri reale**, prin SMTP (nu Mailpit)
   - un cont neverificat **poate face login** (register întoarce în continuare token-ul)
   - un cont neverificat e **șters automat după 2 zile**
 
-  **Pasul 1 — Mailpit + serviciul de email**
-  - [ ] serviciu `mailpit` în `docker-compose.yml` (imaginea `axllent/mailpit`, porturile `1025` SMTP și
-        `8025` interfața web → emailurile se văd la `http://localhost:8025`)
-  - [ ] la serviciul `backend`: `Smtp__Host: mailpit`, `Smtp__Port: 1025`, `Smtp__From: ...`
-        (și în `.env.example`, ca restul variabilelor)
+  **Pasul 1 — furnizorul SMTP + serviciul de email**
+  - [ ] ales furnizorul SMTP (codul e același, se schimbă doar setările):
+        - **Gmail** cu „App Password” — cel mai simplu pentru un proiect de facultate: contul trebuie să aibă
+          verificarea în 2 pași, apoi se generează o parolă de aplicație; `smtp.gmail.com`, port `587`;
+          limită ~500 emailuri / zi; expeditorul e adresa de Gmail
+        - **Brevo** — gratuit 300 / zi, adresa expeditorului trebuie verificată în contul Brevo
+  - [ ] în `.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
+        (și în `.env.example` fără valori, ca restul variabilelor); **parola SMTP nu ajunge în git**
+  - [ ] la serviciul `backend` din `docker-compose.yml`: `Smtp__Host: ${SMTP_HOST}`, `Smtp__Port: ${SMTP_PORT}`,
+        `Smtp__User: ${SMTP_USER}`, `Smtp__Password: ${SMTP_PASSWORD}`, `Smtp__From: ${SMTP_FROM}`
+  - [ ] fiecare coleg își pune propriile date SMTP în `.env`-ul lui (sau folosiți un cont comun al proiectului)
   - [ ] pachetul `MailKit`
   - [ ] `IEmailService` + `EmailService` cu `SendAsync(to, subject, body)`, înregistrat în `Program.cs`
-        (la fel ca `ITokenService` / `TokenService`)
-  - [ ] testat că un email ajunge în Mailpit
+        (la fel ca `ITokenService` / `TokenService`); conexiune cu `SecureSocketOptions.StartTls` pe portul 587
+  - [ ] la pornire, verificare că setările `Smtp:*` există (ca la `Jwt:Key`)
+  - [ ] testat că un email ajunge în inbox-ul real (verificat și folderul Spam)
+  - [ ] la teste folosiți adrese proprii — fiecare register trimite un email real
 
   **Pasul 2 — modelul + migrația**
   - [ ] în `User`: `EmailVerified` (`bool`), `EmailVerificationCodeHash` (`string?`),
@@ -274,6 +282,5 @@ salvați jocuri.
 
   **De decis mai târziu**
   - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot
-  - [ ] furnizorul de email pentru producție (Gmail cu „App Password”, Brevo etc.)
   - [ ] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
         codul trimis pe el e confirmat

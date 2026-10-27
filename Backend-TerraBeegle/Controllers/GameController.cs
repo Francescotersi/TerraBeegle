@@ -4,6 +4,7 @@ using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
 using System.Text.Json;
 using System.Globalization;
+using System.Net;
 
 using Mapster;
 
@@ -74,6 +75,10 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
 
                 return Ok(gameData);
             } 
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return NotFound("Game not found.");
+            }
             catch (HttpRequestException)
             {
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
