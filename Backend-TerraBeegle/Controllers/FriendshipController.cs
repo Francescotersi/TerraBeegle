@@ -58,7 +58,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Forbid();
         
         if (dto.SenderId != userId)
-            return Problem(detail: "SenderId must match the authenticated user's ID.", statusCode: StatusCodes.Status403Forbidden);
+            return BadRequest("SenderId must match the authenticated user's ID.");
 
         if (dto.SenderId == dto.ReceiverId)
             return Problem(detail: "Cannot create friendship with oneself.", statusCode: StatusCodes.Status400BadRequest);
@@ -110,6 +110,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         // Location points to the list of sent requests, where the new one appears
         return CreatedAtAction(nameof(GetFriendships), new { userId, query = "sent" }, ToResponseDTOCompiled(friendship));
+        // return Created("User/Friendships", friendship.Adapt<FriendshipResponseDTO>());
     }
 
     [Authorize]
