@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Enums;
+using System.Linq.Expressions;
 
 using Npgsql;
 using Mapster;
@@ -20,54 +21,34 @@ namespace Backend_TerraBeegle.Controllers;
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
     [Authorize]
-    [HttpGet("{query?}")]
-    public async Task<ActionResult<FriendsListDTO>> GetFriendships(long userId, string? query = null)
+    [HttpGet("{query}")]
+    public async Task<ActionResult<IEnumerable<FriendshipDTO>>> GetFriendships(long userId, string query="friends")
     {
         if (!IsCurrentUser(userId))
             return Forbid();
-     
-        //TODO: implement search functionality if query is provided
-        var allFriendships = await db.Friendships
-            .Where(f => f.User1Id == userId || f.User2Id == userId)
-            .ProjectToType<FriendshipDTO>()
-            .ToListAsync();
-
-        var friends = allFriendships
-            .Where(f => f.Status == FriendshipStatus.Accepted)
-            .ToList();
-    
-        var friendshipsSent = allFriendships
-            .Where(f => f.Status == FriendshipStatus.Pending && f.ReceiverId != userId)
-            .ToList();
-
-        var friendshipsReceived = allFriendships
-            .Where(f => f.Status == FriendshipStatus.Pending && f.ReceiverId == userId)
-            .ToList();
-
-        return Ok(new FriendsListDTO()
+        try
         {
-            Friends = friends.Adapt<IEnumerable<FriendshipResponseDTO>>(),
-            FriendshipsSent = [
-                .. friendshipsSent.Select(f => new FriendshipResponseDTO
-                {
-                    Id = f.Id,
-                    SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
-                    ReceiverId = f.ReceiverId,
-                    Status = f.Status.ToString(),
-                    UpdatedAt = f.UpdatedAt
-                })
-            ],
-            FriendshipsReceived = [
-                .. friendshipsReceived.Select(f => new FriendshipResponseDTO
-                {
-                    Id = f.Id,
-                    SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
-                    ReceiverId = f.ReceiverId,
-                    Status = f.Status.ToString(),
-                    UpdatedAt = f.UpdatedAt
-                })
-            ]
-        });
+            Expression<Func<Friendship, bool>> filter = query.ToLowerInvariant() switch
+            {
+                "friends" => f => (f.User1Id == userId || f.User2Id == userId) 
+                    && f.Status == FriendshipStatus.Accepted,
+                "sent" => f => (f.User1Id == userId || f.User2Id == userId) 
+                    && f.Status == FriendshipStatus.Pending && f.ReceiverId != userId,
+                "received" => f => (f.User1Id == userId || f.User2Id == userId) 
+                    && f.Status == FriendshipStatus.Pending && f.ReceiverId == userId,
+                _ => throw new ArgumentException("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.")
+            }; 
+            
+            var friendships = await db.Friendships
+                .Where(filter)
+                .ProjectToType<FriendshipDTO>()
+                .ToListAsync();
+
+            return Ok(friendships.Adapt<IEnumerable<FriendshipResponseDTO>>());
+        } catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [Authorize]
@@ -128,7 +109,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot create friendship due to database constraints.");
         }
 
-        return CreatedAtAction(nameof(GetFriendships), new { id = friendship.Id }, friendship.Adapt<FriendshipResponseDTO>());
+        return CreatedAtAction(nameof(GetFriendships), new { userId }, friendship.Adapt<FriendshipResponseDTO>());
     }
 
     [Authorize]
