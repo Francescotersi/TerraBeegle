@@ -20,35 +20,34 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users/{userId:long}/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
+    // GET api/users/5/friendship?query=friends|sent|received (without query => friends)
     [Authorize]
-    [HttpGet("{query}")]
-    public async Task<ActionResult<IEnumerable<FriendshipDTO>>> GetFriendships(long userId, string query="friends")
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] string query = "friends")
     {
         if (!IsCurrentUser(userId))
             return Forbid();
-        try
-        {
-            Expression<Func<Friendship, bool>> filter = query.ToLowerInvariant() switch
-            {
-                "friends" => f => (f.User1Id == userId || f.User2Id == userId) 
-                    && f.Status == FriendshipStatus.Accepted,
-                "sent" => f => (f.User1Id == userId || f.User2Id == userId) 
-                    && f.Status == FriendshipStatus.Pending && f.ReceiverId != userId,
-                "received" => f => (f.User1Id == userId || f.User2Id == userId) 
-                    && f.Status == FriendshipStatus.Pending && f.ReceiverId == userId,
-                _ => throw new ArgumentException("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.")
-            }; 
-            
-            var friendships = await db.Friendships
-                .Where(filter)
-                .ProjectToType<FriendshipDTO>()
-                .ToListAsync();
 
-            return Ok(friendships.Adapt<IEnumerable<FriendshipResponseDTO>>());
-        } catch (ArgumentException ex)
+        Expression<Func<Friendship, bool>>? filter = query.ToLowerInvariant() switch
         {
-            return BadRequest(ex.Message);
-        }
+            "friends" => f => (f.User1Id == userId || f.User2Id == userId)
+                && f.Status == FriendshipStatus.Accepted,
+            "sent" => f => (f.User1Id == userId || f.User2Id == userId)
+                && f.Status == FriendshipStatus.Pending && f.ReceiverId != userId,
+            "received" => f => (f.User1Id == userId || f.User2Id == userId)
+                && f.Status == FriendshipStatus.Pending && f.ReceiverId == userId,
+            _ => null
+        };
+
+        if (filter is null)
+            return Problem(detail: "Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.", statusCode: StatusCodes.Status400BadRequest);
+
+        var friendships = await db.Friendships
+            .Where(filter)
+            .Select(ToResponseDTO)
+            .ToListAsync();
+
+        return friendships;
     }
 
     [Authorize]
@@ -109,7 +108,8 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Problem(detail: "Cannot create friendship due to database constraints.", statusCode: StatusCodes.Status409Conflict);
         }
 
-        return CreatedAtAction(nameof(GetFriendships), new { userId }, friendship.Adapt<FriendshipResponseDTO>());
+        // Location points to the list of sent requests, where the new one appears
+        return CreatedAtAction(nameof(GetFriendships), new { userId, query = "sent" }, ToResponseDTOCompiled(friendship));
     }
 
     [Authorize]
@@ -183,6 +183,18 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         return NoContent();
     }
+
+    // Friendship has no SenderId: the sender is the user who is not the receiver.
+    // Expression so EF translates it to SQL in GetFriendships; the compiled version is used for a single object.
+    private static readonly Expression<Func<Friendship, FriendshipResponseDTO>> ToResponseDTO = f => new FriendshipResponseDTO
+    {
+        Id = f.Id,
+        SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
+        ReceiverId = f.ReceiverId,
+        Status = f.Status.ToString(),
+        UpdatedAt = f.UpdatedAt
+    };
+    private static readonly Func<Friendship, FriendshipResponseDTO> ToResponseDTOCompiled = ToResponseDTO.Compile();
 
     private bool IsCurrentUser(long id)
     {

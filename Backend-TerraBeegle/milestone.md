@@ -103,10 +103,12 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   „SenderId must match...”, nu o găsește și aruncă excepție. Apare la liniile 81, 149, 152, 155, 184, 187, 190.
   Soluție: `Problem(detail: "...", statusCode: StatusCodes.Status403Forbidden)`.
 
-- [ ] **17. `CreateFriendship` dă (probabil) 500 după ce salvează**
+- [x] **17. `CreateFriendship` dă (probabil) 500 după ce salvează**
   `CreatedAtAction(nameof(GetFriendships), new { id = friendship.Id }, ...)`: ruta cere `userId`, iar
   `GetFriendships` nu are parametru `id`. Generarea URL-ului eșuează → prietenia e salvată, dar clientul
   primește 500. De confirmat cu un request. Soluție: `new { userId }` în route values.
+  Rezolvat: `GetFriendships` e `[HttpGet]` cu `?query=friends|sent|received`, iar `CreatedAtAction` primește
+  `new { userId, query = "sent" }` → `Location: /api/users/{userId}/friendship?query=sent`.
 
 - [ ] **18. `BackgroundImage` și `NameOriginal` din RAWG vin mereu `null`**
   RAWG trimite `background_image` / `name_original`; `GetFromJsonAsync` ignoră majusculele, dar nu și
@@ -138,7 +140,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 
 ## După merge — minore
 
-- [ ] **24. `SenderId` e mereu 0 în lista `Friends`**
+- [x] **24. `SenderId` e mereu 0 în lista `Friends`**
   `Friends` se mapează din `FriendshipDTO`, care nu are `SenderId`. Pentru prietenii acceptate ar fi mai util
   id-ul celuilalt user.
 
