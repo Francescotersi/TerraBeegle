@@ -183,9 +183,12 @@ salvați jocuri.
   `DateOnly?`), deci Mapster le potrivește singur. Fără migrație (modelul nu s-a schimbat). În JSON cheile sunt
   acum `title` și `releaseDate` (nu `name` / `released`) — de anunțat frontend-ul.
 
-- [ ] **30. `Genres` și `Platforms` lipsesc pentru jocurile din baza de date**
+- [x] **30. `Genres` și `Platforms` lipsesc pentru jocurile din baza de date**
   `FindAsync` nu încarcă relațiile → `Genres` și `Platforms` vin goale.
   Soluție: `.Include(g => g.Genres).Include(g => g.Platforms)` (sau `ProjectToType`, care le include în SELECT).
+  Rezolvat cu `ProjectToType<GameResponseDTO>()` în `GetById`, ca în `GetAll` (verificat cu `ToQueryString()`:
+  genurile și platformele vin în același SELECT). `Slug` / `ReleasedAt` din `GenreDTO` / `PlatformDTO` rămân `null`
+  pentru jocurile din baza de date, pentru că nu există în modele.
 
 - [ ] **31. Joc inexistent la RAWG → 503 în loc de 404**
   RAWG răspunde 404, `GetFromJsonAsync` aruncă `HttpRequestException`, iar `catch`-ul întoarce 503 „External API

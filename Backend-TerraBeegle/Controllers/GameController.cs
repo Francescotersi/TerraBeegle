@@ -24,8 +24,11 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
     [HttpGet("{rawgGameId:int}")]
     public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
     {
-        // Searching by the RAWG id, the same one used for the RAWG request below
-        var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
+        // Searching by the RAWG id, the same one used for the RAWG request below.
+        var game = await db.Games
+            .Where(g => g.RawgGameId == rawgGameId)
+            .ProjectToType<GameResponseDTO>()
+            .FirstOrDefaultAsync();
         if (game is null)
         {
             var client = httpClientFactory.CreateClient("RawgAPI");
@@ -45,7 +48,6 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
                     NameOriginal = response.NameOriginal,
                     Description = response.Description,
                     BackgroundImage = response.BackgroundImage,
-                    // RAWG sends the date as text ("2013-09-17"); null if it is missing or invalid
                     ReleaseDate = DateOnly.TryParse(response.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
                     Tba = response.Tba,
                     Website = response.Website,
@@ -78,7 +80,7 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             }
         }
 
-        return Ok(game.Adapt<GameResponseDTO>());
+        return Ok(game);
     }
     
     private static readonly JsonSerializerOptions RawgJsonOptions = new()
