@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;                 // pentru FindFirstValue
 using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
-
+using Npgsql;
 using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
@@ -14,17 +14,17 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users")]
 public class UserController(AppDbContext db) : ControllerBase
 {
-    [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<UserResponseDTO>>> GetAll()
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> GetAll()
     {
-        // Retrieving all users from the database and projecting them to UserResponseDTO
-        var users = await db.Users.ProjectToType<UserResponseDTO>().ToListAsync();
+        // Retrieving all users from the database and projecting them to UserPublicResponseDTO
+        var users = await db.Users.ProjectToType<UserPublicResponseDTO>().ToListAsync();
         return users;
     }
     
     [Authorize]
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<UserResponseDTO>> GetById(long id)
+    public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
     {
         // Searching for the user by ID
         var user = await db.Users.FindAsync(id);
@@ -33,6 +33,22 @@ public class UserController(AppDbContext db) : ControllerBase
             return NotFound();
         }
 
+        return user.Adapt<UserPublicResponseDTO>();
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ActionResult<UserResponseDTO>> GetMe()
+    {
+        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if(!long.TryParse(sub, out var tokenUserId))
+            return Unauthorized();
+            
+        var user = await db.Users.FindAsync(tokenUserId);
+        
+        if(user is null)
+            return NotFound();
+        
         return user.Adapt<UserResponseDTO>();
     }
 
@@ -92,7 +108,14 @@ public class UserController(AppDbContext db) : ControllerBase
             user.FamilyName = familyName;
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Conflict("Username already exists.");
+        }
         
         return user.Adapt<UserResponseDTO>();
     }
@@ -108,10 +131,15 @@ public class UserController(AppDbContext db) : ControllerBase
         if(user is null)
             return NotFound();
         
+        // Friendships and users are deleted at the same time using a transaction or they are not deleted at all
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        
         await db.Friendships.Where(f => f.User1Id == id || f.User2Id == id).ExecuteDeleteAsync();
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();
+        
+        await transaction.CommitAsync();
 
         return NoContent();
     }
@@ -125,6 +153,6 @@ public class UserController(AppDbContext db) : ControllerBase
     private static bool IsHttpUrl(string value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

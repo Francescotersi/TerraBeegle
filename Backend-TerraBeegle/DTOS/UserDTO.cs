@@ -33,6 +33,13 @@ public class LoginDTO
     public string Password { get; set; } = string.Empty;
 }
 
+public class UserPublicResponseDTO
+{
+    public long Id { get; set; }
+    public string? ImageProfile { get; set; }
+    public string Username { get; set; } = string.Empty;
+}
+
 public class UserResponseDTO
 {
     public long Id { get; set; }

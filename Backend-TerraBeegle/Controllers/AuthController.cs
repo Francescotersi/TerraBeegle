@@ -5,6 +5,8 @@ using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using Npgsql;
 
 using Mapster;
 
@@ -14,6 +16,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher, ITokenService tokenService) : ControllerBase
 {
+    [EnableRateLimiting("register")]
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
     {
@@ -36,13 +39,25 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         // Adding the user to the database and saving changes
         db.Users.Add(user);
-        await db.SaveChangesAsync();
+        
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
+        {
+            // Checks if the unique constraint was violated
+            return pg.ConstraintName == "IX_Users_Email"
+                ? Conflict("Email already exists.")
+                : Conflict("Username already exists.");
+        }
 
         string token = tokenService.CreateToken(user);
         
         return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
-
+    
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {

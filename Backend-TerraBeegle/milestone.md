@@ -17,25 +17,25 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   - [x] `[Authorize]` pe PATCH și DELETE + verificare că id-ul din token = id-ul din URL
   - [x] Swagger configurat să trimită token-ul
 
-- [ ] **2. Rate limiting pe login**
+- [x] **2. Rate limiting pe login**
   Acum se pot încerca mii de parole pe secundă. Folosim rate limiter-ul inclus în ASP.NET Core
   (ex: max 5 încercări pe minut).
 
-- [ ] **3. `GET /api/users` expune email-urile tuturor**
+- [x] **3. `GET /api/users` expune email-urile tuturor**
   De decis cine are voie să vadă lista de useri și ce câmpuri.
 
-- [ ] **4. Secretele din `appsettings`**
+- [x] **4. Secretele din `appsettings`**
   Parola de PostgreSQL e în `appsettings.Development.json`, care e în git. Cheia JWT și parola DB
   se mută în user-secrets / variabile de mediu.
 
 ## Corectitudine
 
-- [ ] **5. Race condition la username / email unic**
+- [x] **5. Race condition la username / email unic**
   `AnyAsync` urmat de `SaveChangesAsync` nu e atomic: două register-uri simultane cu același
   username pot trece amândouă de verificare, iar al doilea crapă cu 500.
   Soluție: prinzi `DbUpdateException` și returnezi 409.
 
-- [ ] **6. Tranzacție la DELETE**
+- [x] **6. Tranzacție la DELETE**
   `ExecuteDeleteAsync` (prieteniile) și `SaveChangesAsync` (userul) sunt operații separate.
   Dacă a doua eșuează, prieteniile sunt deja șterse. Soluție: le pui într-o tranzacție.
 
