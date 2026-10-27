@@ -75,6 +75,6 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             }
         }
 
-        return game.Adapt<GameResponseDTO>();
+        return Ok(game.Adapt<GameResponseDTO>());
     }
 }

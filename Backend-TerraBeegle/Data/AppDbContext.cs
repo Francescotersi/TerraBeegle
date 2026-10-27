@@ -124,7 +124,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasColumnType("text");
 
-            e.Property(g => g.CoverImageUrl)
+            e.Property(g => g.BackgroundImage)
                 .HasMaxLength(500);
 
             e.Property(g => g.ReleaseDate)

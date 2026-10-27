@@ -23,6 +23,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         // Checking if the email or username already exists
         var email = dto.Email.Trim().ToLowerInvariant();
         var username = dto.Username.Trim();
+
         bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
         bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
