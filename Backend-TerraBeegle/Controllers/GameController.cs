@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
+using System.Text.Json;
 
 using Mapster;
 
@@ -31,7 +32,7 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
             {
                 var ApiKey = config["EnvironmentVariables:RAWG_API_KEY"];
                 var url = $"games/{id}?key={ApiKey}";
-                var response = await client.GetFromJsonAsync<RawgResponseDTO>(url);
+                var response = await client.GetFromJsonAsync<RawgResponseDTO>(url, RawgJsonOptions);
                 if (response is null)
                     return NotFound();
 
@@ -77,4 +78,9 @@ public class GameController(AppDbContext db, IHttpClientFactory httpClientFactor
 
         return Ok(game.Adapt<GameResponseDTO>());
     }
+    
+    private static readonly JsonSerializerOptions RawgJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
 }

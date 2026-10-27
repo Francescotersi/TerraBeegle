@@ -110,7 +110,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   Rezolvat: `GetFriendships` e `[HttpGet]` cu `?query=friends|sent|received`, iar `CreatedAtAction` primește
   `new { userId, query = "sent" }` → `Location: /api/users/{userId}/friendship?query=sent`.
 
-- [ ] **18. `BackgroundImage` și `NameOriginal` din RAWG vin mereu `null`**
+- [x] **18. `BackgroundImage` și `NameOriginal` din RAWG vin mereu `null`**
   RAWG trimite `background_image` / `name_original`; `GetFromJsonAsync` ignoră majusculele, dar nu și
   underscore-ul. Doar `Platform` și `ReleasedAt` au `[JsonPropertyName]`.
   Soluție: `[JsonPropertyName("background_image")]` etc. pe câmpurile din `RawgResponseDTO`.
@@ -121,7 +121,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   `AddSecurityRequirement` e comentat în `Program.cs` → toate endpoint-urile `[Authorize]` dau 401 din Swagger.
   De întrebat colegul de ce l-a comentat (poate o eroare de compilare cu versiunea lui de Swashbuckle).
 
-- [ ] **20. Regex-ul de parolă limitează caracterele permise**
+- [x] **20. Regex-ul de parolă limitează caracterele permise**
   `[A-Za-z\d@$!%*?&]{8,}` (în `RegisterDTO` și `UpdatePasswordDTO`) respinge orice parolă cu `#`, `.`, `-`,
   spațiu etc. (ex: `Parola#2026`), deși mesajul de eroare spune altceva. Soluție: păstrezi lookahead-urile și
   înlocuiești partea de final cu `.{8,}`.
@@ -153,3 +153,40 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 
 - [ ] **27. Mesajul de la regex-ul pentru username nu corespunde**
   `^[-a-zA-Z0-9_]+$` permite și `-`, dar mesajul spune doar litere, cifre și underscore. De ales unul.
+
+## GameController — jocuri din baza de date
+
+Acum nu se văd pentru că tabela `Games` e (probabil) goală și totul vine de la RAWG. Apar când începeți să
+salvați jocuri.
+
+- [ ] **28. ID-urile se amestecă în `GET /api/games/{id}`**
+  `db.Games.FindAsync(id)` caută după `Game.Id` (ID-ul intern), dar dacă nu găsește cere RAWG cu același `id`
+  ca ID RAWG. `GET /api/games/3498` caută jocul cu `Id = 3498` din baza voastră, nu pe cel cu `RawgGameId = 3498`.
+  Soluție: `db.Games.FirstOrDefaultAsync(g => g.RawgGameId == id)` (de decis împreună ce ID primește
+  frontend-ul — cel mai simplu e mereu ID-ul RAWG).
+
+- [ ] **29. Numele nu se potrivesc între `Game` și `GameResponseDTO`**
+  Modelul are `Title` și `ReleaseDate` (`DateOnly?`), DTO-ul are `Name` și `Released` (`string?`).
+  `game.Adapt<GameResponseDTO>()` și `ProjectToType<GameResponseDTO>()` din `GetAll` le lasă goale → un joc din
+  baza de date vine fără nume și fără dată. Soluție: configurare Mapster (`TypeAdapterConfig`) cu
+  `.Map(d => d.Name, s => s.Title)` etc., sau mapare manuală.
+
+- [ ] **30. `Genres` și `Platforms` lipsesc pentru jocurile din baza de date**
+  `FindAsync` nu încarcă relațiile → `Genres` și `Platforms` vin goale.
+  Soluție: `.Include(g => g.Genres).Include(g => g.Platforms)` (sau `ProjectToType`, care le include în SELECT).
+
+- [ ] **31. Joc inexistent la RAWG → 503 în loc de 404**
+  RAWG răspunde 404, `GetFromJsonAsync` aruncă `HttpRequestException`, iar `catch`-ul întoarce 503 „External API
+  is unavailable”. Frontend-ul ar afișa „serviciul e picat” pentru un joc care nu există.
+  Soluție: `catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)` → 404, înaintea
+  `catch`-ului general → 503.
+
+## Useri — favorite / wishlist
+
+- [ ] **32. `Favorites` / `Whishlist` în `UserPublicResponseDTO`**
+  - `Whishlist` e mereu `null`: Mapster potrivește după nume, iar în `User` proprietatea e `WishlistItems`
+    (și „Whishlist” e scris greșit).
+  - `Favorites` se încarcă (probabil) la fiecare user din `GetAll` și `Search` prin `ProjectToType` → o pagină
+    de 20 de useri aduce și toate jocurile lor favorite. De confirmat cu un request.
+  - De decis împreună: un DTO separat pentru profil (`GetById`) sau endpoint-uri separate
+    (`GET /api/users/{id}/favorites`, `.../wishlist`), iar `UserPublicResponseDTO` rămâne mic pentru liste.
