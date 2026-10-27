@@ -21,7 +21,24 @@ public class UserController(AppDbContext db) : ControllerBase
         var users = await db.Users.ProjectToType<UserPublicResponseDTO>().ToListAsync();
         return users;
     }
-    
+
+    [Authorize]
+    [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest("Query cannot be empty.");
+        }
+
+        var trimmedQuery = query.Trim();
+        var users = await db.Users
+            .Where(u => u.Username.Contains(trimmedQuery))
+            .ProjectToType<UserPublicResponseDTO>()
+            .ToListAsync();
+        return users;
+    }
+
     [Authorize]
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
