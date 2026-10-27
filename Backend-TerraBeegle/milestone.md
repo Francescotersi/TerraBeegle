@@ -98,7 +98,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   - [x] `dotnet ef migrations add UpdateGameAndFriendship` (redenumirea e `RenameColumn`, nu drop + add)
   - [x] `catch`-ul de la pornire prinde doar `NpgsqlException` și loghează excepția reală; orice altă eroare oprește aplicația
 
-- [ ] **16. `Forbid("mesaj")` dă 500 în `FriendshipController`**
+- [x] **16. `Forbid("mesaj")` dă 500 în `FriendshipController`**
   Parametrul lui `Forbid(string)` e numele unei **scheme de autentificare**, nu un mesaj. ASP.NET caută schema
   „SenderId must match...”, nu o găsește și aruncă excepție. Apare la liniile 81, 149, 152, 155, 184, 187, 190.
   Soluție: `Problem(detail: "...", statusCode: StatusCodes.Status403Forbidden)`.
@@ -115,7 +115,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
 
 ## După merge — medii
 
-- [ ] **19. Swagger nu mai trimite token-ul**
+- [x] **19. Swagger nu mai trimite token-ul**
   `AddSecurityRequirement` e comentat în `Program.cs` → toate endpoint-urile `[Authorize]` dau 401 din Swagger.
   De întrebat colegul de ce l-a comentat (poate o eroare de compilare cu versiunea lui de Swashbuckle).
 
@@ -128,7 +128,7 @@ Stare actuală: CRUD complet pentru User (register, login, get all, get by id, p
   La punctul 3 s-a decis că profilul public e accesibil oricui, iar `GetAll` a rămas public → reguli
   inconsistente. De decis împreună: ori ambele publice, ori ambele cu `[Authorize]`.
 
-- [ ] **22. Erori ca string în codul nou**
+- [x] **22. Erori ca string în codul nou**
   `Search` și tot `FriendshipController` folosesc `BadRequest("...")` / `NotFound("...")` / `Conflict("...")` →
   nu respectă formatul `ProblemDetails` de la punctul 7. Soluție: `Problem(detail: ..., statusCode: ...)`.
 

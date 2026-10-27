@@ -78,19 +78,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Forbid();
         
         if (dto.SenderId != userId)
-            return Forbid("SenderId must match the authenticated user's ID.");
+            return Problem(detail: "SenderId must match the authenticated user's ID.", statusCode: StatusCodes.Status403Forbidden);
 
         if (dto.SenderId == dto.ReceiverId)
-            return BadRequest("Cannot create friendship with oneself.");
+            return Problem(detail: "Cannot create friendship with oneself.", statusCode: StatusCodes.Status400BadRequest);
 
         var senderExists = await db.Users.AnyAsync(u => u.Id == dto.SenderId);
         var receiverExists = await db.Users.AnyAsync(u => u.Id == dto.ReceiverId);
 
         if (!senderExists)
-            return NotFound("Sender user not found.");
-        
+            return Problem(detail: "Sender user not found.", statusCode: StatusCodes.Status404NotFound);
+
         if (!receiverExists)
-            return NotFound("Receiver user not found.");
+            return Problem(detail: "Receiver user not found.", statusCode: StatusCodes.Status404NotFound);
 
         var User1Id = Math.Min(dto.SenderId, dto.ReceiverId);
         var User2Id = Math.Max(dto.SenderId, dto.ReceiverId);
@@ -106,7 +106,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
                 friendship.UpdatedAt = DateTime.UtcNow;
             }
             else
-                return Conflict("Friendship already exists.");
+                return Problem(detail: "Friendship already exists.", statusCode: StatusCodes.Status409Conflict);
         }
         else {
             friendship = new Friendship {
@@ -125,10 +125,10 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
-            return Conflict("Cannot create friendship due to database constraints.");
+            return Problem(detail: "Cannot create friendship due to database constraints.", statusCode: StatusCodes.Status409Conflict);
         }
 
-        return CreatedAtAction(nameof(GetFriendships), new { id = friendship.Id }, friendship.Adapt<FriendshipResponseDTO>());
+        return CreatedAtAction(nameof(GetFriendships), new {  }, friendship.Adapt<FriendshipResponseDTO>());
     }
 
     [Authorize]
@@ -139,20 +139,21 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Forbid();
         
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
-            return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
+            return Problem(detail: "Invalid status. Only 'Accepted' or 'Rejected' are allowed.", statusCode: StatusCodes.Status400BadRequest);
 
         var friendship = await db.Friendships.FindAsync(dto.Id);
         if (friendship is null)
-            return NotFound("Friendship not found.");
+            return Problem(detail: "Friendship not found.", statusCode: StatusCodes.Status404NotFound);
 
         if (friendship.User1Id != userId && friendship.User2Id != userId)
-            return Forbid("Only the users involved in the friendship can update it.");
+            return Problem(detail: "Only the users involved in the friendship can update it.", statusCode: StatusCodes.Status403Forbidden);
 
+        // 409: the user is allowed, but the friendship is not in a state that allows it
         if (friendship.Status != FriendshipStatus.Pending)
-            return Forbid("Only pending friendships can be updated.");
-        
+            return Problem(detail: "Only pending friendships can be updated.", statusCode: StatusCodes.Status409Conflict);
+
         if (friendship.ReceiverId != userId)
-            return Forbid("Only the receiver can update the friendship status.");
+            return Problem(detail: "Only the receiver can update the friendship status.", statusCode: StatusCodes.Status403Forbidden);
         
         friendship.Status = dto.Status.Adapt<FriendshipStatus>();
         friendship.UpdatedAt = DateTime.UtcNow;
@@ -163,7 +164,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
-            return Conflict("Cannot update friendship due to database constraints.");
+            return Problem(detail: "Cannot update friendship due to database constraints.", statusCode: StatusCodes.Status409Conflict);
         }
 
         return Ok(friendship.Adapt<FriendshipDTO>());
@@ -178,16 +179,16 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         
         var friendship = await db.Friendships.FindAsync(id);
         if (friendship is null)
-            return NotFound("Friendship not found.");
+            return Problem(detail: "Friendship not found.", statusCode: StatusCodes.Status404NotFound);
         
         if (friendship.Status == FriendshipStatus.Rejected)
-            return Forbid("Cannot delete a rejected friendship.");
-        
+            return Problem(detail: "Cannot delete a rejected friendship.", statusCode: StatusCodes.Status409Conflict);
+
         if (friendship.User1Id != userId && friendship.User2Id != userId)
-            return Forbid("Only the users involved in the friendship can delete it.");
+            return Problem(detail: "Only the users involved in the friendship can delete it.", statusCode: StatusCodes.Status403Forbidden);
 
         if (friendship.Status == FriendshipStatus.Pending && friendship.ReceiverId == userId)
-            return Forbid("Only the sender can delete a pending friendship request.");
+            return Problem(detail: "Only the sender can delete a pending friendship request.", statusCode: StatusCodes.Status403Forbidden);
 
         db.Friendships.Remove(friendship);
         try
@@ -196,7 +197,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
         {
-            return Conflict("Cannot delete friendship due to existing references in the database.");
+            return Problem(detail: "Cannot delete friendship due to existing references in the database.", statusCode: StatusCodes.Status409Conflict);
         }
 
         return NoContent();

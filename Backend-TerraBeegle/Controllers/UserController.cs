@@ -45,7 +45,7 @@ public class UserController(AppDbContext db) : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return BadRequest("Query cannot be empty.");
+            return Problem(detail: "Query cannot be empty.", statusCode: StatusCodes.Status400BadRequest);
         }
 
         var trimmedQuery = query.Trim();
