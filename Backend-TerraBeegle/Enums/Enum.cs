@@ -1,4 +1,4 @@
-namespace Backend_TerraBeegle.Models;
+namespace Backend_TerraBeegle.Enums;
 
 public enum Theme
 {
@@ -6,35 +6,52 @@ public enum Theme
     Dark
 }
 
-public enum UserStatus
-{
-    Online,
-    Offline,
-    Away,
-    Busy
-}
-
 public enum FriendshipStatus
 {
     Pending,
     Accepted,
-    Blocked
+    Rejected
 }
 
 public enum GameGenre
 {
-    Action,
-    Adventure,
-    RPG,
-    Strategy,
-    Simulation,
-    Sports,
-    Puzzle,
-    Racing,
-    Fighting,
-    Horror,
-    Platformer,
-    Shooter
+    Action = 4,
+    Adventure = 3,
+    Arcade = 11,
+    BoardGames = 28,
+    Card = 17,
+    Casual = 40,
+    Educational = 34,
+    Family = 19,
+    Fighting = 6,
+    Indie = 51,
+    MassivelyMultiplayer = 59,
+    Platformer = 83,
+    Puzzle = 7,
+    Racing = 1,
+    RPG = 5,
+    Shooter = 2,
+    Simulation = 14,
+    Sports = 15,
+    Strategy = 10,
+}
+
+public enum GameParentPlatform
+{
+    PC = 1,
+    PlayStation = 2,
+    Xbox = 3,
+    iOS = 4,
+    Android = 8,
+    AppleMacintosh = 5,
+    Linux = 6,
+    Nintendo = 7,
+    Atari = 9,
+    CommodoreAmiga = 10,
+    SEGA = 11,
+    _3DO = 12,
+    NeoGeo = 13,
+    Web = 14
 }
 
 public enum GamePlatform

@@ -1,6 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.Models;
+using Microsoft.AspNetCore.Identity;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Backend_TerraBeegle.Services;
+using Microsoft.OpenApi;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +21,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .WithExposedHeaders("Retry-After");
     });
 });
 
@@ -20,9 +31,112 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// 3. Configurazione JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (jwtKey is null || jwtKey.Length < 32)
+{
+    Console.Error.WriteLine("Jwt:Key must be at least 32 characters long for security reasons.");
+    Environment.Exit(1);
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // implicit authentication method header is Authorization: Bearer....
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false; // disable renaming of claims
+        options.TokenValidationParameters = new TokenValidationParameters // list of validation paramters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+
+            ValidateLifetime = true,
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)) //transforms the key in symmetric bytes
+        };
+    });
+
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Put login token (without \"Bearer \")."
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+         [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    });
+});
+
+// Aggiungi rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    // 429 = "Too Many Requests", codice per rate limiting
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+        
+        await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too many requests",
+            Detail = "Too many requests. Try again in a minute."
+        }, cancellationToken);
+    };
+
+    // policy "login": ogni IP a un singolo contor
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,                    // max 5 request
+                Window = TimeSpan.FromMinutes(1),   // per minut
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("register", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions()
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    // qui si potrebbe aggiungere un altro policy
+});
+
+// Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// All the errors (including empty 401/403/404) are returned as ProblemDetails
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+// Aggiunge IHttpClientFactory per le chiamate HTTP esterne
+builder.Services.AddHttpClient("RawgAPI", client =>
+{
+    client.BaseAddress = new Uri("https://api.rawg.io/api/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
 var app = builder.Build();
 
@@ -36,21 +150,31 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
         app.Logger.LogInformation("Database PostgreSQL verificato e pronto.");
     }
-    catch (Exception ex)
+    // Only "Postgres is not reachable" is tolerated; any other error (e.g. PendingModelChangesException
+    // when a model was changed without a migration) stops the app so it is noticed immediately
+    catch (Npgsql.NpgsqlException ex)
     {
-        app.Logger.LogWarning("Impossibile connettersi a PostgreSQL all'avvio ({Message}). Verifica che il server sia attivo.", ex.Message);
+        app.Logger.LogWarning(ex, "Impossibile connettersi a PostgreSQL all'avvio. Verifica che il server sia attivo.");
     }
 }
 
 // Configure the HTTP request pipeline.
+// First middleware, so it catches the exceptions from everything after it
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseStatusCodePages();
 app.UseCors("AllowAngularDev");
+app.UseRateLimiter();
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 
 // --- Endpoints API ---
 
@@ -64,29 +188,4 @@ app.MapGet("/api/health", () => Results.Ok(new
 }))
 .WithName("GetHealthStatus");
 
-// Endpoint template di default
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
