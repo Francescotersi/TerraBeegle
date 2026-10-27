@@ -38,7 +38,25 @@ public class UserController(AppDbContext db) : ControllerBase
             TotalPages = (totalCount + pagination.PageSize - 1) / pagination.PageSize
         };
     }
-    
+
+    [Authorize]
+    [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest("Query cannot be empty.");
+        }
+
+        var trimmedQuery = query.Trim();
+        var users = await db.Users
+            .Where(u => u.Username.Contains(trimmedQuery))
+            .ProjectToType<UserPublicResponseDTO>()
+            .ToListAsync();
+        return users;
+    }
+
+    [Authorize]
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
     {
@@ -74,6 +92,7 @@ public class UserController(AppDbContext db) : ControllerBase
     {
         if(!IsCurrentUser(id))
             return Forbid();
+
         // Patch which does not allow empty string or whitespaces.
         var user = await db.Users.FindAsync(id);
         if (user is null)
@@ -171,6 +190,6 @@ public class UserController(AppDbContext db) : ControllerBase
     private static bool IsHttpUrl(string value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

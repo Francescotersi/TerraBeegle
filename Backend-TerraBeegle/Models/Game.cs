@@ -9,11 +9,21 @@ public class Game
     public string Title { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string Description { get; set; } = null!;
-    public string? CoverImageUrl { get; set; }
+    public string? BackgroundImage { get; set; }
     public DateOnly? ReleaseDate { get; set; }
     public bool Tba { get; set; }
+    public string? Website { get; set; }
+
     public decimal? Rating { get; set; }
+    public int? RatingCount { get; set; }
+    public int? Rating5count { get; set; }
+    public int? Rating4count { get; set; }
+    public int? Rating3count { get; set; }
+    public int? Rating2count { get; set; }
+    public int? Rating1count { get; set; }
     public int? Metacritic { get; set; }
+
+    public string? NameOriginal { get; set; }
     public string? Developer { get; set; }
     public string? Publisher { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

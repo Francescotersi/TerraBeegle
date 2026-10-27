@@ -81,9 +81,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(f => f.Status)
                 .HasConversion<string>();
             
-            //e.ToTable(t => t.HasCheckConstraint("ck_friendships_not_self", "\"UserId\" <> \"FriendId\""));
-            
+            e.Property(f => f.ReceiverId)
+                .IsRequired();
+
             e.Property(f => f.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            e.Property(f => f.UpdatedAt)
                 .HasDefaultValueSql("NOW()");
 
             e.HasIndex(f => new { f.User1Id, f.User2Id }).IsUnique();
@@ -120,7 +124,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasColumnType("text");
 
-            e.Property(g => g.CoverImageUrl)
+            e.Property(g => g.BackgroundImage)
                 .HasMaxLength(500);
 
             e.Property(g => g.ReleaseDate)

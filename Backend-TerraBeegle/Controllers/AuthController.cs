@@ -23,6 +23,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         // Checking if the email or username already exists
         var email = dto.Email.Trim().ToLowerInvariant();
         var username = dto.Username.Trim();
+
         bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
         bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
@@ -54,7 +55,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         string token = tokenService.CreateToken(user);
         
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id},  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
     
     [EnableRateLimiting("login")]

@@ -10,7 +10,7 @@ public enum FriendshipStatus
 {
     Pending,
     Accepted,
-    Blocked
+    Rejected
 }
 
 public enum GameGenre
