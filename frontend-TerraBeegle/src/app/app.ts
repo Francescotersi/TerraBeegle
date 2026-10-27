@@ -12,7 +12,7 @@ import { HeaderComponent } from './header/header.component';
 
 		<app-header />
 
-		<main class="container py-4 content">
+		<main class="w-100 py-4 content">
 			<router-outlet />
 		</main>
 	`,

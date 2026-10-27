@@ -1,35 +1,44 @@
 import { Component, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
+
+// to do
+
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LiquidGlassComponent],
   template: `
-    <nav class="sidebar-card p-3 shadow-sm rounded-4">
+    <app-liquid-glass
+      borderRadius="24px"
+      blur="2px"
+      [scale]="85"
+    >
+      <nav class="sidebar-content p-3 w-100">
 
-      <!-- Barra di ricerca -->
-      <div class="mb-3">
-        <div class="input-group input-group-sm">
-          <input
-            type="search"
-            class="form-control sidebar-search rounded-3"
-            placeholder="Search Filters..."
-            [value]="searchQuery()"
-            (input)="onSearchInput($event)"
-          />
+        <!-- Barra di ricerca -->
+        <div class="mb-5">
+          <div class="input-group input-group-sm">
+            <input
+              type="search"
+              class="form-control sidebar-search"
+              placeholder="Search Filters..."
+              [value]="searchQuery()"
+              (input)="onSearchInput($event)"
+            />
+          </div>
         </div>
-      </div>
 
-      <div class="mb-3 pb-2 border-bottom">
-        <a
-          class="nav-link sidebar-item rounded-3 fw-bold"
-          routerLink="/"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-        >
-          All Games
-        </a>
-      </div>
+        <div class="mb-3 pb-2 border-bottom border-light-subtle">
+          <a
+            class="nav-link sidebar-item rounded-3 fw-bold"
+            routerLink="/"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            All Games
+          </a>
+        </div>
 
       <!-- Generi -->
       <div class="category-group mb-2">
@@ -39,7 +48,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           (click)="toggleSection('genres')"
         >
           <span class="fw-bold small text-uppercase">
-            Genres ({{ filteredGenres().length }})
+            Genres
           </span>
           <span class="chevron" [class.open]="isSectionOpen('genres')">▾</span>
         </button>
@@ -71,7 +80,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           (click)="toggleSection('tags')"
         >
           <span class="fw-bold small text-uppercase">
-            Tags ({{ filteredTags().length }})
+            Tags
           </span>
           <span class="chevron" [class.open]="isSectionOpen('tags')">▾</span>
         </button>
@@ -103,7 +112,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           (click)="toggleSection('platforms')"
         >
           <span class="fw-bold small text-uppercase">
-            Platforms ({{ filteredPlatforms().length }})
+            Platforms
           </span>
           <span class="chevron" [class.open]="isSectionOpen('platforms')">▾</span>
         </button>
@@ -135,7 +144,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           (click)="toggleSection('publishers')"
         >
           <span class="fw-bold small text-uppercase">
-            Publishers ({{ filteredPublishers().length }})
+            Publishers
           </span>
           <span class="chevron" [class.open]="isSectionOpen('publishers')">▾</span>
         </button>
@@ -159,22 +168,34 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         </div>
       </div>
     </nav>
+  </app-liquid-glass>
   `,
   styles: `
-    .sidebar-card {
-      background-color: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(0, 0, 0, 0.08);
+    :host {
+      display: block;
+      width: 100%;
+    }
+    app-liquid-glass {
+      display: block;
+      width: 100%;
+    }
+    .sidebar-content {
+      background: transparent;
+      width: 100%;
     }
     .sidebar-search {
-      background-color: rgba(248, 250, 252, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.1);
+      background-color: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
       font-size: 0.85rem;
       padding: 0.4rem 0.75rem;
+      color: inherit;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
     }
     .sidebar-search:focus {
-      border-color: #c16dc9;
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+      background-color: rgba(255, 255, 255, 0.75);
+      border-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
     }
     /* Pulsante dell'intestazione categoria */
     .category-btn {
@@ -183,7 +204,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       transition: background 0.2s ease, color 0.2s ease;
     }
     .category-btn:hover {
-      background-color: rgba(56, 189, 248, 0.08);
+      background-color: rgba(56, 189, 248, 0.12);
       color: #0284c7;
     }
     /* Freccetta che ruota quando la sezione è aperta */
@@ -226,6 +247,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       background-color: #38bdf8 !important;
       color: #ffffff !important;
       font-weight: 600;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
     }
     .sidebar-item {
       color: #1e293b;
@@ -239,8 +261,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       color: #0284c7;
     }
     .sidebar-item.active {
-      background-color: #38bdf8 !important;
-      color: #ffffff !important;
+      background-color: rgba(56, 189, 248, 0.18);
+      color: #0284c7;
     }
   `,
 })

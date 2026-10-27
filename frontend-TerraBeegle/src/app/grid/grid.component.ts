@@ -1,5 +1,5 @@
 import { Component, signal, computed } from '@angular/core';
-import { LiquidGlassComponent } from '../ui/LiquidGlass/liquid-glass.component';
+import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
 
 interface GridComponentProps {
   rawgGameId: number;
@@ -22,9 +22,13 @@ interface GridComponentProps {
   imports: [LiquidGlassComponent],
   selector: 'app-grid-component',
   template: `
-  <app-liquid-glass [borderWidth]="0.10" [borderWidth]="19">
-    <div class="py-4 grid-wrapper mx-auto">
-      <h2 class="h3 fw-bold mb-4 text-center">super</h2>
+  <app-liquid-glass
+    borderRadius="26px"
+    blur="2px"
+    [scale]="85"
+  >
+    <div class="p-4 grid-wrapper mx-auto">
+      <h2 class="h3 fw-bold mb-4 text-center">Beegle's Games Catalog</h2>
 
       <div
         class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3
@@ -64,7 +68,7 @@ interface GridComponentProps {
       @if (hasMoreGames()) {
         <div class="text-center mt-5">
           <button 
-            class="btn btn-primary px-4 py-2 fw-semibold shadow-sm" 
+            class="btn btn-show-more px-4 py-2 fw-semibold shadow-sm" 
             type="button"
             (click)="showMore()"
           >
@@ -76,8 +80,36 @@ interface GridComponentProps {
   </app-liquid-glass>
   `,
   styles: `
+    :host {
+      display: block;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    app-liquid-glass {
+      display: block;
+      width: 100%;
+    }
+
     .grid-wrapper {
       max-width: 1000px;
+      width: 100%;
+    }
+
+    .btn-show-more {
+      background: rgba(56, 189, 248, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      color: #fff;
+      transition: all 0.2s ease;
+    }
+    .btn-show-more:hover {
+      background: rgba(14, 165, 233, 0.95);
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+      color: #fff;
     }
 
     .game-card {
@@ -149,7 +181,6 @@ interface GridComponentProps {
   `,
 })
 export class GridComponent {
-
   private readonly step = 20;
   protected readonly visibleCount = signal(20);
 
