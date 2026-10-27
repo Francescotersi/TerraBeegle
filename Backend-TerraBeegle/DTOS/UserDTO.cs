@@ -9,6 +9,8 @@ public class UserPublicResponseDTO
     public long Id { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
+    public List<GameResponseDTO>? Favorites { get; set; }
+    public List<GameResponseDTO>? Whishlist { get; set; }
 }
 
 public class UserResponseDTO
@@ -48,7 +50,7 @@ public class UpdatePasswordDTO
 {
     [Required]
     [MinLength(8)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$!%*?&])[A-Za-z\d@#$!%*?&]{8,}$", 
         ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
     public string Password { get; set; } = string.Empty;
 }

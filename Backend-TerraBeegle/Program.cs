@@ -71,10 +71,10 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Put login token (without \"Bearer \")."
     });
 
-    // options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    // {
-    //     [new OpenApiSecuritySchemeReference("bearer", document)] = []
-    // });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+         [new OpenApiSecuritySchemeReference("bearer", document)] = []
+    });
 });
 
 // Aggiungi rate limiting
@@ -150,9 +150,11 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
         app.Logger.LogInformation("Database PostgreSQL verificato e pronto.");
     }
-    catch (Exception ex)
+    // Only "Postgres is not reachable" is tolerated; any other error (e.g. PendingModelChangesException
+    // when a model was changed without a migration) stops the app so it is noticed immediately
+    catch (Npgsql.NpgsqlException ex)
     {
-        app.Logger.LogWarning("Impossibile connettersi a PostgreSQL all'avvio ({Message}). Verifica che il server sia attivo.", ex.Message);
+        app.Logger.LogWarning(ex, "Impossibile connettersi a PostgreSQL all'avvio. Verifica che il server sia attivo.");
     }
 }
 

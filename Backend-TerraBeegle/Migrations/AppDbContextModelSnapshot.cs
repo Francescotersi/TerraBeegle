@@ -42,6 +42,11 @@ namespace Backend_TerraBeegle.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
                     b.Property<long>("User1Id")
                         .HasColumnType("bigint");
 
@@ -66,7 +71,7 @@ namespace Backend_TerraBeegle.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("CoverImageUrl")
+                    b.Property<string>("BackgroundImage")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -86,6 +91,9 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<int?>("Metacritic")
                         .HasColumnType("integer");
 
+                    b.Property<string>("NameOriginal")
+                        .HasColumnType("text");
+
                     b.Property<string>("Publisher")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -93,6 +101,24 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<decimal?>("Rating")
                         .HasPrecision(4, 2)
                         .HasColumnType("numeric(4,2)");
+
+                    b.Property<int?>("Rating1count")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rating2count")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rating3count")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rating4count")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rating5count")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RatingCount")
+                        .HasColumnType("integer");
 
                     b.Property<int>("RawgGameId")
                         .HasColumnType("integer");
@@ -117,6 +143,9 @@ namespace Backend_TerraBeegle.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
