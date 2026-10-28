@@ -25,20 +25,25 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   - Problema inițială: `UserPublicResponseDTO` are `Favorites` / `Whishlist`. `Whishlist` e mereu `null`
     (în `User` proprietatea e `WishlistItems`, și „Whishlist” e scris greșit), iar `Favorites` se încarcă (probabil)
     la fiecare user din `GetAll` și `Search` prin `ProjectToType`.
-  - [ ] în `IRawgService` (35): `GetOrCreateGameAsync(rawgGameId)` — caută jocul după `RawgGameId`, iar dacă nu
+  - [x] în `IRawgService` (35): `GetOrCreateGameAsync(rawgGameId)` — caută jocul după `RawgGameId`, iar dacă nu
         există îl ia de la RAWG și îl salvează (cu genuri și platforme); joc inexistent la RAWG → 404
-  - [ ] endpoint-uri (controller nou, ex: `UserGamesController` cu `[Route("api/users/{userId:long}")]`):
-        - `GET    /api/users/{userId}/favorites` — listă paginată (`PagedResponseDTO<GameCardDTO>`)
+  - [x] endpoint-uri (controller nou, ex: `UserGamesController` cu `[Route("api/users/{userId:long}")]`):
+        - `GET    /api/users/{userId}/favorites` — listă (fără paginare)
         - `POST   /api/users/{userId}/favorites/{rawgGameId}` — adaugă
         - `DELETE /api/users/{userId}/favorites/{rawgGameId}` — scoate
         - aceleași trei pentru `/wishlist`
-  - [ ] `POST` / `DELETE` doar pentru userul din token (`IsCurrentUser`); de decis cine vede listele
-        (orice user logat sau doar proprietarul)
-  - [ ] joc adăugat de două ori → de decis: 409 sau 204 fără eroare (mai simplu pentru frontend)
-  - [ ] adăugare cu `Include(u => u.Favorites.Where(g => g.Id == game.Id))` + `user.Favorites.Add(game)`;
-        listare direct în SQL cu `SelectMany(u => u.Favorites)` + `ProjectToType` + paginare
-  - [ ] `Favorites` / `Whishlist` șterse din `UserPublicResponseDTO` → listele de useri nu mai încarcă jocuri
-  - [ ] de verificat: `Genre.RawgGenreId` / `Platform.RawgPlatformId` sunt enum-uri (`GameGenre`, `GamePlatform`) —
+  - [x] `POST` / `DELETE` doar pentru userul din token (`IsCurrentUser`)
+  - [ ] `GET` favorite / wishlist doar pentru proprietar și prietenii lui (prietenie `Accepted`), altfel 403
+        - perechea din `Friendships` e salvată ordonată (`User1Id` = id-ul mai mic), deci verificarea cu
+          `Math.Min` / `Math.Max`, ca în `FriendshipController`
+        - id-ul userului din token ca număr → extension method `User.GetUserId()` pe `ClaimsPrincipal`,
+          folosit în locul celor 3 copii de `IsCurrentUser` (User, Friendship, UserGames)
+  - [x] joc adăugat de două ori → de decis: 409 sau 204 fără eroare (mai simplu pentru frontend) → decis: 204
+        (`DELETE` pentru un joc care nu e în listă → 404)
+  - [x] adăugare cu `Include(u => u.Favorites.Where(g => g.Id == game.Id))` + `user.Favorites.Add(game)`;
+        listare direct în SQL cu `SelectMany(u => u.Favorites)` + `ProjectToType`
+  - [x] `Favorites` / `Whishlist` șterse din `UserPublicResponseDTO` → listele de useri nu mai încarcă jocuri
+  - [x] de verificat: `Genre.RawgGenreId` / `Platform.RawgPlatformId` sunt enum-uri (`GameGenre`, `GamePlatform`) —
         genurile / platformele noi de la RAWG care nu sunt în enum trebuie să poată fi salvate
 
 - [ ] **36. 🔴 `GET /api/games` — căutare, filtre, sortare, paginare (Home, Basic + Advanced search, listă)**

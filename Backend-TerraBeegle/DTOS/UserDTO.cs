@@ -9,8 +9,6 @@ public class UserPublicResponseDTO
     public long Id { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
-    public List<GameResponseDTO>? Favorites { get; set; }
-    public List<GameResponseDTO>? Whishlist { get; set; }
 }
 
 public class UserResponseDTO
