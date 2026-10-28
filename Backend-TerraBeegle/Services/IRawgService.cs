@@ -1,9 +1,11 @@
 using Backend_TerraBeegle.DTOS;
+using Backend_TerraBeegle.Models;
 
 namespace Backend_TerraBeegle.Services;
 
 public interface IRawgService
 {
-    // null = the game does not exist on RAWG
     Task<GameResponseDTO?> GetGameAsync(int rawgGameId);
+
+    Task<Game?> GetOrCreateGameAsync(int rawgGameId);
 }
