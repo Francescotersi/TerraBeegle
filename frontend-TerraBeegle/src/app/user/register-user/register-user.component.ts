@@ -1,11 +1,12 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../../services/auth.service';
 
 interface UserModel {
   name: string;
-  surname: string;
+  familyName: string;
   username: string;
   email: string;
   password: string;
@@ -44,16 +45,16 @@ interface UserModel {
                 </div>
                 <!-- Name e Username -->
                 <div class="col-6">
-                  <label for="surname" class="form-label fw-semibold small text-dark">Last name</label>
+                  <label for="familyName" class="form-label fw-semibold small text-dark">Last name</label>
                   <input
                     type="text"
-                    id="surname"
+                    id="familyName"
                     class="form-control glass-input"
                     placeholder="Rossi"
-                    [formField]="registerForm.surname"
-                    [class.is-invalid]="registerForm.surname().invalid() && registerForm.surname().touched()"
+                    [formField]="registerForm.familyName"
+                    [class.is-invalid]="registerForm.familyName().invalid() && registerForm.familyName().touched()"
                   />
-                  @if (registerForm.surname().invalid() && registerForm.surname().touched()) {
+                  @if (registerForm.familyName().invalid() && registerForm.familyName().touched()) {
                     <div class="invalid-feedback fw-medium">Last name is required.</div>
                   }
                 </div>
@@ -100,16 +101,29 @@ interface UserModel {
                   [class.is-invalid]="registerForm.password().invalid() && registerForm.password().touched()"
                 />
                 @if (registerForm.password().invalid() && registerForm.password().touched()) {
-                  <div class="invalid-feedback fw-medium">The password must be at least 6 characters long.</div>
+                  <div class="invalid-feedback fw-medium">The password must be at least 8 characters long.</div>
                 }
               </div>
+
+              <!-- Errore dal backend -->
+              @if (errorMessage()) {
+                <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
+                  {{ errorMessage() }}
+                </div>
+              }
+
               <!-- Register -->
               <button
                 type="submit"
                 class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm"
-                [disabled]="registerForm().invalid()"
+                [disabled]="registerForm().invalid() || isLoading()"
               >
-                Register
+                @if (isLoading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating account...
+                } @else {
+                  Register
+                }
               </button>
               <!-- Link a Login -->
               <div class="text-center mt-4">
@@ -173,9 +187,13 @@ interface UserModel {
   `,
 })
 export class RegisterUser {
+  private readonly authService = inject(AuthService);
+  protected readonly isLoading = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
+
   protected readonly userModel = signal<UserModel>({
     name: '',
-    surname: '',
+    familyName: '',
     username: '',
     email: '',
     password: '',
@@ -185,8 +203,8 @@ export class RegisterUser {
     required(schema.name, { message: 'Name is required' });
     minLength(schema.name, 1, { message: 'Name must be at least 1 characters long' });
 
-    required(schema.surname, { message: 'Surname is required' });
-    minLength(schema.surname, 1, { message: 'Surname must be at least 1 characters long' });
+    required(schema.familyName, { message: 'familyName is required' });
+    minLength(schema.familyName, 1, { message: 'familyName must be at least 1 characters long' });
 
     required(schema.username, { message: 'Username is required' });
     minLength(schema.username, 1, { message: 'Username must be at least 3 characters long' });
@@ -195,14 +213,34 @@ export class RegisterUser {
     email(schema.email);
 
     required(schema.password, { message: 'Password is required' });
-    minLength(schema.password, 6, { message: 'Password must be at least 6 characters long' });
+    minLength(schema.password, 8, { message: 'Password must be at least 8 characters long' });
   });
 
   protected onSubmit(): void {
-      if (this.registerForm().valid()) {
-      const data = this.userModel();
-      console.log('Dati di register pronti per il backend .NET:', data);
-        // send stuff to backend
+    if (this.registerForm().invalid() || this.isLoading()) {
+      return;
     }
+    const data = this.userModel();
+    
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.authService.register(this.userModel()).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        console.log('Registrazione completata con successo.', data);
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+        
+        if (error.error?.detail) {
+          this.errorMessage.set(error.error.detail);
+        } else if (error.error?.errors) {
+          const firstKey = Object.keys(error.error.errors)[0];
+          this.errorMessage.set(error.error.errors[firstKey][0]);
+        } else {
+          this.errorMessage.set('Registration failed. Please check your inputs.');
+        }
+      }
+    });  
   }
 }
