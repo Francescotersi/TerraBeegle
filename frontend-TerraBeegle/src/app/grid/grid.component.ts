@@ -98,16 +98,17 @@ interface GridComponentProps {
     }
 
     .btn-show-more {
-      background: rgba(56, 189, 248, 0.85);
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
       border: 1px solid rgba(255, 255, 255, 0.6);
       backdrop-filter: blur(8px);
       border-radius: 20px;
       color: #fff;
       transition: all 0.2s ease;
+      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.3);
     }
     .btn-show-more:hover {
-      background: rgba(14, 165, 233, 0.95);
-      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      box-shadow: 0 4px 16px rgba(244, 114, 182, 0.45);
       transform: translateY(-2px);
       color: #fff;
     }

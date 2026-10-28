@@ -127,13 +127,13 @@ interface LoginData {
 
     .glass-input:focus {
       background: rgba(255, 255, 255, 0.75);
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.22);
+      border-color: #f472b6;
+      box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.22);
       outline: none;
     }
 
     .glass-btn {
-      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
       border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 12px;
       transition: all 0.25s ease;
@@ -141,8 +141,8 @@ interface LoginData {
 
     .glass-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4) !important;
-      background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+      box-shadow: 0 8px 20px rgba(244, 114, 182, 0.4) !important;
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
     }
 
     .glass-btn:disabled {
@@ -151,12 +151,12 @@ interface LoginData {
     }
 
     .glass-link {
-      color: #0284c7;
+      color: #db2777;
       transition: color 0.2s ease;
     }
 
     .glass-link:hover {
-      color: #0369a1;
+      color: #be185d;
       text-decoration: underline !important;
     }
   `,

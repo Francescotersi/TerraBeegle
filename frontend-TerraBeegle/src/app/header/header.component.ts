@@ -85,7 +85,7 @@ import { AuthService } from '../services/auth.service';
                 placeholder="Search"
                 aria-label="Search"
               />
-              <button class="btn btn-outline-success search-btn" type="submit">
+              <button class="btn search-btn" type="submit">
                 Search
               </button>
             </form>
@@ -163,12 +163,12 @@ import { AuthService } from '../services/auth.service';
     }
 
     .nav-link:hover {
-      background: rgba(56, 189, 248, 0.12);
-      color: #0284c7;
+      background: rgba(244, 114, 182, 0.12);
+      color: #db2777;
     }
 
     .nav-link.active {
-      color: #0284c7;
+      color: #db2777;
       font-weight: 600;
     }
 
@@ -183,19 +183,34 @@ import { AuthService } from '../services/auth.service';
       padding: 0.375rem 0.85rem;
       color: inherit;
       width: 170px;
-      transition: background 0.2s ease, box-shadow 0.2s ease, width 0.2s ease;
+      transition: background 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, border-color 0.2s ease;
     }
 
     .search-input:focus {
       background: rgba(255, 255, 255, 0.75);
-      border-color: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
+      border-color: rgba(244, 114, 182, 0.6);
+      box-shadow: 0 0 0 0.25rem rgba(244, 114, 182, 0.25);
       width: 200px;
     }
 
     .search-btn {
       border-radius: 20px;
       white-space: nowrap;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      color: #db2777;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(244, 114, 182, 0.45);
+      transition: all 0.2s ease;
+    }
+
+    .search-btn:hover {
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.35);
+      transform: translateY(-1px);
     }
 
     .header-auth-group {
@@ -212,28 +227,28 @@ import { AuthService } from '../services/auth.service';
     }
 
     .btn-login {
-      color: #0284c7;
-      background: rgba(255, 255, 255, 0.45);
-      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #db2777;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(244, 114, 182, 0.45);
     }
 
     .btn-login:hover {
-      background: rgba(56, 189, 248, 0.15);
-      color: #0369a1;
-      border-color: rgba(56, 189, 248, 0.7);
+      background: rgba(244, 114, 182, 0.15);
+      color: #be185d;
+      border-color: rgba(244, 114, 182, 0.7);
       transform: translateY(-1px);
     }
 
     .btn-register {
-      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.3);
     }
 
     .btn-register:hover {
-      background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      box-shadow: 0 4px 16px rgba(244, 114, 182, 0.45);
       transform: translateY(-1px);
       color: #ffffff;
     }

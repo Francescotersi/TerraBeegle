@@ -194,8 +194,8 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
     }
     .sidebar-search:focus {
       background-color: rgba(255, 255, 255, 0.75);
-      border-color: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
+      border-color: rgba(244, 114, 182, 0.6);
+      box-shadow: 0 0 0 0.25rem rgba(244, 114, 182, 0.25);
     }
     /* Pulsante dell'intestazione categoria */
     .category-btn {
@@ -204,26 +204,36 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
       transition: background 0.2s ease, color 0.2s ease;
     }
     .category-btn:hover {
-      background-color: rgba(56, 189, 248, 0.12);
-      color: #0284c7;
+      background-color: rgba(244, 114, 182, 0.12);
+      color: #db2777;
     }
     /* Freccetta che ruota quando la sezione è aperta */
     .chevron {
       font-size: 0.9rem;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, color 0.2s ease;
       display: inline-block;
       transform: rotate(-90deg);
+      color: #94a3b8;
     }
     .chevron.open {
       transform: rotate(0deg);
+      color: #db2777;
     }
     /* Elenco interno a tendina in vera lista verticale con scrollbar sottile */
     .category-list {
       max-height: 180px;
       overflow-y: auto;
       scrollbar-width: thin;
+      scrollbar-color: rgba(244, 114, 182, 0.4) transparent;
       padding-left: 0.5rem;
       padding-right: 0.25rem;
+    }
+    .category-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .category-list::-webkit-scrollbar-thumb {
+      background: rgba(244, 114, 182, 0.35);
+      border-radius: 4px;
     }
     .category-item {
       margin-bottom: 2px;
@@ -239,15 +249,15 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
       transition: all 0.15s ease;
     }
     .sidebar-list-link:hover {
-      background-color: rgba(56, 189, 248, 0.12);
-      color: #0284c7;
+      background-color: rgba(244, 114, 182, 0.12);
+      color: #db2777;
       transform: translateX(4px);
     }
     .sidebar-list-link.active {
-      background-color: #38bdf8 !important;
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%) !important;
       color: #ffffff !important;
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
+      box-shadow: 0 3px 10px rgba(244, 114, 182, 0.35);
     }
     .sidebar-item {
       color: #1e293b;
@@ -257,12 +267,13 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
       transition: all 0.15s ease;
     }
     .sidebar-item:hover {
-      background-color: rgba(56, 189, 248, 0.12);
-      color: #0284c7;
+      background-color: rgba(244, 114, 182, 0.12);
+      color: #db2777;
     }
     .sidebar-item.active {
-      background-color: rgba(56, 189, 248, 0.18);
-      color: #0284c7;
+      background-color: rgba(244, 114, 182, 0.18);
+      color: #db2777;
+      font-weight: 600;
     }
   `,
 })
