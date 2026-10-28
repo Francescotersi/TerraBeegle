@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -91,6 +92,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
 
             <!-- Pulsanti Login e Register a destra sulla stessa row -->
             <div class="d-flex align-items-center gap-2 ms-lg-3 header-auth-group">
+            @if (!authService.isLoggedIn()) {
               <a
                 class="btn btn-sm auth-btn btn-login text-decoration-none"
                 routerLink="/login"
@@ -105,6 +107,15 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
               >
                 Register
               </a>
+            } @else {
+                Ciao {{ authService.currentUser()?.name }}!
+              <a
+                class="btn btn-sm auth-btn btn-login text-decoration-none"
+                (click)="authService.logout(); isMenuOpen.set(false)"
+              >
+                Log Out
+              </a>
+            }
             </div>
           </div>
         </div>
@@ -253,6 +264,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
   `,
 })
 export class HeaderComponent {
+  protected readonly authService = inject(AuthService);
   protected readonly isMenuOpen = signal(false);
 
   protected toggleMenu(): void {
@@ -261,6 +273,4 @@ export class HeaderComponent {
 
   // Da implementare
   protected onSearch(): void { }
-  protected onLogin(): void { }
-  protected onRegister(): void { }
 }

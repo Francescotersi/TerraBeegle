@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 import { AuthService } from '../../services/auth.service';
@@ -190,6 +190,7 @@ export class RegisterUser {
   private readonly authService = inject(AuthService);
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly router = inject(Router);
 
   protected readonly userModel = signal<UserModel>({
     name: '',
@@ -225,9 +226,10 @@ export class RegisterUser {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.authService.register(this.userModel()).subscribe({
-      next: () => {
+      next: (response) => {
         this.isLoading.set(false);
-        console.log('Registrazione completata con successo.', data);
+        console.log('Registration was successfull', data);
+        this.router.navigate(['/login']);
       },
       error: (error) => {
         this.isLoading.set(false);
