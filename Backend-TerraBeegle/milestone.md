@@ -2,6 +2,81 @@
 
 Stare actuală: CRUD complet pentru User (register, login, get all, get by id, patch, delete).
 
+## 🔴 URGENT — endpoint-urile RAWG (funcționalitățile obligatorii din subiect)
+
+Subiectul (`docs/en.game_explorer.pdf`, cap. IV.1) cere ca obligatorii: home page cu jocuri, căutare după nume,
+căutare avansată (gen, platformă, an, rating, sortare), listă de carduri și pagina de detaliu. Valorează **10 puncte**
+(„Correctness and completeness of the mandatory features”), iar bonusurile (auth, prietenii etc.) contează doar
+după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGameId}`, iar `GET /api/games`
+întoarce jocurile din baza de date (goală). Ordinea de lucru: 35 → 32 → 36 → 37 → 38 → 39.
+
+- [x] **35. 🔴 `IRawgService` — tot codul pentru RAWG într-un singur loc**
+  Acum apelul RAWG e în `GameController`; cu punctele 36–38 și cu favoritele (32) ar apărea în mai multe locuri.
+  Subiectul punctează explicit „modularity, code reuse and separation of concerns” (cod 10 puncte).
+  - [x] `IRawgService` + `RawgService`, înregistrat în `Program.cs` (ca `ITokenService`)
+  - [x] `HttpClient`-ul `"RawgAPI"`, cheia (`EnvironmentVariables:RAWG_API_KEY`) și `RawgJsonOptions` (snake_case)
+        se mută în serviciu
+  - [x] la pornire, verificare că `RAWG_API_KEY` există (ca la `Jwt:Key`) — fără cheie nimic nu merge
+  - [x] `GameController` devine subțire: doar apelează serviciul și întoarce rezultatul
+
+- [ ] **32. 🔴 Favorite (obligatoriu, IV.1.6) + wishlist (bonus, VII.4)**
+  Subiectul cere ca userul să poată adăuga / scoate jocuri din favorite și să le vadă într-o secțiune separată.
+  Wishlist-ul e bonus, dar e aproape același cod. Modelele și tabelele (`favorite_games`, `wishlist_games`) există deja.
+  - Problema inițială: `UserPublicResponseDTO` are `Favorites` / `Whishlist`. `Whishlist` e mereu `null`
+    (în `User` proprietatea e `WishlistItems`, și „Whishlist” e scris greșit), iar `Favorites` se încarcă (probabil)
+    la fiecare user din `GetAll` și `Search` prin `ProjectToType`.
+  - [ ] în `IRawgService` (35): `GetOrCreateGameAsync(rawgGameId)` — caută jocul după `RawgGameId`, iar dacă nu
+        există îl ia de la RAWG și îl salvează (cu genuri și platforme); joc inexistent la RAWG → 404
+  - [ ] endpoint-uri (controller nou, ex: `UserGamesController` cu `[Route("api/users/{userId:long}")]`):
+        - `GET    /api/users/{userId}/favorites` — listă paginată (`PagedResponseDTO<GameCardDTO>`)
+        - `POST   /api/users/{userId}/favorites/{rawgGameId}` — adaugă
+        - `DELETE /api/users/{userId}/favorites/{rawgGameId}` — scoate
+        - aceleași trei pentru `/wishlist`
+  - [ ] `POST` / `DELETE` doar pentru userul din token (`IsCurrentUser`); de decis cine vede listele
+        (orice user logat sau doar proprietarul)
+  - [ ] joc adăugat de două ori → de decis: 409 sau 204 fără eroare (mai simplu pentru frontend)
+  - [ ] adăugare cu `Include(u => u.Favorites.Where(g => g.Id == game.Id))` + `user.Favorites.Add(game)`;
+        listare direct în SQL cu `SelectMany(u => u.Favorites)` + `ProjectToType` + paginare
+  - [ ] `Favorites` / `Whishlist` șterse din `UserPublicResponseDTO` → listele de useri nu mai încarcă jocuri
+  - [ ] de verificat: `Genre.RawgGenreId` / `Platform.RawgPlatformId` sunt enum-uri (`GameGenre`, `GamePlatform`) —
+        genurile / platformele noi de la RAWG care nu sunt în enum trebuie să poată fi salvate
+
+- [ ] **36. 🔴 `GET /api/games` — căutare, filtre, sortare, paginare (Home, Basic + Advanced search, listă)**
+  Trimite cererea mai departe la `GET /games` de la RAWG și întoarce o listă de carduri.
+  - [ ] parametri din query (`[FromQuery]` într-un DTO, ca `PaginationDTO`): `search`, `genres`, `platforms`,
+        `year`, `ordering`, `metacritic`, `page`, `pageSize`
+  - [ ] traducerea pentru RAWG: `year=2020` → `dates=2020-01-01,2020-12-31`; `genres` / `platforms` ca ID-uri
+        separate prin virgulă; `page_size` maxim 40 (limita RAWG)
+  - [ ] `ordering` validat (doar `name`, `-released`, `-rating`, `-metacritic` și variantele lor) → 400 altfel
+  - [ ] **rating:** RAWG nu are filtru după rating — de decis: filtru după `metacritic` (ex: `80,100`), sau filtrare
+        după `rating` pe pagina primită (atenție: strică numărul de rezultate pe pagină)
+  - [ ] `GameCardDTO` cu ce cere subiectul pentru carduri: `rawgGameId`, `title`, `backgroundImage`, `releaseDate`,
+        `rating`, platformele principale (`parent_platforms` de la RAWG)
+  - [ ] răspuns `PagedResponseDTO<GameCardDTO>` (refolosit de la `GET /api/users`), `TotalCount` = `count` de la RAWG
+  - [ ] fără `search` și filtre → o selecție pentru Home (ex: `ordering=-rating`)
+  - [ ] `GET /api/games` de acum (jocurile din baza de date) dispare — favoritele au endpoint-ul lor (32)
+
+- [ ] **37. 🔴 Pagina de detaliu completă: developer, publisher, screenshots**
+  Subiectul (IV.1.5) cere și developer, publisher și imagini / screenshots. Acum `Developer` / `Publisher` vin
+  mereu `null` (nu sunt citite de la RAWG) și nu există screenshots.
+  - [ ] în `RawgResponseDTO`: `Developers` și `Publishers` (liste cu `name`), `DescriptionRaw` (descrierea fără HTML)
+  - [ ] în `GameResponseDTO`: listele de developeri / publisheri completate în ramura RAWG
+  - [ ] screenshots de la `GET /games/{id}/screenshots` (RAWG): ori în același răspuns (`Screenshots: string[]`),
+        ori endpoint separat `GET /api/games/{rawgGameId}/screenshots`
+  - [ ] erori ca la punctul 31: joc inexistent → 404, RAWG picat → 503
+
+- [ ] **38. 🔴 `GET /api/genres` și `GET /api/platforms` (pentru filtrele din căutarea avansată)**
+  Frontend-ul are nevoie de lista de genuri / platforme ca să afișeze filtrele.
+  - [ ] proxy către `GET /genres` și `GET /platforms/lists/parents` (sau `/platforms`) de la RAWG
+  - [ ] DTO-uri mici: `id`, `name`, `slug`
+  - [ ] cache cu `IMemoryCache` (ex: 24 de ore) — se schimbă rar, iar RAWG are limită de request-uri
+
+- [ ] **39. 🔴 Testare cu Postman + colecție exportată**
+  Subiectul (V.5) cere ca toate API-urile să fie verificate cu Postman și recomandă colecția ca documentație.
+  - [ ] o colecție cu toate endpoint-urile (auth, users, friendship, games, genres, platforms, favorites)
+  - [ ] cazuri de eroare: fără token (401), date invalide (400), joc inexistent (404), etc.
+  - [ ] colecția exportată în repo (ex: `docs/TerraBeegle.postman_collection.json`)
+
 ## Securitate
 
 - [x] **1. Autentificare cu JWT + autorizare**
@@ -190,21 +265,11 @@ salvați jocuri.
   genurile și platformele vin în același SELECT). `Slug` / `ReleasedAt` din `GenreDTO` / `PlatformDTO` rămân `null`
   pentru jocurile din baza de date, pentru că nu există în modele.
 
-- [ ] **31. Joc inexistent la RAWG → 503 în loc de 404**
+- [x] **31. Joc inexistent la RAWG → 503 în loc de 404**
   RAWG răspunde 404, `GetFromJsonAsync` aruncă `HttpRequestException`, iar `catch`-ul întoarce 503 „External API
   is unavailable”. Frontend-ul ar afișa „serviciul e picat” pentru un joc care nu există.
   Soluție: `catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)` → 404, înaintea
   `catch`-ului general → 503.
-
-## Useri — favorite / wishlist
-
-- [ ] **32. `Favorites` / `Whishlist` în `UserPublicResponseDTO`**
-  - `Whishlist` e mereu `null`: Mapster potrivește după nume, iar în `User` proprietatea e `WishlistItems`
-    (și „Whishlist” e scris greșit).
-  - `Favorites` se încarcă (probabil) la fiecare user din `GetAll` și `Search` prin `ProjectToType` → o pagină
-    de 20 de useri aduce și toate jocurile lor favorite. De confirmat cu un request.
-  - De decis împreună: un DTO separat pentru profil (`GetById`) sau endpoint-uri separate
-    (`GET /api/users/{id}/favorites`, `.../wishlist`), iar `UserPublicResponseDTO` rămâne mic pentru liste.
 
 ## Frontend ↔ backend
 

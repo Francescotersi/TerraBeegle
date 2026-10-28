@@ -128,6 +128,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IRawgService, RawgService>();
 
 // Aggiunge IHttpClientFactory per le chiamate HTTP esterne
 builder.Services.AddHttpClient("RawgAPI", client =>
@@ -137,6 +138,12 @@ builder.Services.AddHttpClient("RawgAPI", client =>
 });
 
 var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
+
+if (string.IsNullOrWhiteSpace(ApiKey))
+{
+    Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
+    Environment.Exit(1);
+}
 
 var app = builder.Build();
 
