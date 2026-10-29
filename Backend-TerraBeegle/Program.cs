@@ -34,7 +34,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 3. Configurazione JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
 
-if (jwtKey is null || jwtKey.Length < 32)
+// the startup checks are skipped when the app is started by "dotnet ef" (migrations): there the settings from .env
+// do not exist and they are not needed
+if (!EF.IsDesignTime && (jwtKey is null || jwtKey.Length < 32))
 {
     Console.Error.WriteLine("Jwt:Key must be at least 32 characters long for security reasons.");
     Environment.Exit(1);
@@ -55,9 +57,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // im
             ValidateLifetime = true,
 
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)) //transforms the key in symmetric bytes
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)) //transforms the key in symmetric bytes
         };
     });
+
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
@@ -129,6 +132,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IRawgService, RawgService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
 // Aggiunge IHttpClientFactory per le chiamate HTTP esterne
 builder.Services.AddHttpClient("RawgAPI", client =>
@@ -139,10 +144,22 @@ builder.Services.AddHttpClient("RawgAPI", client =>
 
 var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
-if (string.IsNullOrWhiteSpace(ApiKey))
+if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
 {
     Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
     Environment.Exit(1);
+}
+
+// without the SMTP settings the verification emails cannot be sent
+string[] smtpSettings = ["Smtp:Host", "Smtp:Port", "Smtp:User", "Smtp:Password", "Smtp:From"];
+
+foreach (var setting in smtpSettings)
+{
+    if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(builder.Configuration[setting]))
+    {
+        Console.Error.WriteLine($"{setting} is missing. Set the SMTP_* variables in .env.");
+        Environment.Exit(1);
+    }
 }
 
 var app = builder.Build();

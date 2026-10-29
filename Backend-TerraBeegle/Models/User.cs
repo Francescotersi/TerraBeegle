@@ -11,6 +11,10 @@ public class User
     public string? ImageProfile { get; set; }          // URL imagine
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
+    public bool EmailVerified { get; set; }
+    public string? EmailVerificationCodeHash { get; set; }
+    public DateTime? EmailVerificationCodeExpiration { get; set; }
+    public int EmailVerificationAttempts { get; set; }
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

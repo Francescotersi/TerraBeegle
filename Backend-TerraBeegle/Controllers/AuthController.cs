@@ -14,7 +14,9 @@ namespace Backend_TerraBeegle.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher, ITokenService tokenService) : ControllerBase
+public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher,
+                            ITokenService tokenService, IEmailVerificationService emailVerificationService, 
+                            ILogger<AuthController> logger) : ControllerBase
 {
     [EnableRateLimiting("register")]
     [HttpPost("register")]
@@ -39,6 +41,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
         
         // Adding the user to the database and saving changes
+        var code = emailVerificationService.SetNewCode(user);
         db.Users.Add(user);
         
         try
@@ -54,6 +57,15 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         string token = tokenService.CreateToken(user);
+
+        try
+        {
+            await emailVerificationService.SendCodeAsync(user.Email, code);
+        }
+        catch(Exception ex)
+        {
+            logger.LogError(ex, "Error sending verification code to {Email}", user.Email);
+        }
         
         return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
