@@ -2,7 +2,15 @@ using System.Text.Json.Serialization;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class RawgResponseDTO
+public class RawgSearchDTO
+{
+    public int Count { get; set; }
+    public string? Next { get; set; }
+    public string? Previous { get; set; }
+    public IEnumerable<RawgGameIdDTO> Results { get; set; } = [];
+}
+
+public class RawgGameIdDTO
 {
     public int Id { get; set; }
     public string Slug { get; set; } = null!;
@@ -43,6 +51,13 @@ public class RawgPlatformDTO
 }
 
 public class RawgGenreDTO
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+}
+
+public class RawgObjectDTO
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

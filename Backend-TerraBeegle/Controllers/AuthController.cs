@@ -54,6 +54,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         string token = tokenService.CreateToken(user);
+        // TODO: send verification email
         
         return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
@@ -67,6 +68,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
         if(user == null)
             return Unauthorized("Invalid credentials.");
+
+        if (!user.IsVerified)
+            return Unauthorized("Account not verified. Please check your email for the verification token.");
 
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");

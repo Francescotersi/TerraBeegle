@@ -92,6 +92,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasIndex(f => new { f.User1Id, f.User2Id }).IsUnique();
 
+            e.HasIndex(f => f.User2Id);
+
             e.HasOne(f => f.User1)
                 .WithMany(u => u.FriendRequestsAsUser1)
                 .HasForeignKey(f => f.User1Id)
@@ -112,7 +114,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.RawgGameId)
                 .IsRequired();
 
-            e.Property(g => g.Title)
+            e.Property(g => g.Name)
                 .IsRequired()
                 .HasMaxLength(255);
 

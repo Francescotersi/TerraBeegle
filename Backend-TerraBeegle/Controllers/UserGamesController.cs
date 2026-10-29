@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using Microsoft.IdentityModel.JsonWebTokens;  
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
+using Npgsql;
 using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
@@ -25,11 +26,11 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         {
             return NotFound("User not found.");
         }
-        
+
         return await db.Users
             .Where(u => u.Id == userId)
             .SelectMany(u => u.Favorites)
-            .OrderBy(g => g.Title)
+            .OrderBy(g => g.Name)
             .ProjectToType<GameCardDTO>()
             .ToListAsync();
     }
@@ -43,17 +44,20 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
+            game = await rawgService.CreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
         }
-        
+
         if (game is null)
             return NotFound("Game not found.");
-        
-        var user = await db.Users.Include(u => u.Favorites.Where(g => g.Id == game.Id)).FirstOrDefaultAsync(u => u.Id == userId);
+
+        var user = await db.Users
+            .Include(u => u.Favorites.Where(g => g.Id == game.Id))
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
         if (user is null)
             return NotFound("User not found.");
 
@@ -61,7 +65,16 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             return NoContent();
 
         user.Favorites.Add(game);
-        await db.SaveChangesAsync();
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Conflict("Game is already in favorites.");
+        }
+
         return NoContent();
     }
 
@@ -70,20 +83,31 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     {
         if(!IsCurrentUser(userId))
             return Forbid();
-        
-        var user = await db.Users.Include(u => u.Favorites.Where(g => g.RawgGameId == rawgGameId)).FirstOrDefaultAsync(u => u.Id == userId);
+
+        var user = await db.Users
+            .Include(u => u.Favorites.Where(g => g.RawgGameId == rawgGameId))
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
         if(user is null)
             return NotFound("User not found.");
-        
+
         var game = user.Favorites.FirstOrDefault();
         if(game is null)
             return NotFound("Game is not in favorites.");
 
         user.Favorites.Remove(game);
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+        {
+            return Conflict("Cannot remove game from favorites due to foreign key constraint.");
+        }
+
         return NoContent();
     }
-    
+
     // wishlist
     [HttpGet("wishlist")]
     public async Task<ActionResult<IEnumerable<GameCardDTO>>> GetWishlist(long userId)
@@ -93,11 +117,11 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         {
             return NotFound("User not found.");
         }
-        
+
         return await db.Users
             .Where(u => u.Id == userId)
             .SelectMany(u => u.WishlistItems)
-            .OrderBy(g => g.Title)
+            .OrderBy(g => g.Name)
             .ProjectToType<GameCardDTO>()
             .ToListAsync();
     }
@@ -111,17 +135,20 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
+            game = await rawgService.CreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
         }
-        
+
         if (game is null)
             return NotFound("Game not found.");
-        
-        var user = await db.Users.Include(u => u.WishlistItems.Where(g => g.Id == game.Id)).FirstOrDefaultAsync(u => u.Id == userId);
+
+        var user = await db.Users
+            .Include(u => u.WishlistItems.Where(g => g.Id == game.Id))
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
         if (user is null)
             return NotFound("User not found.");
 
@@ -129,7 +156,16 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             return NoContent();
 
         user.WishlistItems.Add(game);
-        await db.SaveChangesAsync();
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Conflict("Game is already in wishlist.");
+        }
+
         return NoContent();
     }
 
@@ -138,20 +174,32 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     {
         if(!IsCurrentUser(userId))
             return Forbid();
-        
-        var user = await db.Users.Include(u => u.WishlistItems.Where(g => g.RawgGameId == rawgGameId)).FirstOrDefaultAsync(u => u.Id == userId);
+
+        var user = await db.Users
+            .Include(u => u.WishlistItems.Where(g => g.RawgGameId == rawgGameId))
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
         if(user is null)
             return NotFound("User not found.");
-        
+
         var game = user.WishlistItems.FirstOrDefault();
         if(game is null)
             return NotFound("Game is not in wishlist.");
 
         user.WishlistItems.Remove(game);
-        await db.SaveChangesAsync();
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+        {
+            return Conflict("Cannot remove game from wishlist due to foreign key constraint.");
+        }
+
         return NoContent();
     }
-    
+
     private bool IsCurrentUser(long id)
     {
         var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);

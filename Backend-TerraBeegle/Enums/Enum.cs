@@ -109,10 +109,16 @@ public enum GamePlatform
     XboxSeriesSX = 186
 }
 
-public enum GameStatus
+public enum GameStore
 {
-    NotStarted,
-    Playing,
-    Completed,
-    Abandoned
+    Steam = 1,
+    XboxStore = 2,
+    PlayStationStore = 3,
+    AppStore = 4,
+    GOG = 5,
+    NintendoStore = 6,
+    Xbox360Store = 7,
+    GooglePlay = 8,
+    ItchIO = 9,
+    EpicGames = 11
 }

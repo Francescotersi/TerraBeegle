@@ -6,6 +6,8 @@ using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Models;
 using Backend_TerraBeegle.Enums;
+using Mapster;
+using System.Linq.Expressions;
 
 namespace Backend_TerraBeegle.Services;
 
@@ -18,48 +20,52 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
+    public async Task<ICollection<GameResponseDTO>> SearchGamesAsync(string query)
+    {
+        var client = httpClientFactory.CreateClient("RawgAPI");
+
+        var response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games?{query}"), RawgJsonOptions);
+
+        if (response is null || response.Results is null)
+            return [];
+
+        return [.. response.Results.Select(ToGameResponseDTO)];
+    }
+
+    private async Task<RawgGameIdDTO?> FetchGameAsync(int rawgGameId)
+    {
+        var client = httpClientFactory.CreateClient("RawgAPI");
+
+        RawgGameIdDTO? response;
+        try
+        {
+            response = await client.GetFromJsonAsync<RawgGameIdDTO>(WithKey($"games/{rawgGameId}"), RawgJsonOptions);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        
+        return response;
+    }
+
     public async Task<GameResponseDTO?> GetGameAsync(int rawgGameId)
     {
+        var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
+        if (game is not null)
+        {
+            return game.Adapt<Game, GameResponseDTO>();
+        }
 
         var response = await FetchGameAsync(rawgGameId);
 
         if (response is null)
             return null;
 
-        return new GameResponseDTO
-        {
-            RawgGameId = response.Id,
-            Title = response.Name,
-            Slug = response.Slug,
-            NameOriginal = response.NameOriginal,
-            Description = response.Description,
-            BackgroundImage = response.BackgroundImage,
-            ReleaseDate = DateOnly.TryParse(response.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
-            Tba = response.Tba,
-            Website = response.Website,
-            Rating = response.Rating,
-            Metacritic = response.Metacritic,
-            Platforms = [
-                .. response.Platforms.Select(p => new PlatformDTO
-                {
-                    Name = p.Platform.Name,
-                    RawgPlatformId = p.Platform.Id,
-                    Slug = p.Platform.Slug,
-                    ReleasedAt = p.ReleasedAt
-                })
-            ],
-            Genres = [
-                .. response.Genres.Select(g => new GenreDTO
-                {
-                    Name = g.Name,
-                    RawgGenreId = g.Id,
-                    Slug = g.Slug
-                })
-            ]
-        };
+        return ToGameResponseDTO(response);
     }
 
-    public async Task<Game?> GetOrCreateGameAsync(int rawgGameId)
+    public async Task<Game?> CreateGameAsync(int rawgGameId)
     {
         var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
         if (game is not null)
@@ -76,13 +82,14 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         // loads the genres and the platforms thet already exist in the DB using their ID
         var genreIds = response.Genres.Select(g => (GameGenre)g.Id).ToList();
         var existingGenres = await db.Genres.Where(g => genreIds.Contains(g.RawgGenreId)).ToListAsync();
+
         var platformIds = response.Platforms.Select(p => (GamePlatform)p.Platform.Id).ToList();
         var existingPlatforms = await db.Platforms.Where(p => platformIds.Contains(p.RawgPlatformId)).ToListAsync();
         
         game = new Game
         {
             RawgGameId = response.Id,
-            Title = response.Name,
+            Name = response.Name,
             Slug = response.Slug,
             NameOriginal = response.NameOriginal,
             Description = response.Description,
@@ -121,20 +128,35 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return $"{path}{separator}key={config["EnvironmentVariables:RAWG_API_KEY"]}";
     }
 
-    private async Task<RawgResponseDTO?> FetchGameAsync(int rawgGameId)
+    private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {
-        var client = httpClientFactory.CreateClient("RawgAPI");
-
-        RawgResponseDTO? response;
-        try
-        {
-            response = await client.GetFromJsonAsync<RawgResponseDTO>(WithKey($"games/{rawgGameId}"), RawgJsonOptions);
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-        
-        return response;
-    }
+        RawgGameId = r.Id,
+        Name = r.Name,
+        Slug = r.Slug,
+        NameOriginal = r.NameOriginal,
+        Description = r.Description,
+        BackgroundImage = r.BackgroundImage,
+        ReleaseDate = DateOnly.TryParse(r.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
+        Tba = r.Tba,
+        Website = r.Website,
+        Rating = r.Rating,
+        Metacritic = r.Metacritic,
+        Platforms = [
+            .. r.Platforms.Select(p => new PlatformDTO
+            {
+                Name = p.Platform.Name,
+                RawgPlatformId = p.Platform.Id,
+                Slug = p.Platform.Slug,
+                ReleasedAt = p.ReleasedAt
+            })
+        ],
+        Genres = [
+            .. r.Genres.Select(g => new GenreDTO
+            {
+                Name = g.Name,
+                RawgGenreId = g.Id,
+                Slug = g.Slug
+            })
+        ]
+    };
 }

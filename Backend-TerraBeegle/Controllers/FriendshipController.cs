@@ -16,19 +16,19 @@ using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/users/{userId:long}/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
-    // GET api/users/{userId}/friendship?query=friends|sent|received (without query => friends)
-    [Authorize]
+    // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] string query = "friends")
+    public async Task<ActionResult<IEnumerable<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] string search = "friends")
     {
         if (!IsCurrentUser(userId))
             return Forbid();
 
-        Expression<Func<Friendship, bool>>? filter = query.ToLowerInvariant() switch
+        Expression<Func<Friendship, bool>>? filter = search.ToLowerInvariant() switch
         {
             "friends" => f => (f.User1Id == userId || f.User2Id == userId)
                 && f.Status == FriendshipStatus.Accepted,
@@ -44,13 +44,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         var friendships = await db.Friendships
             .Where(filter)
-            .Select(ToResponseDTO)
+            .Select( f => new FriendshipResponseDTO 
+            {
+                Id = f.Id,
+                SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
+                ReceiverId = f.ReceiverId,
+                Status = f.Status.ToString(),
+                UpdatedAt = f.UpdatedAt
+            })
             .ToListAsync();
 
         return friendships;
     }
 
-    [Authorize]
     [HttpPost]
     public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipRequestDTO dto)
     {
@@ -108,11 +114,12 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot create friendship due to database constraints.");
         }
 
-        // Location points to the list of sent requests, where the new one appears
-        return CreatedAtAction(nameof(GetFriendships), new { userId, query = "sent" }, ToResponseDTOCompiled(friendship));
+        var createdFriendship = friendship.Adapt<Friendship, FriendshipResponseDTO>();
+        createdFriendship.SenderId = dto.SenderId;
+
+        return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
     }
 
-    [Authorize]
     [HttpPatch]
     public async Task<ActionResult<FriendshipDTO>> UpdateFriendship(long userId, FriendshipDTO dto)
     {
@@ -152,7 +159,6 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         return Ok(friendship.Adapt<FriendshipDTO>());
     }
 
-    [Authorize]
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteFriendship(long userId, long id)
     {
@@ -184,19 +190,6 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         return NoContent();
     }
-
-    // Friendship has no SenderId: the sender is the user who is not the receiver.
-    // Expression so EF translates it to SQL in GetFriendships; the compiled version is used for a single object.
-    private static readonly Expression<Func<Friendship, FriendshipResponseDTO>> ToResponseDTO = f => new FriendshipResponseDTO
-    {
-        Id = f.Id,
-        SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
-        ReceiverId = f.ReceiverId,
-        Status = f.Status.ToString(),
-        UpdatedAt = f.UpdatedAt
-    };
-
-    private static readonly Func<Friendship, FriendshipResponseDTO> ToResponseDTOCompiled = ToResponseDTO.Compile();
 
     private bool IsCurrentUser(long id)
     {

@@ -1,20 +1,22 @@
 using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
+using Backend_TerraBeegle.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;                 // pentru FindFirstValue
 using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
+using Microsoft.AspNetCore.Identity;
 using Npgsql;
 using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/users")]
-public class UserController(AppDbContext db) : ControllerBase
+public class UserController(AppDbContext db, IPasswordHasher<User> passwordHasher) : ControllerBase
 {
-    [Authorize]
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
@@ -40,24 +42,22 @@ public class UserController(AppDbContext db) : ControllerBase
         };
     }
 
-    [Authorize]
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search(string query)
+    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search([FromQuery] string username)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (string.IsNullOrWhiteSpace(username))
         {
-            return BadRequest("Query cannot be empty.");
+            return BadRequest("Username cannot be empty.");
         }
 
-        var trimmedQuery = query.Trim();
+        var trimmedUsername = username.Trim();
         var users = await db.Users
-            .Where(u => u.Username.Contains(trimmedQuery))
+            .Where(u => u.Username.Contains(trimmedUsername))
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
         return users;
     }
 
-    [Authorize]
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
     {
@@ -71,7 +71,6 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserPublicResponseDTO>();
     }
 
-    [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<UserResponseDTO>> GetMe()
     {
@@ -87,7 +86,6 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserResponseDTO>();
     }
 
-    [Authorize]
     [HttpPatch("{id:long}")]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser(long id, UpdateUserDTO dto)
     {
@@ -158,7 +156,24 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserResponseDTO>();
     }
 
-    [Authorize]
+    [HttpPatch("{id:long}/password")]
+    public async Task<ActionResult> ChangePassword(long id, UpdatePasswordDTO dto)
+    {
+        if(!IsCurrentUser(id))
+            return Forbid();
+        
+        var user = await db.Users.FindAsync(id);
+        if(user is null)
+            return NotFound();
+
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.OldPassword) == PasswordVerificationResult.Failed)
+            return Unauthorized("Old password is incorrect.");
+
+        user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
+        
+        return Ok("Password changed successfully.");
+    }
+
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
     {
