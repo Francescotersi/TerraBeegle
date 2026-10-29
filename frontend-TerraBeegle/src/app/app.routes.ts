@@ -1,9 +1,10 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home.component';
-import { GridComponent } from './grid/grid.component';
-import { LogInUser } from './user/log-in-user/log-in-user.component';
-import { RegisterUser } from './user/register-user/register-user.component';
+import { Home } from './views/home/home.component';
+import { GridComponent } from './views/grid/grid.component';
+import { LogInUser } from './views/user/log-in-user/log-in-user.component';
+import { RegisterUser } from './views/user/register-user/register-user.component';
 import { authGuard } from './guards/auth.guard';
+import { ProfilePageComponent } from './views/profile-page/profile-page.component';
 
 export const routes: Routes = [
     {
@@ -33,5 +34,10 @@ export const routes: Routes = [
     {
         path:'register',
         component: RegisterUser
+    },
+    {
+        path: 'profile',
+        component: ProfilePageComponent,
+        canActivate: [authGuard],
     }
 ];

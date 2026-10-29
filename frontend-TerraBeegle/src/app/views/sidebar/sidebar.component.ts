@@ -1,9 +1,6 @@
 import { Component, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
-
-// to do
-
+import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -98,7 +95,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
               </li>
             }
             @if (filteredTags().length === 0) {
-              <li class="text-muted small px-3 py-1">Nessun tag trovato</li>
+              <li class="text-muted small px-3 py-1">No tag found</li>
             }
           </ul>
         </div>
@@ -130,7 +127,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
               </li>
             }
             @if (filteredPlatforms().length === 0) {
-              <li class="text-muted small px-3 py-1">Nessuna piattaforma</li>
+              <li class="text-muted small px-3 py-1">No platform found</li>
             }
           </ul>
         </div>
@@ -162,7 +159,7 @@ import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component'
               </li>
             }
             @if (filteredPublishers().length === 0) {
-              <li class="text-muted small px-3 py-1">Nessun publisher</li>
+              <li class="text-muted small px-3 py-1">No publisher found</li>
             }
           </ul>
         </div>

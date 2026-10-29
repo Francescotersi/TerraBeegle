@@ -1,8 +1,8 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
-import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
-import { AuthService } from '../../services/auth.service';
+import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../../../services/auth.service';
 
 interface LoginData {
   identifier: string;

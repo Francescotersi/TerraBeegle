@@ -92,6 +92,7 @@ let nextLiquidGlassId = 0;
         inset 0 1px 1px rgba(255, 255, 255, 0.8),
         inset 0 -1px 1px rgba(255, 255, 255, 0.25);
       transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      transform: translateZ(0);
     }
 
     .glass-specular {

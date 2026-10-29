@@ -28,8 +28,6 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
     .sidebar-sticky {
       position: sticky;
       top: 90px;
-      max-height: calc(100vh - 110px);
-      overflow-y: auto;
     }
   `,
 })

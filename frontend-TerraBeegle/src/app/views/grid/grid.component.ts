@@ -1,5 +1,5 @@
 import { Component, signal, computed } from '@angular/core';
-import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
+import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 
 interface GridComponentProps {
   rawgGameId: number;

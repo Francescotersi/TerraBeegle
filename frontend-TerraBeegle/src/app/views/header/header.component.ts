@@ -1,7 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LiquidGlassComponent } from '../ui/liquid-glass/liquid-glass.component';
-import { AuthService } from '../services/auth.service';
+import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -43,6 +43,7 @@ import { AuthService } from '../services/auth.service';
                   class="nav-link fw-semibold px-3 py-1"
                   routerLink="/"
                   routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
                   (click)="isMenuOpen.set(false)"
                 >
                   Home
@@ -51,6 +52,8 @@ import { AuthService } from '../services/auth.service';
               <!-- da implementare Immagine profilo -->
               <li class="nav-item">
                 <a
+                  routerLink="/profile"
+                  routerLinkActive="active"
                   class="nav-link fw-semibold px-3 py-1"
                   (click)="isMenuOpen.set(false)"
                 >
@@ -90,7 +93,7 @@ import { AuthService } from '../services/auth.service';
               </button>
             </form>
 
-            <!-- Pulsanti Login e Register a destra sulla stessa row -->
+            <!-- Pulsanti Login e Register a destra -->
             <div class="d-flex align-items-center gap-2 ms-lg-3 header-auth-group">
             @if (!authService.isLoggedIn()) {
               <a
@@ -109,12 +112,6 @@ import { AuthService } from '../services/auth.service';
               </a>
             } @else {
                 Ciao {{ authService.currentUser()?.name }}!
-              <a
-                class="btn btn-sm auth-btn btn-login text-decoration-none"
-                (click)="authService.logout(); isMenuOpen.set(false)"
-              >
-                Log Out
-              </a>
             }
             </div>
           </div>

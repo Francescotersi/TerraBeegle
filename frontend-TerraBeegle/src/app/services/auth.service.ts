@@ -22,18 +22,17 @@ export interface User {
   familyName: string;
   username: string;
   email: string;
+  imageProfile?: string | null;
+  theme?: string;
 }
 
 export interface AuthResponse {
   token: string;
-  user: {
-    id: number;
-    name: string;
-    familyName: string;
-    username: string;
-    email: string;
-  };
+  user: User;
 }
+
+const TOKEN_KEY = 'tb_token';
+const USER_KEY = 'tb_user';
 
 @Injectable({
   providedIn: 'root'
@@ -52,8 +51,10 @@ export class AuthService {
   login(data: LoginPayload): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/auth/login', data).pipe(
       tap((response) => {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(TOKEN_KEY, response.token);
+          localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+        }
         this.currentUser.set(response.user);
       })
     );
@@ -61,10 +62,9 @@ export class AuthService {
 
   logout(): void {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('tb_token');
-      localStorage.removeItem('tb_user');
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
     }
-    localStorage.removeItem('token');
     this.currentUser.set(null);
     this.router.navigate(['/login']);
   }
@@ -72,14 +72,14 @@ export class AuthService {
   // ritorna il token JWT dello user loggato
   getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('token');
+      return localStorage.getItem(TOKEN_KEY);
     }
     return null;
   }
 
   private getStoredUser(): User | null {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('tb_user');
+      const stored = localStorage.getItem(USER_KEY);
       if (stored) {
         try {
           return JSON.parse(stored) as User;
