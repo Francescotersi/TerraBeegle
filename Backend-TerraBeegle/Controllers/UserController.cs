@@ -14,6 +14,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users")]
 public class UserController(AppDbContext db) : ControllerBase
 {
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {

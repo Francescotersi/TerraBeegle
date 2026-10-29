@@ -110,12 +110,7 @@ let nextLiquidGlassId = 0;
     }
 
     /* Fallback morbido per browser senza supporto a SVG in backdrop-filter */
-    @supports not (backdrop-filter: url(#test)) {
-      .liquid-glass-card {
-        backdrop-filter: blur(24px) saturate(180%);
-        -webkit-backdrop-filter: blur(24px) saturate(180%);
-      }
-    }
+
   `,
 })
 export class LiquidGlassComponent {

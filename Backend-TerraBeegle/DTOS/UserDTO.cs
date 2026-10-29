@@ -9,8 +9,6 @@ public class UserPublicResponseDTO
     public long Id { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
-    public List<GameResponseDTO>? Favorites { get; set; }
-    public List<GameResponseDTO>? Whishlist { get; set; }
 }
 
 public class UserResponseDTO
@@ -30,7 +28,7 @@ public class UpdateUserDTO
     public string? Name { get; set; }
 
     [MaxLength(100)]
-    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores.")]
+    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores or dashes.")]
     public string? Username { get; set; }
 
     [MaxLength(100)]
@@ -43,6 +41,7 @@ public class UpdateEmailDTO
 {
     [Required]
     [EmailAddress]
+    [MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 }
 
