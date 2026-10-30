@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
 using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
+using System.Security.Claims;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Cryptography;
 
 using Mapster;
 
@@ -86,4 +90,44 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
+
+	[Authorize]
+	[HttpPost("verify-email")]
+	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
+	{
+		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+		
+		if(!long.TryParse(sub, out var tokenId))
+			return Unauthorized("Invalid token.");
+
+		var user = await db.Users.FindAsync(tokenId);
+        if(user is null)
+            return NotFound();
+
+		if(user.EmailVerified)
+			return Conflict("Already verified.");
+
+		if(user.EmailVerificationCodeHash is null || user.EmailVerificationCodeExpiration < DateTime.UtcNow)
+			return BadRequest("The code has expired. Ask for a new one.");
+		
+		if(user.EmailVerificationAttempts >= 5)
+			return BadRequest("Too many attempts. Ask for a new code.");
+
+		var hash = emailVerificationService.HashCode(dto.Code);
+		if(CryptographicOperations.FixedTimeEquals(Convert.FromHexString(user.EmailVerificationCodeHash), Convert.FromHexString(hash)))
+		{
+			user.EmailVerified = true;
+			user.EmailVerificationAttempts = 0;
+			user.EmailVerificationCodeHash = null;
+			user.EmailVerificationCodeExpiration = null;
+			await db.SaveChangesAsync();
+
+			return Ok();
+		}
+
+		user.EmailVerificationAttempts++;
+		await db.SaveChangesAsync();
+
+		return BadRequest("Invalid code.");
+	}
 }
