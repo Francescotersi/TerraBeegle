@@ -20,30 +20,26 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
-        // Ordering is required, otherwise Postgres can return the rows in a different order on each page
-        var query = db.Users.OrderBy(u => u.Id);
-
-        var totalCount = await query.CountAsync();
+        var totalCount = await db.Users.CountAsync();
 
         // Retrieving only the users from the requested page and projecting them to UserPublicResponseDTO
-        var users = await query
+        var users = await db.Users
+            .OrderBy(u => u.Id)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
 
-        return new PagedResponseDTO<UserPublicResponseDTO>
-        {
-            Items = users,
-            Page = pagination.Page,
-            PageSize = pagination.PageSize,
-            TotalCount = totalCount,
-            TotalPages = (totalCount + pagination.PageSize - 1) / pagination.PageSize
-        };
+        return Ok(Utils.CreatePagedResponse(
+            users,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+        ));
     }
 
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search([FromQuery] string username)
+    public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> Search([FromQuery] string username, [FromQuery] PaginationDTO pagination)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -51,11 +47,28 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         var trimmedUsername = username.Trim();
+
+        var totalCount = await db.Users.CountAsync(u => u.Username.Contains(trimmedUsername));
+
+        if (totalCount == 0)
+        {
+            return NotFound("No users found with the specified username.");
+        }
+
         var users = await db.Users
             .Where(u => u.Username.Contains(trimmedUsername))
+            .OrderBy(u => u.Username)
+            .Skip((pagination.Page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
-        return users;
+
+        return Ok(Utils.CreatePagedResponse(
+            users,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(Search), new { username, Page = page, pagination.PageSize })
+        ));
     }
 
     [HttpGet("{id:long}")]
@@ -89,7 +102,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPatch("{id:long}")]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser(long id, UpdateUserDTO dto)
     {
-        if(!IsCurrentUser(id))
+        if(!Utils.IsCurrentUser(User, id))
             return Forbid();
 
         // Patch which does not allow empty string or whitespaces.
@@ -107,7 +120,8 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             ModelState.AddModelError(nameof(dto.FamilyName), "Surname cannot be empty.");
 
         // Empty ImageProfile is for removing the picture
-        if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) && !IsHttpUrl(dto.ImageProfile.Trim()))
+        if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) 
+            && !Utils.IsHttpUrl(dto.ImageProfile.Trim()))
             ModelState.AddModelError(nameof(dto.ImageProfile), "Image profile must be a valid http or https URL.");
 
         if(dto.Theme is not null && !Enum.IsDefined(dto.Theme.Value))
@@ -159,7 +173,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPatch("{id:long}/password")]
     public async Task<ActionResult> ChangePassword(long id, UpdatePasswordDTO dto)
     {
-        if(!IsCurrentUser(id))
+        if(!Utils.IsCurrentUser(User, id))
             return Forbid();
         
         var user = await db.Users.FindAsync(id);
@@ -177,7 +191,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
     {
-        if(!IsCurrentUser(id))
+        if(!Utils.IsCurrentUser(User, id))
             return Forbid();
         
         var user = await db.Users.FindAsync(id);
@@ -195,17 +209,5 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         await transaction.CommitAsync();
 
         return NoContent();
-    }
-
-    private bool IsCurrentUser(long id)
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
-    }
-
-    private static bool IsHttpUrl(string value)
-    {
-        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

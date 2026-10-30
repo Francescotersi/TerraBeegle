@@ -23,9 +23,9 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 {
     // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] string search = "friends")
+    public async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, [FromQuery] string search = "friends")
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         Expression<Func<Friendship, bool>>? filter = search.ToLowerInvariant() switch
@@ -41,9 +41,16 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         if (filter is null)
             return BadRequest("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.");
-
-        var friendships = await db.Friendships
+        
+        var totalCount = await db.Friendships.CountAsync(filter);
+        var friendships = new List<FriendshipResponseDTO>();
+        
+        if (totalCount != 0) {
+            friendships = await db.Friendships
             .Where(filter)
+            .OrderBy(f => userId == f.User1Id ? f.User2Id : f.User1Id) // Order by the other user's ID
+            .Skip((pagination.Page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
             .Select( f => new FriendshipResponseDTO 
             {
                 Id = f.Id,
@@ -53,14 +60,20 @@ public class FriendshipController(AppDbContext db) : ControllerBase
                 UpdatedAt = f.UpdatedAt
             })
             .ToListAsync();
+        }
 
-        return friendships;
+        return Ok(Utils.CreatePagedResponse(
+            friendships, 
+            totalCount, 
+            pagination, 
+            page => Url.Action(nameof(GetFriendships), new { userId, search, Page = page, pagination.PageSize })
+        ));
     }
 
     [HttpPost]
     public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipRequestDTO dto)
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
         
         if (dto.SenderId != userId)
@@ -123,7 +136,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     [HttpPatch]
     public async Task<ActionResult<FriendshipDTO>> UpdateFriendship(long userId, FriendshipDTO dto)
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
         
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
@@ -162,7 +175,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteFriendship(long userId, long id)
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
         
         var friendship = await db.Friendships.FindAsync(id);
@@ -189,11 +202,5 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         }
 
         return NoContent();
-    }
-
-    private bool IsCurrentUser(long id)
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
     }
 }

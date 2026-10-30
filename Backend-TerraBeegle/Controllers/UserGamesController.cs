@@ -19,7 +19,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
 {
     // favorites
     [HttpGet("favorites")]
-    public async Task<ActionResult<IEnumerable<GameCardDTO>>> GetFavorites(long userId)
+    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
@@ -27,18 +27,36 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             return NotFound("User not found.");
         }
 
-        return await db.Users
+        var totalCount = await db.Users
             .Where(u => u.Id == userId)
             .SelectMany(u => u.Favorites)
-            .OrderBy(g => g.Name)
-            .ProjectToType<GameCardDTO>()
-            .ToListAsync();
+            .CountAsync();
+
+        var games = new List<GameCardDTO>();
+
+        if (totalCount != 0) {
+            games = await db.Users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.Favorites)
+                .OrderBy(g => g.Name)
+                .Skip((pagination.Page - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ProjectToType<GameCardDTO>()
+                .ToListAsync();
+        }
+
+        return Ok(Utils.CreatePagedResponse(
+            games,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(GetFavorites), new { userId, Page = page, pagination.PageSize })
+        ));
     }
 
     [HttpPost("favorites/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToFavorites(long userId, int rawgGameId)
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         Game? game;
@@ -81,7 +99,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     [HttpDelete("favorites/{rawgGameId:int}")]
     public async Task<IActionResult> DeleteGameFromFavorites(long userId, int rawgGameId)
     {
-        if(!IsCurrentUser(userId))
+        if(!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
@@ -110,7 +128,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
 
     // wishlist
     [HttpGet("wishlist")]
-    public async Task<ActionResult<IEnumerable<GameCardDTO>>> GetWishlist(long userId)
+    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
@@ -118,18 +136,35 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             return NotFound("User not found.");
         }
 
-        return await db.Users
+        var totalCount = await db.Users
             .Where(u => u.Id == userId)
             .SelectMany(u => u.WishlistItems)
-            .OrderBy(g => g.Name)
-            .ProjectToType<GameCardDTO>()
-            .ToListAsync();
+            .CountAsync();
+        
+        var games = new List<GameCardDTO>();
+        if (totalCount != 0) {
+            games = await db.Users
+                .Where(u => u.Id == userId)
+                .SelectMany(u => u.WishlistItems)
+                .OrderBy(g => g.Name)
+                .Skip((pagination.Page - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ProjectToType<GameCardDTO>()
+                .ToListAsync();
+        }
+
+        return Ok(Utils.CreatePagedResponse(
+            games,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(GetWishlist), new { userId, Page = page, pagination.PageSize })
+        ));
     }
 
     [HttpPost("wishlist/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToWishlist(long userId, int rawgGameId)
     {
-        if (!IsCurrentUser(userId))
+        if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         Game? game;
@@ -172,7 +207,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     [HttpDelete("wishlist/{rawgGameId:int}")]
     public async Task<IActionResult> DeleteGameFromWishlist(long userId, int rawgGameId)
     {
-        if(!IsCurrentUser(userId))
+        if(!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
@@ -198,11 +233,5 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
 
         return NoContent();
-    }
-
-    private bool IsCurrentUser(long id)
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
     }
 }

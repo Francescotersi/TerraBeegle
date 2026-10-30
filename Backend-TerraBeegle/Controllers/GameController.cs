@@ -13,7 +13,7 @@ namespace Backend_TerraBeegle.Controllers;
 public class GameController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<GameResponseDTO>>> Search(GameSearchDTO search)
+    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> Search(GameSearchDTO search)
     {
         if (!string.IsNullOrWhiteSpace(search.Title))
             search.Title = $"search={search.Title.Trim()}";
@@ -31,7 +31,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
             if (allowedSortValues.Contains(search.SortBy))
             {
-                search.SortBy = search.Ascending ? search.SortBy : $"-{search.SortBy}";
+                search.SortBy = $"order={(search.Ascending ? search.SortBy : $"-{search.SortBy}")}";
             }
             else
             {
@@ -47,13 +47,21 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
 	// retrieving all games from the database and projecting them to GameResponseDTO
     [HttpGet("all")]
-    public async Task<ActionResult<IEnumerable<GameResponseDTO>>> GetAll()
+    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
         var games = await db.Games
+            .OrderBy(g => g.Name) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
+            .Skip((pagination.Page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
             .ProjectToType<GameResponseDTO>()
             .ToListAsync();
 
-        return games;
+        return Ok(Utils.CreatePagedResponse(
+            games,
+            await db.Games.CountAsync(),
+            pagination,
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+        ));
     }
     
 	// searching by the RAWG id the same one used for the RAWG request below
