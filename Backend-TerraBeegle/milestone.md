@@ -290,7 +290,7 @@ salvați jocuri.
 
 ## Verificare email
 
-- [ ] **34. Verificarea email-ului cu un cod de 8 caractere**
+- [x] **34. Verificarea email-ului cu un cod de 8 caractere**
   La register contul are `EmailVerified = false` și primește pe email un cod random de 8 caractere. Userul
   introduce codul → `EmailVerified = true`.
   **Decizii (27.10.2026):**
@@ -338,23 +338,23 @@ salvați jocuri.
         `SendCodeAsync`), refolosit la pașii 4, 5 și la punctul 14
 
   **Pasul 4 — `POST /api/auth/verify-email`**
-  - [ ] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
-  - [ ] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
-  - [ ] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
-  - [ ] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
+  - [x] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
+  - [x] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
+  - [x] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
+  - [x] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
 
   **Pasul 5 — `POST /api/auth/resend-verification`**
-  - [ ] `[Authorize]`; deja verificat → 409
-  - [ ] cod nou, expirare nouă, `Attempts = 0`, email trimis
-  - [ ] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
+  - [x] `[Authorize]`; deja verificat → 409
+  - [x] cod nou, expirare nouă, `Attempts = 0`, email trimis
+  - [x] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
 
   **Pasul 6 — ștergerea conturilor neverificate după 2 zile**
-  - [ ] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
+  - [x] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
         `!EmailVerified && CreatedAt < UtcNow - 2 zile`
-  - [ ] ca la `DeleteUser`: prieteniile au `DeleteBehavior.Restrict`, deci se șterg întâi prieteniile, apoi userii,
+  - [x] ca la `DeleteUser`: prieteniile au `DeleteBehavior.Restrict`, deci se șterg întâi prieteniile, apoi userii,
         într-o tranzacție (favoritele / wishlist-ul se șterg automat, cascade pe tabelele de legătură)
-  - [ ] `DbContext` se ia dintr-un scope nou (`IServiceScopeFactory`), pentru că `BackgroundService` e singleton
-  - [ ] log cu câți useri au fost șterși
+  - [x] `DbContext` se ia dintr-un scope nou (`IServiceScopeFactory`), pentru că `BackgroundService` e singleton
+  - [x] log cu câți useri au fost șterși
 
   **De decis mai târziu**
   - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot

@@ -130,4 +130,38 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		return BadRequest("Invalid code.");
 	}
+
+	[Authorize]
+	[EnableRateLimiting("resend-email")]
+	[HttpPost("resend-email")]
+	public async Task<IActionResult> ResendEmail()
+	{
+		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+		
+		if(!long.TryParse(sub, out var tokenId))
+			return Unauthorized("Invalid token.");
+
+		var user = await db.Users.FindAsync(tokenId);
+        if(user is null)
+            return NotFound();
+
+		if(user.EmailVerified)
+			return Conflict("Already verified.");
+
+		var code = emailVerificationService.SetNewCode(user);
+
+		await db.SaveChangesAsync();
+
+		try
+		{
+			await emailVerificationService.SendCodeAsync(user.Email, code);
+		}
+		catch(Exception ex)
+		{
+			logger.LogError(ex, "Error resending verification code to {Email}", user.Email);
+			return StatusCode(StatusCodes.Status503ServiceUnavailable, "Failed to send code. Try again later.");
+		}
+
+		return Ok("The code has been resent.");
+	}
 }
