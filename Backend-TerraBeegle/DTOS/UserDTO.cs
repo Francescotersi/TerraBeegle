@@ -17,6 +17,7 @@ public class UserResponseDTO
     public string Name { get; set; } = string.Empty;
     public string FamilyName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public bool EmailVerified { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
     public Theme Theme { get; set; }

@@ -37,6 +37,13 @@ public class LoginDTO
     public string Password { get; set; } = string.Empty;
 }
 
+public class VerifyEmailDTO
+{
+    [Required]
+    [StringLength(8, MinimumLength = 8)]
+    public string Code { get; set; } = string.Empty;
+}
+
 public class AuthResponseDTO
 {
     public string Token { get; set; } = string.Empty;

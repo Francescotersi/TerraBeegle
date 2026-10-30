@@ -56,7 +56,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         var users = await db.Users
-            .Where(u => u.Username.Contains(trimmedUsername))
+            .Where(u => u.Username.Contains(trimmedUsername) && u.EmailVerified) // Only return users with confirmed emails
             .OrderBy(u => u.Username)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)

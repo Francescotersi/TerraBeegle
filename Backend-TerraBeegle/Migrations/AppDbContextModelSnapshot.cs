@@ -253,6 +253,18 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<int>("EmailVerificationAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("EmailVerificationCodeExpiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailVerificationCodeHash")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("FamilyName")
                         .IsRequired()
                         .HasMaxLength(100)

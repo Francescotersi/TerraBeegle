@@ -290,7 +290,7 @@ salvați jocuri.
 
 ## Verificare email
 
-- [ ] **34. Verificarea email-ului cu un cod de 8 caractere**
+- [x] **34. Verificarea email-ului cu un cod de 8 caractere**
   La register contul are `EmailVerified = false` și primește pe email un cod random de 8 caractere. Userul
   introduce codul → `EmailVerified = true`.
   **Decizii (27.10.2026):**
@@ -299,56 +299,62 @@ salvați jocuri.
   - un cont neverificat e **șters automat după 2 zile**
 
   **Pasul 1 — furnizorul SMTP + serviciul de email**
-  - [ ] ales furnizorul SMTP (codul e același, se schimbă doar setările):
+  - [x] ales furnizorul SMTP (codul e același, se schimbă doar setările) → ales: **Gmail** cu App Password:
         - **Gmail** cu „App Password” — cel mai simplu pentru un proiect de facultate: contul trebuie să aibă
           verificarea în 2 pași, apoi se generează o parolă de aplicație; `smtp.gmail.com`, port `587`;
           limită ~500 emailuri / zi; expeditorul e adresa de Gmail
         - **Brevo** — gratuit 300 / zi, adresa expeditorului trebuie verificată în contul Brevo
-  - [ ] în `.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
+  - [x] în `.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
         (și în `.env.example` fără valori, ca restul variabilelor); **parola SMTP nu ajunge în git**
-  - [ ] la serviciul `backend` din `docker-compose.yml`: `Smtp__Host: ${SMTP_HOST}`, `Smtp__Port: ${SMTP_PORT}`,
+  - [x] la serviciul `backend` din `docker-compose.yml`: `Smtp__Host: ${SMTP_HOST}`, `Smtp__Port: ${SMTP_PORT}`,
         `Smtp__User: ${SMTP_USER}`, `Smtp__Password: ${SMTP_PASSWORD}`, `Smtp__From: ${SMTP_FROM}`
-  - [ ] fiecare coleg își pune propriile date SMTP în `.env`-ul lui (sau folosiți un cont comun al proiectului)
-  - [ ] pachetul `MailKit`
-  - [ ] `IEmailService` + `EmailService` cu `SendAsync(to, subject, body)`, înregistrat în `Program.cs`
+  - [x] fiecare coleg își pune propriile date SMTP în `.env`-ul lui (sau folosiți un cont comun al proiectului)
+        → cont Gmail comun, făcut pentru TerraBeegle
+  - [x] pachetul `MailKit`
+  - [x] `IEmailService` + `EmailService` cu `SendAsync(to, subject, body)`, înregistrat în `Program.cs`
         (la fel ca `ITokenService` / `TokenService`); conexiune cu `SecureSocketOptions.StartTls` pe portul 587
-  - [ ] la pornire, verificare că setările `Smtp:*` există (ca la `Jwt:Key`)
-  - [ ] testat că un email ajunge în inbox-ul real (verificat și folderul Spam)
-  - [ ] la teste folosiți adrese proprii — fiecare register trimite un email real
+  - [x] la pornire, verificare că setările `Smtp:*` există (ca la `Jwt:Key`)
+  - [x] testat că un email ajunge în inbox-ul real (verificat și folderul Spam)
+  - [x] la teste folosiți adrese proprii — fiecare register trimite un email real
 
   **Pasul 2 — modelul + migrația**
-  - [ ] în `User`: `EmailVerified` (`bool`), `EmailVerificationCodeHash` (`string?`),
-        `EmailVerificationExpiresAt` (`DateTime?`), `EmailVerificationAttempts` (`int`)
-  - [ ] migrația + `UPDATE "Users" SET "EmailVerified" = true;` în `Up()` → userii existenți nu sunt considerați
-        neverificați (și nu sunt șterși de pasul 6)
-  - [ ] `EmailVerified` în `UserResponseDTO`, ca frontend-ul să poată afișa „Verifică-ți email-ul” (`GET /me`)
+  - [x] în `User`: `EmailVerified` (`bool`), `EmailVerificationCodeHash` (`string?`),
+        `EmailVerificationCodeExpiration` (`DateTime?`), `EmailVerificationAttempts` (`int`)
+  - [x] migrația (`AddEmailVerification`) + `UPDATE "Users" SET "EmailVerified" = true;` în `Up()` → userii
+        existenți nu sunt considerați neverificați (și nu sunt șterși de pasul 6)
+  - [x] `EmailVerified` în `UserResponseDTO`, ca frontend-ul să poată afișa „Verifică-ți email-ul” (`GET /me`)
+  - [x] verificările de la pornire din `Program.cs` sar peste `dotnet ef` (`EF.IsDesignTime`) — altfel
+        `dotnet ef migrations add` se oprește, pentru că valorile din `.env` există doar în Docker
 
   **Pasul 3 — generarea și trimiterea codului la register**
-  - [ ] cod cu `RandomNumberGenerator.GetString(alfabet, 8)` (nu `Random`), alfabet fără caractere care se
-        confundă (`0/O`, `1/I/L`)
-  - [ ] în baza de date se salvează doar hash-ul codului (`SHA256`), nu codul
-  - [ ] expirare după 15 minute, `EmailVerificationAttempts = 0`
-  - [ ] emailul se trimite după `SaveChangesAsync`; dacă trimiterea eșuează, contul rămâne creat și userul
+  - [x] cod cu `RandomNumberGenerator.GetString(alfabet, 8)` (nu `Random`), alfabet fără caractere care se
+        confundă (`0/O`, `1/I/L`) → doar litere mari + cifre: `ABCDEFGHJKMNPQRSTUVWXYZ23456789`
+  - [x] în baza de date se salvează doar hash-ul codului (`SHA256`), nu codul
+        (`HashCode` face și `Trim().ToUpperInvariant()`, deci la pasul 4 codul introdus nu trebuie normalizat)
+  - [x] expirare după 15 minute, `EmailVerificationAttempts = 0`
+  - [x] emailul se trimite după `SaveChangesAsync`; dacă trimiterea eșuează, contul rămâne creat și userul
         cere un cod nou (pasul 5)
+  - [x] totul în `IEmailVerificationService` / `EmailVerificationService` (`SetNewCode`, `HashCode`,
+        `SendCodeAsync`), refolosit la pașii 4, 5 și la punctul 14
 
   **Pasul 4 — `POST /api/auth/verify-email`**
-  - [ ] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
-  - [ ] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
-  - [ ] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
-  - [ ] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
+  - [x] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
+  - [x] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
+  - [x] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
+  - [x] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
 
   **Pasul 5 — `POST /api/auth/resend-verification`**
-  - [ ] `[Authorize]`; deja verificat → 409
-  - [ ] cod nou, expirare nouă, `Attempts = 0`, email trimis
-  - [ ] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
+  - [x] `[Authorize]`; deja verificat → 409
+  - [x] cod nou, expirare nouă, `Attempts = 0`, email trimis
+  - [x] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
 
   **Pasul 6 — ștergerea conturilor neverificate după 2 zile**
-  - [ ] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
+  - [x] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
         `!EmailVerified && CreatedAt < UtcNow - 2 zile`
-  - [ ] ca la `DeleteUser`: prieteniile au `DeleteBehavior.Restrict`, deci se șterg întâi prieteniile, apoi userii,
+  - [x] ca la `DeleteUser`: prieteniile au `DeleteBehavior.Restrict`, deci se șterg întâi prieteniile, apoi userii,
         într-o tranzacție (favoritele / wishlist-ul se șterg automat, cascade pe tabelele de legătură)
-  - [ ] `DbContext` se ia dintr-un scope nou (`IServiceScopeFactory`), pentru că `BackgroundService` e singleton
-  - [ ] log cu câți useri au fost șterși
+  - [x] `DbContext` se ia dintr-un scope nou (`IServiceScopeFactory`), pentru că `BackgroundService` e singleton
+  - [x] log cu câți useri au fost șterși
 
   **De decis mai târziu**
   - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot
