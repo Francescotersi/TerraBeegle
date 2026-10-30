@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Models;
 using Backend_TerraBeegle.Enums;
 using Mapster;
-using System.Linq.Expressions;
+using Backend_TerraBeegle.Controllers;
 
 namespace Backend_TerraBeegle.Services;
 
@@ -20,16 +20,41 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
-    public async Task<ICollection<GameResponseDTO>> SearchGamesAsync(string query)
+    public async Task<RawgSearchDTO> SearchGamesAsync(string query)
     {
         var client = httpClientFactory.CreateClient("RawgAPI");
 
-        var response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games?{query}"), RawgJsonOptions);
+        RawgSearchDTO? response;
+        try
+        {
+            response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games?{query}"), RawgJsonOptions);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new RawgSearchDTO { 
+                Results = [],
+                Next = null,
+                Previous = null,
+                Count = 0
+            };
+        }
 
-        if (response is null || response.Results is null)
-            return [];
+        if (response is null)
+        {
+            return new RawgSearchDTO { 
+                Results = [],
+                Next = null,
+                Previous = null,
+                Count = 0
+            };
+        }
 
-        return [.. response.Results.Select(ToGameResponseDTO)];
+        return new RawgSearchDTO { 
+            Results = [.. response.Results.Select(ToGameCardDTO)],
+            Next = response.Next,
+            Previous = response.Previous,
+            Count = response.Count
+        };
     }
 
     private async Task<RawgGameIdDTO?> FetchGameAsync(int rawgGameId)
@@ -127,6 +152,33 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         var separator = path.Contains('?') ? '&' : '?';
         return $"{path}{separator}key={config["EnvironmentVariables:RAWG_API_KEY"]}";
     }
+
+    private static readonly Func<RawgGameDTO, GameCardDTO> ToGameCardDTO = r => new GameCardDTO
+    {
+        RawgGameId = r.Id,
+        Title = r.Name,
+        BackgroundImage = r.BackgroundImage,
+        Rating = r.Rating,
+        ReleaseDate = DateOnly.TryParse(r.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
+        Tba = r.Tba,
+        Platforms = [
+            .. r.Platforms.Select(p => new PlatformDTO
+            {
+                Name = p.Platform.Name,
+                RawgPlatformId = p.Platform.Id,
+                Slug = p.Platform.Slug,
+                ReleasedAt = p.ReleasedAt
+            })
+        ],
+        Genres = [
+            .. r.Genres.Select(g => new GenreDTO
+            {
+                Name = g.Name,
+                RawgGenreId = g.Id,
+                Slug = g.Slug
+            })
+        ]
+    };
 
     private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {

@@ -3,11 +3,7 @@ using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using System.Security.Claims;
-using Microsoft.IdentityModel.JsonWebTokens;  
 using Microsoft.AspNetCore.Authorization;
-using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Enums;
 using System.Linq.Expressions;
 

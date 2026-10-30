@@ -5,7 +5,7 @@ namespace Backend_TerraBeegle.Services;
 
 public interface IRawgService
 {
-    Task<ICollection<GameResponseDTO>> SearchGamesAsync(string query);
+    Task<RawgSearchDTO> SearchGamesAsync(string query);
     Task<GameResponseDTO?> GetGameAsync(int rawgGameId);
     Task<Game?> CreateGameAsync(int rawgGameId);
 }

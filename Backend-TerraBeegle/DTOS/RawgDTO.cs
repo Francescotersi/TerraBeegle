@@ -7,7 +7,22 @@ public class RawgSearchDTO
     public int Count { get; set; }
     public string? Next { get; set; }
     public string? Previous { get; set; }
-    public IEnumerable<RawgGameIdDTO> Results { get; set; } = [];
+    public IEnumerable<RawgGameDTO> Results { get; set; } = [];
+}
+
+public class RawgGameDTO
+{
+    public int Id { get; set; }
+    public string Slug { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public int? Metacritic { get; set; }
+    public string? Released { get; set; }
+    public bool Tba { get; set; }
+    public string? BackgroundImage { get; set; }
+    public double Rating { get; set; }
+    public IEnumerable<RawgParentPlatformListDTO> ParentPlatforms { get; set; } = [];
+    public IEnumerable<RawgPlatformListDTO> Platforms { get; set; } = [];
+    public IEnumerable<RawgGenreDTO> Genres { get; set; } = [];
 }
 
 public class RawgGameIdDTO
