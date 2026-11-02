@@ -5,12 +5,9 @@ using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
+using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
-using System.Security.Claims;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Cryptography;
 
 using Mapster;
 
@@ -85,53 +82,32 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
         
+        // The code is checked only after the password, so only the owner of the account can use up its attempts
         if (!user.EmailVerified)
-	        return StatusCode(StatusCodes.Status403Forbidden, "Email not verified. Please enter the code sent to your email.");
+        {
+            if (dto.Code is null)
+                return StatusCode(StatusCodes.Status403Forbidden, "Email not verified. Please enter the code sent to your email.");
+
+            var result = emailVerificationService.VerifyCode(user, dto.Code);
+
+            // Saved in every case: a wrong code increases the attempts, a correct one marks the email as verified
+            await db.SaveChangesAsync();
+
+            switch (result)
+            {
+                case CodeVerificationResult.Expired:
+                    return BadRequest("The code has expired. Ask for a new one.");
+                case CodeVerificationResult.TooManyAttempts:
+                    return BadRequest("Too many attempts. Ask for a new code.");
+                case CodeVerificationResult.Invalid:
+                    return BadRequest("Invalid code.");
+            }
+        }
 
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
-	[EnableRateLimiting("login")]
-	[HttpPost("verify-email")]
-	public async Task<ActionResult<AuthResponseDTO>> VerifyEmail(VerifyEmailDTO dto)
-	{
-		var email = dto.Email.Trim().ToLowerInvariant();
-		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-
-		// Same answer as a wrong code, so the endpoint cannot be used to find out which emails are registered
-		if(user is null)
-			return BadRequest("Invalid code.");
-
-		if(user.EmailVerified)
-			return Conflict("Already verified.");
-
-		if(user.EmailVerificationCodeHash is null || user.EmailVerificationCodeExpiration < DateTime.UtcNow)
-			return BadRequest("The code has expired. Ask for a new one.");
-		
-		if(user.EmailVerificationAttempts >= 5)
-			return BadRequest("Too many attempts. Ask for a new code.");
-
-		var hash = emailVerificationService.HashCode(dto.Code);
-		if(CryptographicOperations.FixedTimeEquals(Convert.FromHexString(user.EmailVerificationCodeHash), Convert.FromHexString(hash)))
-		{
-			user.EmailVerified = true;
-			user.EmailVerificationAttempts = 0;
-			user.EmailVerificationCodeHash = null;
-			user.EmailVerificationCodeExpiration = null;
-			await db.SaveChangesAsync();
-
-			// The user has just proven they own the email, so they are logged in directly
-			string token = tokenService.CreateToken(user);
-			return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
-		}
-
-		user.EmailVerificationAttempts++;
-		await db.SaveChangesAsync();
-
-		return BadRequest("Invalid code.");
-	}
-	
 	[EnableRateLimiting("resend-email")]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail(ResendEmailDTO dto)

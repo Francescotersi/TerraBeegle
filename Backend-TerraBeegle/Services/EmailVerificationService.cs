@@ -1,3 +1,4 @@
+using Backend_TerraBeegle.Enums;
 using Backend_TerraBeegle.Models;
 using System.Security.Cryptography;
 using System.Text;
@@ -9,8 +10,9 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     private const string Characters = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     private const int CodeLength = 8;
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
+    private const int MaxAttempts = 5;
 
-    public string HashCode(string code)
+    private string HashCode(string code)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(code.Trim().ToUpperInvariant())));
     }
@@ -24,6 +26,34 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
         user.EmailVerificationAttempts = 0;
         
         return code;
+    }
+
+    // Only changes the user; the caller saves the changes (like SetNewCode)
+    public CodeVerificationResult VerifyCode(User user, string code)
+    {
+        if (user.EmailVerificationCodeHash is null || user.EmailVerificationCodeExpiration < DateTime.UtcNow)
+            return CodeVerificationResult.Expired;
+
+        if (user.EmailVerificationAttempts >= MaxAttempts)
+            return CodeVerificationResult.TooManyAttempts;
+
+        // Fixed time comparison, so the response time does not reveal how much of the code is correct
+        bool matches = CryptographicOperations.FixedTimeEquals(
+            Convert.FromHexString(user.EmailVerificationCodeHash),
+            Convert.FromHexString(HashCode(code)));
+
+        if (!matches)
+        {
+            user.EmailVerificationAttempts++;
+            return CodeVerificationResult.Invalid;
+        }
+
+        user.EmailVerified = true;
+        user.EmailVerificationCodeHash = null;
+        user.EmailVerificationCodeExpiration = null;
+        user.EmailVerificationAttempts = 0;
+
+        return CodeVerificationResult.Valid;
     }
 
     public async Task SendCodeAsync(string email, string code)

@@ -303,8 +303,15 @@ salvați jocuri.
   introduce codul → `EmailVerified = true`.
   **Decizii (27.10.2026):**
   - se trimit **emailuri reale**, prin SMTP (nu Mailpit)
-  - un cont neverificat **poate face login** (register întoarce în continuare token-ul)
+  - ~~un cont neverificat **poate face login** (register întoarce în continuare token-ul)~~ → schimbat pe 02.11.2026
   - un cont neverificat e **șters automat după 2 zile**
+
+  **Decizii (02.11.2026), înlocuiesc login-ul de mai sus:**
+  - register **nu** mai întoarce token; codul ajunge **doar** pe email
+  - un cont neverificat **nu poate face login** fără cod: login-ul cere `emailOrUsername` + `password` + `code`
+  - un cont verificat face login doar cu `emailOrUsername` + `password`
+  - `POST /api/auth/verify-email` nu mai există — verificarea se face direct la login
+  - `resend-email` e public și primește doar `{ email }`
 
   **Pasul 1 — furnizorul SMTP + serviciul de email**
   - [x] ales furnizorul SMTP (codul e același, se schimbă doar setările) → ales: **Gmail** cu App Password:
@@ -342,19 +349,27 @@ salvați jocuri.
   - [x] expirare după 15 minute, `EmailVerificationAttempts = 0`
   - [x] emailul se trimite după `SaveChangesAsync`; dacă trimiterea eșuează, contul rămâne creat și userul
         cere un cod nou (pasul 5)
-  - [x] totul în `IEmailVerificationService` / `EmailVerificationService` (`SetNewCode`, `HashCode`,
+  - [x] totul în `IEmailVerificationService` / `EmailVerificationService` (`SetNewCode`, `VerifyCode`,
         `SendCodeAsync`), refolosit la pașii 4, 5 și la punctul 14
+  - [x] register întoarce 201 cu `UserResponseDTO`, fără token (decizia din 02.11)
 
-  **Pasul 4 — `POST /api/auth/verify-email`**
-  - [x] `[Authorize]` (userul e deja logat) + `{ code }` în body; userul se ia din token
-  - [x] deja verificat → 409; cod expirat → 400; prea multe încercări (ex: 5) → 400 + trebuie cerut alt cod
-  - [x] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri; cod greșit → `Attempts++`
-  - [x] cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg
+  **Pasul 4 — verificarea codului la `POST /api/auth/login`** (până pe 02.11 era un endpoint separat, `verify-email`)
+  - [x] `LoginDTO` are `Code` opțional (`string?`, `[StringLength(8, MinimumLength = 8)]`)
+  - [x] ordinea în `Login`: user găsit → parolă corectă (altfel 401) → email verificat? → token
+  - [x] email neverificat fără `code` → 403 (frontend-ul afișează câmpul pentru cod)
+  - [x] email neverificat cu `code` → `VerifyCode`, apoi `SaveChangesAsync` în orice caz:
+        expirat → 400; prea multe încercări (`MaxAttempts = 5`) → 400 + trebuie cerut alt cod; cod greșit → 400
+        (`Attempts++`); cod corect → `EmailVerified = true`, hash-ul / expirarea / încercările se șterg + token
+  - [x] codul se verifică **după** parolă → doar proprietarul contului poate consuma cele 5 încercări
+  - [x] comparare cu `CryptographicOperations.FixedTimeEquals` pe hash-uri, în
+        `EmailVerificationService.VerifyCode` (întoarce `CodeVerificationResult`; nu salvează, salvează controller-ul)
 
-  **Pasul 5 — `POST /api/auth/resend-verification`**
-  - [x] `[Authorize]`; deja verificat → 409
+  **Pasul 5 — `POST /api/auth/resend-email`**
+  - [x] public, body `{ email }` (`ResendEmailDTO`); userul se caută după email normalizat
+  - [x] același 200 în toate cazurile (email inexistent, deja verificat, trimis, trimitere eșuată) → endpoint-ul
+        nu poate fi folosit ca să afli ce emailuri sunt înregistrate; eroarea de trimitere ajunge doar în log
   - [x] cod nou, expirare nouă, `Attempts = 0`, email trimis
-  - [x] rate limiting (ex: 3 pe 10 minute per user) — altfel endpoint-ul poate trimite mii de emailuri
+  - [x] rate limiting `resend-email`: 3 pe 10 minute **per IP** (nu per user: fără token nu există user)
 
   **Pasul 6 — ștergerea conturilor neverificate după 2 zile**
   - [x] `BackgroundService` care rulează periodic (ex: o dată pe oră) și șterge userii cu
@@ -365,17 +380,18 @@ salvați jocuri.
   - [x] log cu câți useri au fost șterși
 
   **De decis mai târziu**
-  - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot
   - [ ] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
         codul trimis pe el e confirmat
 
 ## După merge-ul din 02.11.2026 — grave
 
-- [ ] **40. Proiectul nu compilează**
+- [x] **40. Proiectul nu compilează**
   `RawgService.cs:53`: `RawgSearchDTO.Results` e o listă de `RawgGameDTO`, dar i se dă o listă de `GameCardDTO`
   (`ToGameCardDTO`) → CS0029. Nimeni nu poate porni backend-ul.
   Soluție: `SearchGamesAsync` întoarce direct `PagedResponseDTO<GameCardDTO>` (ce declară și `GameController.Search`),
   iar `RawgSearchDTO` rămâne doar pentru deserializarea răspunsului de la RAWG.
+  → rezolvat de coleg („Fixed Game Search”): `SearchGamesAsync` întoarce `GameSearchResponseDTO` (`Results` de tip
+  `GameCardDTO`). `GameController.Search` declară încă `PagedResponseDTO<GameResponseDTO>` (vezi 48).
 
 - [x] **41. Lipsește migrația pentru modelele modificate (din nou, ca la punctul 15)**
   Modificări fără migrație: `Game.Title` → `Game.Name`, `RatingCount` `int` → `long`, `Game.DLCs` / `ParentGames` /
@@ -387,7 +403,7 @@ salvați jocuri.
   - [x] `dotnet ef migrations add ...` + verificat în fișierul generat că `Title` → `Name` e `RenameColumn`,
         nu `DropColumn` + `AddColumn` (altfel se pierd titlurile jocurilor salvate)
 
-- [ ] **42. Login blocat pentru conturile neverificate → userul nu mai poate verifica niciodată**
+- [x] **42. Login blocat pentru conturile neverificate → userul nu mai poate verifica niciodată**
   În `Login` s-a adăugat `if (!user.EmailVerified) return Unauthorized(...)`. Contrazice decizia de la 34 („un cont
   neverificat poate face login”) și strică fluxul: `verify-email` și `resend-email` sunt `[Authorize]`, deci după ce
   expiră token-ul de la register (60 de minute) userul nu mai poate obține alt token → nu poate verifica și nu poate
@@ -397,6 +413,8 @@ salvați jocuri.
   De decis împreună: ori se scoate verificarea (decizia de la 34), ori se schimbă tot fluxul (register fără token,
   `verify-email` / `resend-email` publice cu `{ email, code }` / `{ email }`, răspuns identic indiferent dacă
   emailul există).
+  → rezolvat pe 02.11: un cont neverificat nu poate face login fără cod, iar codul se trimite direct la login
+  (vezi punctul 34, pașii 4–5). `verify-email` a fost șters.
 
 - [ ] **43. `ChangePassword` răspunde „Password changed successfully”, dar nu salvează nimic**
   În `UserController.ChangePassword` lipsește `await db.SaveChangesAsync()` → parola rămâne cea veche.
@@ -411,6 +429,10 @@ salvați jocuri.
   `&key=...`. Oricine folosește aplicația vede cheia în răspunsul JSON (ca la punctul 12, dar mai grav).
   Soluție: `PreviousPageUrl` / `NextPageUrl` construite de noi (`Utils.CreatePagedResponse` + `Url.Action`), ca la
   celelalte liste.
+  - [x] colegul scoate acum cheia cu `Replace(key, "")` din `Next` / `Previous` → cheia nu mai ajunge la client
+  - [ ] de verificat URL-ul rezultat: dacă RAWG pune `key` primul (`?key=...&page=2`), `Replace("?&", "&")` dă
+        `api/games&page=2` (fără `?`); în plus parametrii RAWG (`page_size`) nu se potrivesc cu ai noștri (`PageSize`).
+        Varianta sigură rămâne cea de mai sus: URL-uri construite de noi
 
 ## După merge-ul din 02.11.2026 — `GET /api/games` (punctul 36)
 
@@ -450,8 +472,9 @@ salvați jocuri.
   `Game.Title` a devenit `Game.Name`, dar `GameCardDTO` are tot `Title` → `ProjectToType<GameCardDTO>()` nu mai
   găsește câmpul și `Title` e mereu `null`. De ales un singur nume (`Name` peste tot, ca la RAWG și la
   `GameResponseDTO`), sau o regulă Mapster `Map(dest => dest.Title, src => src.Name)`.
-  → decis: `Title` peste tot (`Game`, `GameCardDTO`, `GameResponseDTO`); coloana din baza de date rămâne `Title`,
-  deci migrația de la 41 nu mai redenumește nimic. Frontend-ul citește `title` și la pagina de detaliu.
+  → decis inițial `Title` peste tot, dar după merge-ul cu `fracerba` a rămas **`Name` peste tot** (`Game`,
+  `GameCardDTO`, `GameResponseDTO`); coloana a fost redenumită în migrația `RenameTitleToNameAndAddIndexes`
+  (`RenameColumn`, fără pierdere de date). Frontend-ul citește `name`.
 
 - [ ] **51. `Search` pe useri: numărul total nu corespunde cu lista**
   `totalCount` numără toți userii găsiți, dar lista are în plus `&& u.EmailVerified` → `TotalPages` greșit și pagini
@@ -475,8 +498,8 @@ salvați jocuri.
 
 - [ ] **54. `Utils` e în namespace-ul `Controllers`, iar `RawgService` îl importă**
   Un serviciu nu ar trebui să depindă de controllere. `Utils.IsCurrentUser(User, id)` → extension method pe
-  `ClaimsPrincipal` (ex: `User.GetUserId()`, cum scrie la 32), folosit și în `AuthController`
-  (`VerifyEmail` / `ResendEmail` au încă codul cu `sub` copiat).
+  `ClaimsPrincipal` (ex: `User.GetUserId()`, cum scrie la 32). (`AuthController` nu mai citește token-ul deloc
+  după 02.11, deci nu mai are cod copiat.)
 
 - [ ] **55. Cod nefolosit**
   - [ ] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
@@ -487,6 +510,7 @@ salvați jocuri.
 
 - [ ] **56. Mesaje / documentație care nu mai corespund**
   - [ ] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
-  - [ ] la 34, pasul 5: ruta e `resend-verification`, în cod e `resend-email`, iar limita e per IP, nu per user
+  - [x] la 34, pasul 5: ruta e `resend-verification`, în cod e `resend-email`, iar limita e per IP, nu per user
+        (actualizat în milestone pe 02.11)
   - [ ] textul emailului: „Thank you for creating an account” se trimite și la resend; „contact our support team” fără adresă
   - [ ] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect

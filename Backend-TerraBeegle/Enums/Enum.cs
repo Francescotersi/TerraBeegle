@@ -122,3 +122,11 @@ public enum GameStore
     ItchIO = 9,
     EpicGames = 11
 }
+
+public enum CodeVerificationResult
+{
+    Valid,
+    Invalid,
+    Expired,
+    TooManyAttempts
+}

@@ -39,18 +39,10 @@ public class LoginDTO
     public string EmailOrUsername { get; set; } = string.Empty;
     [Required]
     public string Password { get; set; } = string.Empty;
-}
 
-public class VerifyEmailDTO
-{
-    [Required]
-    [EmailAddress]
-    [MaxLength(255)]
-    public string Email { get; set; } = string.Empty;
-    
-    [Required]
+    // Only needed when the email is not verified yet (the code sent on register / resend-email)
     [StringLength(8, MinimumLength = 8)]
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
 }
 
 public class ResendEmailDTO
