@@ -24,7 +24,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 {
     [EnableRateLimiting("register")]
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
+    public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
         var email = dto.Email.Trim().ToLowerInvariant();
@@ -69,7 +69,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             logger.LogError(ex, "Error sending verification code to {Email}", user.Email);
         }
         
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id }, user.Adapt<UserResponseDTO>());
     }
     
     [EnableRateLimiting("login")]
@@ -86,27 +86,22 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Unauthorized("Invalid credentials.");
         
         if (!user.EmailVerified)
-            return Unauthorized("Account not verified. Please check your email for the verification token.");
-
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid credentials.");
+	        return StatusCode(StatusCodes.Status403Forbidden, "Email not verified. Please enter the code sent to your email.");
 
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
-	[EnableRateLimiting("verify-email")]
+	[EnableRateLimiting("login")]
 	[HttpPost("verify-email")]
-	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
+	public async Task<ActionResult<AuthResponseDTO>> VerifyEmail(VerifyEmailDTO dto)
 	{
-		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-		
-		if(!long.TryParse(sub, out var tokenId))
-			return Unauthorized("Invalid token.");
+		var email = dto.Email.Trim().ToLowerInvariant();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-		var user = await db.Users.FindAsync(tokenId);
-        if(user is null)
-            return NotFound();
+		// Same answer as a wrong code, so the endpoint cannot be used to find out which emails are registered
+		if(user is null)
+			return BadRequest("Invalid code.");
 
 		if(user.EmailVerified)
 			return Conflict("Already verified.");
@@ -126,7 +121,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 			user.EmailVerificationCodeExpiration = null;
 			await db.SaveChangesAsync();
 
-			return Ok();
+			// The user has just proven they own the email, so they are logged in directly
+			string token = tokenService.CreateToken(user);
+			return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
 		}
 
 		user.EmailVerificationAttempts++;
@@ -137,19 +134,16 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 	
 	[EnableRateLimiting("resend-email")]
 	[HttpPost("resend-email")]
-	public async Task<IActionResult> ResendEmail()
+	public async Task<IActionResult> ResendEmail(ResendEmailDTO dto)
 	{
-		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-		
-		if(!long.TryParse(sub, out var tokenId))
-			return Unauthorized("Invalid token.");
+		// The same answer in every case, so the endpoint cannot be used to find out which emails are registered
+		const string message = "If the account exists and is not verified, a new code has been sent.";
 
-		var user = await db.Users.FindAsync(tokenId);
-        if(user is null)
-            return NotFound();
+		var email = dto.Email.Trim().ToLowerInvariant();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-		if(user.EmailVerified)
-			return Conflict("Already verified.");
+		if(user is null || user.EmailVerified)
+			return Ok(message);
 
 		var code = emailVerificationService.SetNewCode(user);
 
@@ -162,9 +156,8 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		catch(Exception ex)
 		{
 			logger.LogError(ex, "Error resending verification code to {Email}", user.Email);
-			return StatusCode(StatusCodes.Status503ServiceUnavailable, "Failed to send code. Try again later.");
 		}
 
-		return Ok("The code has been resent.");
+		return Ok(message);
 	}
 }

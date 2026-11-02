@@ -44,8 +44,21 @@ public class LoginDTO
 public class VerifyEmailDTO
 {
     [Required]
+    [EmailAddress]
+    [MaxLength(255)]
+    public string Email { get; set; } = string.Empty;
+    
+    [Required]
     [StringLength(8, MinimumLength = 8)]
     public string Code { get; set; } = string.Empty;
+}
+
+public class ResendEmailDTO
+{
+    [Required]
+    [EmailAddress]
+    [MaxLength(255)]
+    public string Email { get; set; } = string.Empty;
 }
 
 public class AuthResponseDTO
