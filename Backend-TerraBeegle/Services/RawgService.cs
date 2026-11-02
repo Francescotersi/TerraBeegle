@@ -157,7 +157,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
     private static readonly Func<RawgGameDTO, GameCardDTO> ToGameCardDTO = r => new GameCardDTO
     {
         RawgGameId = r.Id,
-        Title = r.Name,
+        Name = r.Name,
         BackgroundImage = r.BackgroundImage,
         Rating = r.Rating,
         ReleaseDate = DateOnly.TryParse(r.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,

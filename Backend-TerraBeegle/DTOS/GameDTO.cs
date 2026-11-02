@@ -24,7 +24,7 @@ public class GameResponseDTO
 public class GameCardDTO
 {
     public int RawgGameId { get; set; }
-    public string Title { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public string? BackgroundImage { get; set; }
     public double? Rating { get; set; }
     public DateOnly? ReleaseDate { get; set; }
@@ -50,7 +50,7 @@ public class GameSearchDTO
     public string? SortBy { get; set; }
     public bool Ascending { get; set; } = true;
 
-    public string? Title { get; set; }
+    public string? Name { get; set; }
     public string? ParentPlatforms { get; set; }
     public string? Platforms { get; set; }
     public string? Stores { get; set; }

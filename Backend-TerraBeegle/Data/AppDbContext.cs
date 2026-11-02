@@ -145,6 +145,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
             e.HasIndex(g => g.RawgGameId).IsUnique();
+            
+            e.OwnsMany(g => g.DLCs, o => o.ToTable("game_dlcs"));
+            e.OwnsMany(g => g.ParentGames, o => o.ToTable("game_parent_games"));
+            e.OwnsMany(g => g.Series, o => o.ToTable("game_series"));
 
             e.HasIndex(g => g.Slug).IsUnique();
 
