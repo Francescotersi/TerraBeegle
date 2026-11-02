@@ -44,7 +44,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         if (totalCount != 0) {
             friendships = await db.Friendships
             .Where(filter)
-            .OrderBy(f => userId == f.User1Id ? f.User2Id : f.User1Id) // Order by the other user's ID
+            .OrderBy(f => f.User1Id == userId ? f.User2.Username : f.User1.Username) // Order by the other user's username
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .Select( f => new FriendshipResponseDTO 
@@ -53,7 +53,14 @@ public class FriendshipController(AppDbContext db) : ControllerBase
                 SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
                 ReceiverId = f.ReceiverId,
                 Status = f.Status.ToString(),
-                UpdatedAt = f.UpdatedAt
+                UpdatedAt = f.UpdatedAt,
+                // EF translates the navigations to a JOIN with Users, no Include needed
+                User = new UserPublicResponseDTO
+                {
+                    Id = f.User1Id == userId ? f.User2Id : f.User1Id,
+                    Username = f.User1Id == userId ? f.User2.Username : f.User1.Username,
+                    ImageProfile = f.User1Id == userId ? f.User2.ImageProfile : f.User1.ImageProfile
+                }
             })
             .ToListAsync();
         }
@@ -79,12 +86,13 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return BadRequest("Cannot create friendship with oneself.");
 
         var senderExists = await db.Users.AnyAsync(u => u.Id == dto.SenderId);
-        var receiverExists = await db.Users.AnyAsync(u => u.Id == dto.ReceiverId);
+        // Loaded (not only checked), because the response contains the receiver's username and image
+        var receiver = await db.Users.FindAsync(dto.ReceiverId);
 
         if (!senderExists)
             return NotFound("Sender user not found.");
 
-        if (!receiverExists)
+        if (receiver is null)
             return NotFound("Receiver user not found.");
 
         var User1Id = Math.Min(dto.SenderId, dto.ReceiverId);
@@ -125,6 +133,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 
         var createdFriendship = friendship.Adapt<Friendship, FriendshipResponseDTO>();
         createdFriendship.SenderId = dto.SenderId;
+        createdFriendship.User = receiver.Adapt<UserPublicResponseDTO>();
 
         return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
     }
