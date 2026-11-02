@@ -134,7 +134,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       </div>
     </div>
 
-    <!-- Modal Pop-up di Conferma Logout -->
+    <!-- Pop-up Logout -->
     <app-logout-popup
       [isOpen]="isLogoutModalOpen()"
       (close)="closeLogoutModal()"
@@ -165,7 +165,6 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 25px rgba(219, 39, 119, 0.28), inset 0 2px 4px rgba(255, 255, 255, 0.4);
       border: 3px solid rgba(255, 255, 255, 0.85);
       flex-shrink: 0;
       overflow: hidden;
@@ -224,7 +223,6 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       min-height: 180px;
     }
 
-    /* Scritta rossa con sottolineatura per il logout */
     .logout-link {
       background: none;
       border: none;

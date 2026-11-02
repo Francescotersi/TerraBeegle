@@ -1,7 +1,7 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, input } from '@angular/core';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 
-interface GridComponentProps {
+export interface GridComponentProps {
   rawgGameId: number;
   name: string;
   description: string;
@@ -24,57 +24,63 @@ interface GridComponentProps {
   template: `
   <app-liquid-glass
     borderRadius="26px"
-    blur="2px"
-    [scale]="85"
+    blur="16px"
   >
-    <div class="p-4 grid-wrapper mx-auto">
-      <h2 class="h3 fw-bold mb-4 text-center">Beegle's Games Catalog</h2>
+    <div class="p-4 p-md-5 grid-wrapper w-100">
+      <h2 class="h3 fw-bold mb-4 text-center">{{ title() }}</h2>
 
-      <div
-        class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3
-        justify-content-center"
-      >
-        @for (game of visibleGames(); track game.rawgGameId) {
-          
-          <div class="col">
-            <div class="card h-100 shadow-sm game-card">
-              <img 
-                [src]="game.coverImage"
-                [alt]="game.name"
-                class="card-img game-cover"
-              />
-              <div class="card-img-overlay d-flex flex-column justify-content-end p-2 card-overlay">
-                <h6 class="card-title fw-bold mb-1 text-white" [title]="game.name">
-                  {{ game.name }}
-                </h6>
+      @if (games().length === 0) {
+        <div class="text-center py-5 text-muted">
+          <p class="fs-5 mb-0">{{ emptyMessage() }}</p>
+        </div>
+      } @else {
+        <div
+          class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3
+          justify-content-center"
+        >
+          @for (game of visibleGames(); track game.rawgGameId) {
+            
+            <div class="col">
+              <div class="card h-100 shadow-sm game-card">
+                <img 
+                  [src]="game.coverImage"
+                  [alt]="game.name"
+                  class="card-img game-cover"
+                  loading="lazy"
+                />
+                <div class="card-img-overlay d-flex flex-column justify-content-end p-2 card-overlay">
+                  <h6 class="card-title fw-bold mb-1 text-white" [title]="game.name">
+                    {{ game.name }}
+                  </h6>
 
-                <div class="card-details d-flex align-items-center justify-content-between">
-                  <span class="badge bg-warning text-dark py-1 px-1 small">
-                    ★ {{ game.rating }}
-                  </span>
-                  
-                  @if (game.metacritic) {
-                    <span class="badge bg-dark border border-secondary text-light py-1 px-1 small">
-                      Metacritic: {{ game.metacritic }}
+                  <div class="card-details d-flex align-items-center justify-content-between">
+                    <span class="badge bg-warning text-dark py-1 px-1 small">
+                      ★ {{ game.rating }}
                     </span>
-                  }
+                    
+                    @if (game.metacritic) {
+                      <span class="badge bg-dark border border-secondary text-light py-1 px-1 small">
+                        Metacritic: {{ game.metacritic }}
+                      </span>
+                    }
 
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        }       
-      </div>
-      @if (hasMoreGames()) {
-        <div class="text-center mt-5">
-          <button 
-            class="btn btn-show-more px-4 py-2 fw-semibold shadow-sm" 
-            type="button"
-            (click)="showMore()"
-          >
-            Show More
-          </button>
+          }       
         </div>
+        @if (hasMoreGames()) {
+          <div class="text-center mt-5">
+            <button 
+              class="btn btn-show-more px-4 py-2 fw-semibold shadow-sm" 
+              type="button"
+              (click)="showMore()"
+            >
+              Show More
+            </button>
+          </div>
+        }
       }
     </div>
   </app-liquid-glass>
@@ -83,8 +89,6 @@ interface GridComponentProps {
     :host {
       display: block;
       width: 100%;
-      max-width: 1000px;
-      margin: 0 auto;
     }
 
     app-liquid-glass {
@@ -93,7 +97,6 @@ interface GridComponentProps {
     }
 
     .grid-wrapper {
-      max-width: 1000px;
       width: 100%;
     }
 
@@ -123,7 +126,6 @@ interface GridComponentProps {
       transform: translateZ(0);
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
-      will-change: transform;
       transform-origin: bottom center;
       transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.25s ease;
     }
@@ -142,6 +144,7 @@ interface GridComponentProps {
     }
 
     .game-card:hover {
+      will-change: transform;
       transition-delay: 0.25s;
       transform: scale(1.05);
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -182,46 +185,22 @@ interface GridComponentProps {
   `,
 })
 export class GridComponent {
+  readonly title = input<string>("Beegle's Games Catalog");
+  readonly games = input<GridComponentProps[]>([]);
+  readonly emptyMessage = input<string>('No games found.');
+
   private readonly step = 20;
   protected readonly visibleCount = signal(20);
 
   protected readonly visibleGames = computed(() => {
-    return this.props.slice(0, this.visibleCount());
+    return this.games().slice(0, this.visibleCount());
   });
 
   protected readonly hasMoreGames = computed(() => {
-    return this.visibleCount() < this.props.length;
+    return this.visibleCount() < this.games().length;
   });
 
   protected showMore(): void {
     this.visibleCount.update((count) => count + this.step);
-  }
-
-
-  //    test
-  protected readonly props: GridComponentProps[] = [
-    this.createGame({ rawgGameId: 1, name: 'The Witcher 3: Wild Hunt', released: '2015-05-19', rating: 4.8, metacritic: 93, tags: ['fantasy', 'open world', 'magic'], genres: ['RPG', 'Adventure'] }),
-    this.createGame({ rawgGameId: 2, name: 'Cyberpunk 2077', released: '2020-12-10', rating: 4.3, metacritic: 86, tags: ['cyberpunk', 'future', 'neon'], genres: ['Action', 'RPG'] }),
-    this.createGame({ rawgGameId: 3, name: 'Elden Ring', released: '2022-02-25', rating: 4.9, metacritic: 96, tags: ['souls-like', 'dark fantasy', 'boss battles'], genres: ['RPG', 'Action'] }),
-    this.createGame({ rawgGameId: 4, name: 'Hollow Knight', released: '2017-02-24', rating: 4.7, metacritic: 90, tags: ['insects', 'exploration', 'metroidvania'], genres: ['Platformer', 'Adventure'] }),
-    this.createGame({ rawgGameId: 5, name: 'Hollow Knight', released: '2017-02-24', rating: 4.7, metacritic: 90, tags: ['underground', 'mystery', 'indie'], genres: ['Platformer', 'Action'] }),
-    this.createGame({ rawgGameId: 6, name: 'Hollow Knight', released: '2017-02-24', rating: 4.7, metacritic: 90, tags: ['knights', 'ruins', 'challenging'], genres: ['Adventure', 'Indie'] }),
-    this.createGame({ rawgGameId: 7, name: 'Hollow Knight', released: '2017-02-24', rating: 4.7, metacritic: 90, tags: ['caverns', 'combat', 'hand-drawn'], genres: ['Action', 'Platformer'] }),
-  ];
-
-  //    test
-  private createGame(game: Partial<GridComponentProps> & Pick<GridComponentProps, 'rawgGameId' | 'name' | 'released' | 'rating' | 'metacritic'>): GridComponentProps {
-    return {
-      description: '',
-      tba: false,
-      website: '',
-      coverImage: 'https://imgs.search.brave.com/a1EsFjU-WvxTYpFAexmjkr9I7R1sdZ5L3-Gwc3AhY9A/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJhY2Nlc3Mu/Y29tL2Z1bGwvMTA0/NTg1NzUuanBn',
-      developer: '',
-      publisher: '',
-      genres: [],
-      platforms: [6, 48, 49],
-      ...game,
-      tags: game.tags ?? [],
-    };
   }
 }

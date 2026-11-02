@@ -15,12 +15,12 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
           </div>
         </aside>
 
-        <main class="col-12 col-lg-8 col-xl-6 col-xxl-8">
+        <main class="col-12 col-lg-8 col-xl-8 col-xxl-8">
           <router-outlet />
         </main>
 
         <!-- recensioni etc... -->
-        <div class="d-none d-xl-block col-xl-3 col-xxl-2" aria-hidden="true"></div>
+        <div class="d-none d-xxl-block col-xxl-2" aria-hidden="true"></div>
       </div>
     </div>
   `,
