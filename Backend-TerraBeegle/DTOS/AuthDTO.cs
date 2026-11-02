@@ -39,6 +39,7 @@ public class LoginDTO
     public string EmailOrUsername { get; set; } = string.Empty;
     [Required]
     public string Password { get; set; } = string.Empty;
+}
 
     // Only needed when the email is not verified yet (the code sent on register / resend-email)
     [StringLength(8, MinimumLength = 8)]

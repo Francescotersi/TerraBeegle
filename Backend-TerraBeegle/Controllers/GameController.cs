@@ -13,7 +13,7 @@ namespace Backend_TerraBeegle.Controllers;
 public class GameController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> Search(GameSearchDTO search)
+    public async Task<ActionResult<GameSearchResponseDTO>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
 
@@ -35,7 +35,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
             search.SortBy = search.SortBy.Trim().ToLowerInvariant();
-            query += $"&order={(search.Ascending ? search.SortBy : $"-{search.SortBy}")}";
+            query += $"&ordering={(search.Ascending ? search.SortBy : $"-{search.SortBy}")}";
         }
 
         if (!string.IsNullOrWhiteSpace(search.ParentPlatforms))
@@ -84,7 +84,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
             {
                 string startDate = $"{dateParts[0].Trim()}-01-01";
                 string endDate = $"{dateParts[1].Trim()}-12-31";
-                query += $"&dates={startDate},{endDate}";
+                query += $"&updated={startDate},{endDate}";
             }
         }
 
@@ -107,6 +107,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
             query += $"&exclude_stores={search.ExcludeStores.Trim()}";
 
         var result = await rawgService.SearchGamesAsync(query.TrimStart('&'));
+
         return Ok(result);
     }
 
