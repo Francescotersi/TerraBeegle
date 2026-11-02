@@ -163,12 +163,12 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
 
 ## Cont
 
-- [ ] **13. Schimbarea parolei**
+- [x] **13. Schimbarea parolei**
   `UpdatePasswordDTO` există, dar nu e folosit de niciun endpoint.
-  - [ ] endpoint `[Authorize]` (ex: `PATCH /api/users/{id}/password`) + verificare că id-ul din token = id-ul din URL
-  - [ ] DTO-ul cere și parola curentă; dacă e greșită → 401 / 400
-  - [ ] parola nouă validată la fel ca la register (`[Required]`, `[MinLength(8)]`)
-  - [ ] parola nouă se hash-uiește cu `IPasswordHasher<User>`
+  - [x] endpoint `[Authorize]` (ex: `PATCH /api/users/{id}/password`) + verificare că id-ul din token = id-ul din URL
+  - [x] DTO-ul cere și parola curentă; dacă e greșită → 401 / 400
+  - [x] parola nouă validată la fel ca la register (`[Required]`, `[MinLength(8)]`)
+  - [x] parola nouă se hash-uiește cu `IPasswordHasher<User>`
 
 - [ ] **14. Schimbarea email-ului**
   `UpdateEmailDTO` există, dar nu e folosit de niciun endpoint.
@@ -416,13 +416,13 @@ salvați jocuri.
   → rezolvat pe 02.11: un cont neverificat nu poate face login fără cod, iar codul se trimite direct la login
   (vezi punctul 34, pașii 4–5). `verify-email` a fost șters.
 
-- [ ] **43. `ChangePassword` răspunde „Password changed successfully”, dar nu salvează nimic**
+- [x] **43. `ChangePassword` răspunde „Password changed successfully”, dar nu salvează nimic**
   În `UserController.ChangePassword` lipsește `await db.SaveChangesAsync()` → parola rămâne cea veche.
-  - [ ] `SaveChangesAsync` după `HashPassword`
-  - [ ] `OldPassword` are regex-ul de complexitate → cine are o parolă creată înainte de regex-ul actual (punctul 20)
+  - [x] `SaveChangesAsync` după `HashPassword`
+  - [x] `OldPassword` are regex-ul de complexitate → cine are o parolă creată înainte de regex-ul actual (punctul 20)
         primește 400 și nu-și poate schimba parola. Parola veche are nevoie doar de `[Required]`
-  - [ ] parolă veche greșită → 401 îl poate deloga pe user în frontend; mai bine 400 / 403
-  - [ ] după rezolvare, bifat și punctul 13
+  - [x] parolă veche greșită → 401 îl poate deloga pe user în frontend; mai bine 400 / 403
+  - [x] după rezolvare, bifat și punctul 13
 
 - [ ] **44. Cheia RAWG ajunge la client prin `Next` / `Previous`**
   `SearchGamesAsync` copiază `response.Next` / `response.Previous` de la RAWG, care sunt URL-uri complete cu

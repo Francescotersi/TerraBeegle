@@ -49,9 +49,6 @@ public class UpdateEmailDTO
 public class UpdatePasswordDTO
 {
     [Required]
-    [MinLength(8)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}])[-A-Za-z\d`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}]{8,}$",
-        ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
     public string OldPassword { get; set; } = string.Empty;
 
     [Required]
