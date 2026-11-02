@@ -23,7 +23,6 @@ export interface GridComponentProps {
   selector: 'app-grid-component',
   template: `
     <div class="grid-wrapper w-100 pt-2 pt-md-4">
-      <!-- Filtro SVG Liquid Glass Globale pre-compilato nella GPU (0ms di latenza all'hover) -->
       <svg width="0" height="0" style="position: absolute; pointer-events: none;" aria-hidden="true">
         <filter id="tb-global-liquid-filter" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="noise">
@@ -33,7 +32,6 @@ export interface GridComponentProps {
           <feGaussianBlur in="refracted" stdDeviation="0.8" />
         </filter>
       </svg>
-      <!-- Pre-warmer: elemento invisibile per forzare la GPU a compilare lo shader al page load -->
       <div
         style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; backdrop-filter: url(#tb-global-liquid-filter);"
         aria-hidden="true"
@@ -59,7 +57,7 @@ export interface GridComponentProps {
                 (mouseenter)="onMouseEnter(game.rawgGameId)"
                 (mouseleave)="onMouseLeave()"
               >
-                <!-- Contenitore immagine con aspect ratio 16:9 -->
+                <!-- Contenitore immagine -->
                 <div class="game-cover-container">
                   <img
                     [src]="game.coverImage"
@@ -68,7 +66,7 @@ export interface GridComponentProps {
                     loading="lazy"
                   />
 
-                  <!-- Overlay titolo: rimane SEMPRE sull'immagine sia a riposo che in hover (come nella foto) -->
+                  <!-- Overlay titolo -->
                   <div class="card-img-overlay d-flex flex-column justify-content-end p-2.5 card-overlay-title">
                     <h6 class="card-title fw-bold mb-0 text-white text-truncate" [title]="game.name">
                       {{ game.name }}
@@ -76,7 +74,7 @@ export interface GridComponentProps {
                   </div>
                 </div>
 
-                <!-- Pannello dettagli Liquid Glass: istanziato solo all'hover per massima leggerezza -->
+                <!-- Pannello dettagli -->
                 @if (hoveredGameId() === game.rawgGameId) {
                   <div class="game-details-liquid">
                     <app-liquid-glass
@@ -88,7 +86,6 @@ export interface GridComponentProps {
                       [customStyle]="{ 'border-top': 'none', 'border-color': 'rgba(255, 255, 255, 0.75)', 'border-bottom-left-radius': '14px', 'border-bottom-right-radius': '14px' }"
                     >
                       <div class="p-3 text-dark details-inner">
-                        <!-- Riga 1: Pulsanti azione proporzionati -->
                         <div class="d-flex align-items-center gap-2 mb-2 action-buttons">
 
                           <button class="btn-action-circle" type="button" title="Add to Wishlist">
@@ -111,7 +108,7 @@ export interface GridComponentProps {
                           </button>
                         </div>
 
-                        <!-- Rating and Metacritic -->
+                        <!-- Rating / Metacritic -->
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                           <span class="rating-box" [title]="'Rating: ' + game.rating">
                             ★ {{ game.rating }}
@@ -134,7 +131,7 @@ export interface GridComponentProps {
                           }
                         </div>
 
-                        <!-- Riga 3: Categorie / Generi (es. 'Commedia', 'Action • RPG') -->
+                        <!-- Categorie / Generi -->
                         @if (game.genres && game.genres.length > 0) {
                           <div class="game-genres-line text-truncate">
                             {{ game.genres.slice(0, 3).join(' • ') }}
