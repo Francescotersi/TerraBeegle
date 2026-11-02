@@ -47,13 +47,12 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             };
         }
 
-        var BaseUrl = "https://api.rawg.io/";
-        var key = $"key={config["EnvironmentVariables:RAWG_API_KEY"]}";
-
-        return new GameSearchResponseDTO { 
+        // Next / Previous from RAWG are not copied: they contain the API key and use RAWG's parameter names.
+        // The controller builds them with our own parameters
+        return new GameSearchResponseDTO {
             Results = [.. response.Results.Select(ToGameCardDTO)],
-            Next = response.Next?.Replace(BaseUrl, "").Replace(key, "").Replace("?&", "&").Replace("&&", "&"),
-            Previous = response.Previous?.Replace(BaseUrl, "").Replace(key, "").Replace("?&", "&").Replace("&&", "&"),
+            Next = null,
+            Previous = null,
             Count = response.Count
         };
     }

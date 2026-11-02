@@ -25,4 +25,7 @@ public class FriendshipResponseDTO
     public long ReceiverId { get; set; }
     public string Status { get; set; } = null!;
     public DateTime UpdatedAt { get; set; }
+
+    // The other user of the friendship (not the logged in one): the friend, the receiver or the sender
+    public UserPublicResponseDTO User { get; set; } = null!;
 }

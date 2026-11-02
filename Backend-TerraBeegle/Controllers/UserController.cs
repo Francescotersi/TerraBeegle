@@ -181,9 +181,12 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return NotFound();
 
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.OldPassword) == PasswordVerificationResult.Failed)
-            return Unauthorized("Old password is incorrect.");
+            return BadRequest("Old password is incorrect.");
 
         user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
+        
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
         
         return Ok("Password changed successfully.");
     }

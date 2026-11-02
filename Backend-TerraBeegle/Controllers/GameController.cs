@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
@@ -108,7 +109,27 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
         var result = await rawgService.SearchGamesAsync(query.TrimStart('&'));
 
+        if (result is not null)
+        {
+            int page = search.Page ?? 1;
+            int pageSize = search.PageSize ?? 20;
+
+            result.Previous = page > 1 ? PageUrl(page - 1) : null;
+            result.Next = page * pageSize < result.Count ? PageUrl(page + 1) : null;
+        }
+
         return Ok(result);
+    }
+
+    // Same URL as the current request (same filters, with our parameter names), only with another page
+    private string PageUrl(int page)
+    {
+        var parameters = Request.Query
+            .Where(q => !q.Key.Equals("page", StringComparison.OrdinalIgnoreCase))
+            .Select(q => KeyValuePair.Create(q.Key, (string?)q.Value.ToString()))
+            .Append(KeyValuePair.Create("page", (string?)page.ToString()));
+
+        return QueryHelpers.AddQueryString(Request.Path, parameters);
     }
 
 	// retrieving all games from the database and projecting them to GameResponseDTO
