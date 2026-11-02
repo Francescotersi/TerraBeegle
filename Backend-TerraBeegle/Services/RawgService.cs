@@ -20,28 +20,26 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
-    public async Task<RawgSearchDTO> SearchGamesAsync(string query)
+    public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query)
     {
         var client = httpClientFactory.CreateClient("RawgAPI");
 
         RawgSearchDTO? response;
         try
         {
-            response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games?{query}"), RawgJsonOptions);
+            if (!string.IsNullOrWhiteSpace(query))
+                query = "?" + query;
+
+            response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games{query}"), RawgJsonOptions);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            return new RawgSearchDTO { 
-                Results = [],
-                Next = null,
-                Previous = null,
-                Count = 0
-            };
+            return null;
         }
 
         if (response is null)
         {
-            return new RawgSearchDTO { 
+            return new GameSearchResponseDTO { 
                 Results = [],
                 Next = null,
                 Previous = null,
@@ -49,10 +47,13 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             };
         }
 
-        return new RawgSearchDTO { 
+        var BaseUrl = "https://api.rawg.io/";
+        var key = $"key={config["EnvironmentVariables:RAWG_API_KEY"]}";
+
+        return new GameSearchResponseDTO { 
             Results = [.. response.Results.Select(ToGameCardDTO)],
-            Next = response.Next,
-            Previous = response.Previous,
+            Next = response.Next?.Replace(BaseUrl, "").Replace(key, "").Replace("?&", "&").Replace("&&", "&"),
+            Previous = response.Previous?.Replace(BaseUrl, "").Replace(key, "").Replace("?&", "&").Replace("&&", "&"),
             Count = response.Count
         };
     }
@@ -114,7 +115,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         game = new Game
         {
             RawgGameId = response.Id,
-            Title = response.Name,
+            Name = response.Name,
             Slug = response.Slug,
             NameOriginal = response.NameOriginal,
             Description = response.Description,
@@ -156,7 +157,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
     private static readonly Func<RawgGameDTO, GameCardDTO> ToGameCardDTO = r => new GameCardDTO
     {
         RawgGameId = r.Id,
-        Title = r.Name,
+        Name = r.Name,
         BackgroundImage = r.BackgroundImage,
         Rating = r.Rating,
         ReleaseDate = DateOnly.TryParse(r.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
@@ -183,7 +184,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
     private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {
         RawgGameId = r.Id,
-        Title = r.Name,
+        Name = r.Name,
         Slug = r.Slug,
         NameOriginal = r.NameOriginal,
         Description = r.Description,

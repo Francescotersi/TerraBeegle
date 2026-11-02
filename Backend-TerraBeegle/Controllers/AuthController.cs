@@ -86,12 +86,16 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Unauthorized("Invalid credentials.");
         
         if (!user.EmailVerified)
-	        return Unauthorized("Account not verified. Please check your email for the verification token.");
+            return Unauthorized("Account not verified. Please check your email for the verification token.");
+
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+            return Unauthorized("Invalid credentials.");
 
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
-	
+
+	[EnableRateLimiting("verify-email")]
 	[HttpPost("verify-email")]
 	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
 	{

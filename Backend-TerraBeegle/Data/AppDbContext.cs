@@ -114,7 +114,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.RawgGameId)
                 .IsRequired();
 
-            e.Property(g => g.Title)
+            e.Property(g => g.Name)
                 .IsRequired()
                 .HasMaxLength(255);
 
@@ -150,6 +150,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.OwnsMany(g => g.ParentGames, o => o.ToTable("game_parent_games"));
             e.OwnsMany(g => g.Series, o => o.ToTable("game_series"));
 
+            e.HasIndex(g => g.Slug).IsUnique();
+
             e.HasMany(g => g.Genres)
                 .WithMany(g => g.Games)
                 .UsingEntity(j => j.ToTable("game_genres"));
@@ -180,6 +182,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(100);
 
             e.HasIndex(g => g.RawgGenreId).IsUnique();
+
+            e.HasIndex(g => g.Name).IsUnique();
 
             e.HasMany(g => g.Games)
                 .WithMany(g => g.Genres)

@@ -17,8 +17,8 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
     {
         string query = "";
 
-        if (!string.IsNullOrWhiteSpace(search.Title))
-            query += $"search={search.Title.Trim()}";
+        if (!string.IsNullOrWhiteSpace(search.Name))
+            query += $"search={search.Name.Trim()}";
 
         if (search.Page.HasValue && search.Page.Value != 1)
             query += $"&page={search.Page.Value}";
@@ -115,7 +115,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
     public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
         var games = await db.Games
-            .OrderBy(g => g.Title) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
+            .OrderBy(g => g.Slug) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ProjectToType<GameResponseDTO>()
