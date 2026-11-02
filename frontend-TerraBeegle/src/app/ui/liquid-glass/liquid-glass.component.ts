@@ -14,51 +14,53 @@ let nextLiquidGlassId = 0;
       [style.height]="height()"
       [style.border-radius]="borderRadius()"
       [style.background]="background()"
-      [style.--lg-filter-url]="'url(#' + filterId + ')'"
+      [style.--lg-filter-url]="'url(#' + filterId() + ')'"
       [style.--lg-blur]="blur()"
       [style.--lg-radius]="borderRadius()"
       [ngStyle]="customStyle()"
     >
-      <svg
-        width="0"
-        height="0"
-        style="position: absolute; pointer-events: none;"
-        aria-hidden="true"
-      >
-        <filter
-          [attr.id]="filterId"
-          x="-20%"
-          y="-20%"
-          width="140%"
-          height="140%"
+      @if (!sharedFilterId()) {
+        <svg
+          width="0"
+          height="0"
+          style="position: absolute; pointer-events: none;"
+          aria-hidden="true"
         >
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.02"
-            numOctaves="3"
-            result="noise"
+          <filter
+            [attr.id]="internalFilterId"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
           >
-            <animate
-              attributeName="baseFrequency"
-              dur="14s"
-              values="0.016;0.026;0.016"
-              repeatCount="indefinite"
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.02"
+              numOctaves="3"
+              result="noise"
+            >
+              <animate
+                attributeName="baseFrequency"
+                dur="14s"
+                values="0.016;0.026;0.016"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              [attr.scale]="scale()"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="refracted"
             />
-          </feTurbulence>
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="noise"
-            [attr.scale]="scale()"
-            xChannelSelector="R"
-            yChannelSelector="G"
-            result="refracted"
-          />
-          <feGaussianBlur
-            in="refracted"
-            stdDeviation="0.8"
-          />
-        </filter>
-      </svg>
+            <feGaussianBlur
+              in="refracted"
+              stdDeviation="0.8"
+            />
+          </filter>
+        </svg>
+      }
 
       <!-- Riflesso bordo superiore ed effetto luce satinata -->
       <div class="glass-specular"></div>
@@ -127,6 +129,11 @@ export class LiquidGlassComponent {
   readonly scale = input<number>(85);
   readonly background = input<string>('rgba(255, 255, 255, 0.18)');
   readonly customStyle = input<Record<string, string>>({});
+  readonly sharedFilterId = input<string | null>(null);
 
-  protected readonly filterId = `tb-liquid-filter-${nextLiquidGlassId++}`;
+  protected readonly internalFilterId = `tb-liquid-filter-${nextLiquidGlassId++}`;
+
+  protected readonly filterId = computed(() => {
+    return this.sharedFilterId() || this.internalFilterId;
+  });
 }
