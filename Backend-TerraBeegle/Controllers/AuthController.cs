@@ -94,7 +94,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
-	[Authorize]
+	[EnableRateLimiting("verify-email")]
 	[HttpPost("verify-email")]
 	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
 	{
@@ -134,7 +134,6 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return BadRequest("Invalid code.");
 	}
 
-	[Authorize]
 	[EnableRateLimiting("resend-email")]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail()

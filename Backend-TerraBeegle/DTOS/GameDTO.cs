@@ -68,3 +68,11 @@ public class GameSearchDTO
     public bool? ExcludeGameSeries { get; set; }
     public string? ExcludeStores { get; set; }
 }
+
+public class GameSearchResponseDTO
+{
+    public int Count { get; set; }
+    public string? Next { get; set; }
+    public string? Previous { get; set; }
+    public IEnumerable<GameCardDTO> Results { get; set; } = [];
+}

@@ -146,6 +146,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasIndex(g => g.RawgGameId).IsUnique();
 
+            e.HasIndex(g => g.Slug).IsUnique();
+
             e.HasMany(g => g.Genres)
                 .WithMany(g => g.Games)
                 .UsingEntity(j => j.ToTable("game_genres"));
@@ -176,6 +178,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(100);
 
             e.HasIndex(g => g.RawgGenreId).IsUnique();
+
+            e.HasIndex(g => g.Name).IsUnique();
 
             e.HasMany(g => g.Games)
                 .WithMany(g => g.Genres)
