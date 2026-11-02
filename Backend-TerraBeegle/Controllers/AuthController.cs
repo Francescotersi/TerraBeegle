@@ -60,8 +60,6 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
                 : Conflict("Username already exists.");
         }
 
-        string token = tokenService.CreateToken(user);
-
         try
         {
             await emailVerificationService.SendCodeAsync(user.Email, code);
@@ -84,17 +82,16 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if(user == null)
             return Unauthorized("Invalid credentials.");
 
-        if (!user.EmailVerified)
-            return Unauthorized("Account not verified. Please check your email for the verification token.");
-
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
+        
+        if (!user.EmailVerified)
+	        return Unauthorized("Account not verified. Please check your email for the verification token.");
 
         string token = tokenService.CreateToken(user);
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
-
-	[Authorize]
+	
 	[HttpPost("verify-email")]
 	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
 	{
@@ -133,8 +130,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		return BadRequest("Invalid code.");
 	}
-
-	[Authorize]
+	
 	[EnableRateLimiting("resend-email")]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail()
