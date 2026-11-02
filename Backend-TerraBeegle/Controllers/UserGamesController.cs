@@ -38,7 +38,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             games = await db.Users
                 .Where(u => u.Id == userId)
                 .SelectMany(u => u.Favorites)
-                .OrderBy(g => g.Name)
+                .OrderBy(g => g.Title)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .ProjectToType<GameCardDTO>()
@@ -146,7 +146,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
             games = await db.Users
                 .Where(u => u.Id == userId)
                 .SelectMany(u => u.WishlistItems)
-                .OrderBy(g => g.Name)
+                .OrderBy(g => g.Title)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .ProjectToType<GameCardDTO>()

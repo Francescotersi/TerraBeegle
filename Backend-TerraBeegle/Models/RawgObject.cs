@@ -1,6 +1,6 @@
 namespace Backend_TerraBeegle.Models;
 
-public abstract class RawgObject
+public class RawgObject
 {
     public long Id { get; set; }
     public int RawgId { get; set; }               // RAWG Id

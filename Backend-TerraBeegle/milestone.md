@@ -52,12 +52,17 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
         `year`, `ordering`, `metacritic`, `page`, `pageSize`
   - [ ] traducerea pentru RAWG: `year=2020` → `dates=2020-01-01,2020-12-31`; `genres` / `platforms` ca ID-uri
         separate prin virgulă; `page_size` maxim 40 (limita RAWG)
-  - [ ] `ordering` validat (doar `name`, `-released`, `-rating`, `-metacritic` și variantele lor) → 400 altfel
-  - [ ] **rating:** RAWG nu are filtru după rating — de decis: filtru după `metacritic` (ex: `80,100`), sau filtrare
+        → parțial: `genres` / `platforms` și `page_size` ≤ 40 sunt făcute; anul merge doar ca interval
+        (`"2020,2022"`), un singur an e ignorat (vezi 46)
+  - [x] `ordering` validat (doar `name`, `-released`, `-rating`, `-metacritic` și variantele lor) → 400 altfel
+        (`SortBy` + `Ascending` cu regex; dar se trimite ca `order=` în loc de `ordering=`, vezi 46)
+  - [x] **rating:** RAWG nu are filtru după rating — de decis: filtru după `metacritic` (ex: `80,100`), sau filtrare
         după `rating` pe pagina primită (atenție: strică numărul de rezultate pe pagină)
+        → decis: filtru după `metacritic`
   - [ ] `GameCardDTO` cu ce cere subiectul pentru carduri: `rawgGameId`, `title`, `backgroundImage`, `releaseDate`,
         `rating`, platformele principale (`parent_platforms` de la RAWG)
   - [ ] răspuns `PagedResponseDTO<GameCardDTO>` (refolosit de la `GET /api/users`), `TotalCount` = `count` de la RAWG
+        (vezi 40 și 48)
   - [ ] fără `search` și filtre → o selecție pentru Home (ex: `ordering=-rating`)
   - [ ] `GET /api/games` de acum (jocurile din baza de date) dispare — favoritele au endpoint-ul lor (32)
 
@@ -226,6 +231,9 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
 - [ ] **23. `Search` fără paginare și case-sensitive**
   Întoarce toți userii găsiți și „vlad” nu-l găsește pe „Vlad”. Soluție: `PaginationDTO` ca la `GetAll` +
   `EF.Functions.ILike(u.Username, $"%{query}%")` (cu `%` / `_` din query escapate).
+  - [x] paginare (`PaginationDTO` + `Utils.CreatePagedResponse`)
+  - [ ] case-insensitive (`ILike`) — tot `Contains`
+  - [ ] numărul total nu corespunde cu lista (vezi 51)
 
 ## După merge — minore
 
@@ -360,3 +368,125 @@ salvați jocuri.
   - [ ] ce nu are voie să facă un cont neverificat (ex: cereri de prietenie) — acum are voie la tot
   - [ ] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
         codul trimis pe el e confirmat
+
+## După merge-ul din 02.11.2026 — grave
+
+- [ ] **40. Proiectul nu compilează**
+  `RawgService.cs:53`: `RawgSearchDTO.Results` e o listă de `RawgGameDTO`, dar i se dă o listă de `GameCardDTO`
+  (`ToGameCardDTO`) → CS0029. Nimeni nu poate porni backend-ul.
+  Soluție: `SearchGamesAsync` întoarce direct `PagedResponseDTO<GameCardDTO>` (ce declară și `GameController.Search`),
+  iar `RawgSearchDTO` rămâne doar pentru deserializarea răspunsului de la RAWG.
+
+- [x] **41. Lipsește migrația pentru modelele modificate (din nou, ca la punctul 15)**
+  Modificări fără migrație: `Game.Title` → `Game.Name`, `RatingCount` `int` → `long`, `Game.DLCs` / `ParentGames` /
+  `Series`, `User.IsChangingMail`, indexul nou pe `Friendship.User2Id`. La pornire `Migrate()` aruncă
+  `PendingModelChangesException` și aplicația se oprește (comportamentul ales la 15).
+  - [x] `RawgObject` e `abstract` și nu are nicio clasă concretă derivată → EF nu poate construi modelul
+        („cannot be instantiated, and there is no derived entity type”). De decis: clase concrete
+        (ex: `GameSeries`, `Dlc`) sau scoase până sunt folosite — acum nu le completează nimeni
+  - [x] `dotnet ef migrations add ...` + verificat în fișierul generat că `Title` → `Name` e `RenameColumn`,
+        nu `DropColumn` + `AddColumn` (altfel se pierd titlurile jocurilor salvate)
+
+- [ ] **42. Login blocat pentru conturile neverificate → userul nu mai poate verifica niciodată**
+  În `Login` s-a adăugat `if (!user.EmailVerified) return Unauthorized(...)`. Contrazice decizia de la 34 („un cont
+  neverificat poate face login”) și strică fluxul: `verify-email` și `resend-email` sunt `[Authorize]`, deci după ce
+  expiră token-ul de la register (60 de minute) userul nu mai poate obține alt token → nu poate verifica și nu poate
+  cere cod nou → contul e șters după 2 zile.
+  În plus, verificarea e făcută **înainte** de parolă: oricine poate afla, fără parolă, dacă un email / username
+  există și e neverificat. Mesajul vorbește de „verification token”, dar e un cod.
+  De decis împreună: ori se scoate verificarea (decizia de la 34), ori se schimbă tot fluxul (register fără token,
+  `verify-email` / `resend-email` publice cu `{ email, code }` / `{ email }`, răspuns identic indiferent dacă
+  emailul există).
+
+- [ ] **43. `ChangePassword` răspunde „Password changed successfully”, dar nu salvează nimic**
+  În `UserController.ChangePassword` lipsește `await db.SaveChangesAsync()` → parola rămâne cea veche.
+  - [ ] `SaveChangesAsync` după `HashPassword`
+  - [ ] `OldPassword` are regex-ul de complexitate → cine are o parolă creată înainte de regex-ul actual (punctul 20)
+        primește 400 și nu-și poate schimba parola. Parola veche are nevoie doar de `[Required]`
+  - [ ] parolă veche greșită → 401 îl poate deloga pe user în frontend; mai bine 400 / 403
+  - [ ] după rezolvare, bifat și punctul 13
+
+- [ ] **44. Cheia RAWG ajunge la client prin `Next` / `Previous`**
+  `SearchGamesAsync` copiază `response.Next` / `response.Previous` de la RAWG, care sunt URL-uri complete cu
+  `&key=...`. Oricine folosește aplicația vede cheia în răspunsul JSON (ca la punctul 12, dar mai grav).
+  Soluție: `PreviousPageUrl` / `NextPageUrl` construite de noi (`Utils.CreatePagedResponse` + `Url.Action`), ca la
+  celelalte liste.
+
+## După merge-ul din 02.11.2026 — `GET /api/games` (punctul 36)
+
+- [ ] **45. `Search` nu primește parametrii din query**
+  `Search(GameSearchDTO search)` fără `[FromQuery]`: cu `[ApiController]`, un parametru de tip clasă se citește din
+  **body** → `GET /api/games?title=witcher` dă 415 / 400. Soluție: `[FromQuery] GameSearchDTO search`.
+
+- [ ] **46. Parametri greșiți trimiși la RAWG**
+  - [ ] sortarea se trimite ca `order=`, dar RAWG cere `ordering=` → sortarea nu are niciun efect
+  - [ ] `Updated` se trimite tot ca `dates=` (copiat de la `ReleaseDate`) → RAWG primește două `dates`;
+        trebuie `updated=`
+  - [ ] valorile nu sunt encodate: `title=Ratchet & Clank` taie căutarea la `Ratchet` și adaugă un parametru
+        `Clank`; un `title` cu `&...=` poate adăuga orice parametru în cererea către RAWG.
+        Soluție: `Uri.EscapeDataString(...)` sau `QueryHelpers.AddQueryString(...)`
+  - [ ] `ReleaseDate` acceptă doar `"2020,2022"`; un singur an (`"2020"`) sau o valoare greșită (`"abc,def"`) sunt
+        ignorate în tăcere → userul primește rezultate nefiltrate fără să știe. Subiectul cere filtru după **an**:
+        ori `Year` (`int?`), ori 400 pentru format invalid
+
+- [ ] **47. RAWG picat → 500, nu 503**
+  `GetById` prinde `HttpRequestException` și întoarce 503, `Search` nu → excepția ajunge la `GlobalExceptionHandler`.
+  La fel pentru un filtru pe care RAWG îl respinge (ex: gen inexistent) → tot 500.
+
+- [ ] **48. Tipul de răspuns nu corespunde**
+  Semnătura spune `PagedResponseDTO<GameResponseDTO>`, dar se întoarce `RawgSearchDTO` (alte câmpuri: `Count`,
+  `Results`, `Next`, `Previous`). Swagger și frontend-ul văd alt format decât cel real. Se rezolvă împreună cu 40:
+  `PagedResponseDTO<GameCardDTO>`, ca la favorite.
+
+- [ ] **49. Construirea query-ului e în controller**
+  ~90 de linii de `if`-uri în `GameController.Search`. Punctul 35 a mutat tot ce ține de RAWG în `RawgService`;
+  aici se întoarce invers. Soluție: `rawgService.SearchGamesAsync(GameSearchDTO search)`, controller-ul doar
+  apelează. Merită și un DTO mai scurt: `Stores`, `Creators`, `Tags`, `Updated`, `PlatformsCount`, `Exclude*` nu
+  sunt cerute de subiect și fiecare e un loc în plus pentru bug-uri (ex: 46).
+
+## După merge-ul din 02.11.2026 — medii
+
+- [x] **50. Favoritele / wishlist-ul vin fără titlu**
+  `Game.Title` a devenit `Game.Name`, dar `GameCardDTO` are tot `Title` → `ProjectToType<GameCardDTO>()` nu mai
+  găsește câmpul și `Title` e mereu `null`. De ales un singur nume (`Name` peste tot, ca la RAWG și la
+  `GameResponseDTO`), sau o regulă Mapster `Map(dest => dest.Title, src => src.Name)`.
+  → decis: `Title` peste tot (`Game`, `GameCardDTO`, `GameResponseDTO`); coloana din baza de date rămâne `Title`,
+  deci migrația de la 41 nu mai redenumește nimic. Frontend-ul citește `title` și la pagina de detaliu.
+
+- [ ] **51. `Search` pe useri: numărul total nu corespunde cu lista**
+  `totalCount` numără toți userii găsiți, dar lista are în plus `&& u.EmailVerified` → `TotalPages` greșit și pagini
+  goale.
+  - [ ] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
+  - [ ] `GetAll` și `GetById` arată și userii neverificați, `Search` nu → de decis o regulă comună
+  - [ ] tot case-sensitive (punctul 23 rămâne deschis)
+
+- [ ] **52. Același joc căutat de două ori în baza de date**
+  `GameController.GetById` caută jocul în DB, apoi `rawgService.GetGameAsync` îl caută din nou. Ramura din serviciu
+  (`game.Adapt<Game, GameResponseDTO>()`) nu face `Include` → ar întoarce `Genres` / `Platforms` goale (bug-ul de
+  la punctul 30). Acum nu se ajunge acolo, dar e cod mort care poate fi folosit greșit. Soluție: o singură căutare,
+  în serviciu, cu `ProjectToType`.
+
+- [ ] **53. Joc deja adăugat la favorite / wishlist: 204 sau 409?**
+  La 32 s-a decis 204, dar `catch`-ul nou pe `UniqueViolation` întoarce 409 → același caz, două răspunsuri
+  (204 de obicei, 409 la două request-uri simultane). De ales unul. `catch`-ul pe `ForeignKeyViolation` la
+  ștergere nu poate apărea (se șterge doar un rând din tabela de legătură) — de scos.
+
+## După merge-ul din 02.11.2026 — minore
+
+- [ ] **54. `Utils` e în namespace-ul `Controllers`, iar `RawgService` îl importă**
+  Un serviciu nu ar trebui să depindă de controllere. `Utils.IsCurrentUser(User, id)` → extension method pe
+  `ClaimsPrincipal` (ex: `User.GetUserId()`, cum scrie la 32), folosit și în `AuthController`
+  (`VerifyEmail` / `ResendEmail` au încă codul cu `sub` copiat).
+
+- [ ] **55. Cod nefolosit**
+  - [ ] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
+  - [ ] `RawgGameDTO.ParentPlatforms` se deserializează, dar nu ajunge în `GameCardDTO` (`ParentPlatformDTO` e comentat).
+        Subiectul cere „main platforms” pe card → exact `parent_platforms`
+  - [ ] `RawgObjectDTO`, `GameStore` — nefolosite
+  - [ ] `GET /api/games/all` — la 36 s-a decis că dispare; acum întoarce `GameResponseDTO` complet (cu descriere)
+
+- [ ] **56. Mesaje / documentație care nu mai corespund**
+  - [ ] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
+  - [ ] la 34, pasul 5: ruta e `resend-verification`, în cod e `resend-email`, iar limita e per IP, nu per user
+  - [ ] textul emailului: „Thank you for creating an account” se trimite și la resend; „contact our support team” fără adresă
+  - [ ] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect

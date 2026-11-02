@@ -114,7 +114,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         game = new Game
         {
             RawgGameId = response.Id,
-            Name = response.Name,
+            Title = response.Name,
             Slug = response.Slug,
             NameOriginal = response.NameOriginal,
             Description = response.Description,
@@ -183,7 +183,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
     private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {
         RawgGameId = r.Id,
-        Name = r.Name,
+        Title = r.Name,
         Slug = r.Slug,
         NameOriginal = r.NameOriginal,
         Description = r.Description,

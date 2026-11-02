@@ -4,7 +4,7 @@ public class Game
 {
     public long Id { get; set; }
     public int RawgGameId { get; set; }                // RAWG Id
-    public string Name { get; set; } = null!;
+    public string Title { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string Description { get; set; } = null!;
     public string? BackgroundImage { get; set; }

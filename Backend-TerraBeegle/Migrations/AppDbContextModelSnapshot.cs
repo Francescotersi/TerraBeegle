@@ -117,8 +117,8 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<int?>("Rating5count")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RatingCount")
-                        .HasColumnType("integer");
+                    b.Property<long?>("RatingCount")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("RawgGameId")
                         .HasColumnType("integer");
@@ -273,6 +273,9 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<string>("ImageProfile")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsChangingMail")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -388,6 +391,105 @@ namespace Backend_TerraBeegle.Migrations
                     b.Navigation("User1");
 
                     b.Navigation("User2");
+                });
+
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Game", b =>
+                {
+                    b.OwnsMany("Backend_TerraBeegle.Models.RawgObject", "DLCs", b1 =>
+                        {
+                            b1.Property<long>("GameId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<long>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("bigint");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<long>("Id"));
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<int>("RawgId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Slug")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("GameId", "Id");
+
+                            b1.ToTable("game_dlcs", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("GameId");
+                        });
+
+                    b.OwnsMany("Backend_TerraBeegle.Models.RawgObject", "ParentGames", b1 =>
+                        {
+                            b1.Property<long>("GameId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<long>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("bigint");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<long>("Id"));
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<int>("RawgId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Slug")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("GameId", "Id");
+
+                            b1.ToTable("game_parent_games", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("GameId");
+                        });
+
+                    b.OwnsMany("Backend_TerraBeegle.Models.RawgObject", "Series", b1 =>
+                        {
+                            b1.Property<long>("GameId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<long>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("bigint");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<long>("Id"));
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<int>("RawgId")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Slug")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("GameId", "Id");
+
+                            b1.ToTable("game_series", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("GameId");
+                        });
+
+                    b.Navigation("DLCs");
+
+                    b.Navigation("ParentGames");
+
+                    b.Navigation("Series");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Platform", b =>
