@@ -48,7 +48,7 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
 
 - [ ] **36. 🔴 `GET /api/games` — căutare, filtre, sortare, paginare (Home, Basic + Advanced search, listă)**
   Trimite cererea mai departe la `GET /games` de la RAWG și întoarce o listă de carduri.
-  - [ ] parametri din query (`[FromQuery]` într-un DTO, ca `PaginationDTO`): `search`, `genres`, `platforms`,
+  - [x] parametri din query (`[FromQuery]` într-un DTO, ca `PaginationDTO`): `search`, `genres`, `platforms`,
         `year`, `ordering`, `metacritic`, `page`, `pageSize`
   - [ ] traducerea pentru RAWG: `year=2020` → `dates=2020-01-01,2020-12-31`; `genres` / `platforms` ca ID-uri
         separate prin virgulă; `page_size` maxim 40 (limita RAWG)
@@ -436,13 +436,14 @@ salvați jocuri.
 
 ## După merge-ul din 02.11.2026 — `GET /api/games` (punctul 36)
 
-- [ ] **45. `Search` nu primește parametrii din query**
+- [x] **45. `Search` nu primește parametrii din query**
   `Search(GameSearchDTO search)` fără `[FromQuery]`: cu `[ApiController]`, un parametru de tip clasă se citește din
   **body** → `GET /api/games?title=witcher` dă 415 / 400. Soluție: `[FromQuery] GameSearchDTO search`.
+  → rezolvat de coleg („Fixed api/games”): `[FromQuery] GameSearchDTO search`; testat — căutarea funcționează.
 
 - [ ] **46. Parametri greșiți trimiși la RAWG**
-  - [ ] sortarea se trimite ca `order=`, dar RAWG cere `ordering=` → sortarea nu are niciun efect
-  - [ ] `Updated` se trimite tot ca `dates=` (copiat de la `ReleaseDate`) → RAWG primește două `dates`;
+  - [x] sortarea se trimite ca `order=`, dar RAWG cere `ordering=` → sortarea nu are niciun efect
+  - [x] `Updated` se trimite tot ca `dates=` (copiat de la `ReleaseDate`) → RAWG primește două `dates`;
         trebuie `updated=`
   - [ ] valorile nu sunt encodate: `title=Ratchet & Clank` taie căutarea la `Ratchet` și adaugă un parametru
         `Clank`; un `title` cu `&...=` poate adăuga orice parametru în cererea către RAWG.
@@ -454,11 +455,16 @@ salvați jocuri.
 - [ ] **47. RAWG picat → 500, nu 503**
   `GetById` prinde `HttpRequestException` și întoarce 503, `Search` nu → excepția ajunge la `GlobalExceptionHandler`.
   La fel pentru un filtru pe care RAWG îl respinge (ex: gen inexistent) → tot 500.
+  - [ ] nou după fix: `SearchGamesAsync` întoarce `null` la 404 de la RAWG (ex: pagină după ultima), iar
+        `Ok(null)` devine **204 No Content** fără body → frontend-ul primește un răspuns gol în loc de o listă goală.
+        Soluție: la 404 aceeași listă goală ca la `response is null` (`Count = 0`, `Results = []`)
 
-- [ ] **48. Tipul de răspuns nu corespunde**
+- [x] **48. Tipul de răspuns nu corespunde**
   Semnătura spune `PagedResponseDTO<GameResponseDTO>`, dar se întoarce `RawgSearchDTO` (alte câmpuri: `Count`,
   `Results`, `Next`, `Previous`). Swagger și frontend-ul văd alt format decât cel real. Se rezolvă împreună cu 40:
   `PagedResponseDTO<GameCardDTO>`, ca la favorite.
+  → rezolvat altfel: semnătura e acum `ActionResult<GameSearchResponseDTO>`, adică exact ce se întoarce
+  (`Count` / `Next` / `Previous` / `Results`). Nu e `PagedResponseDTO` ca la celelalte liste, dar e consecvent.
 
 - [ ] **49. Construirea query-ului e în controller**
   ~90 de linii de `if`-uri în `GameController.Search`. Punctul 35 a mutat tot ce ține de RAWG în `RawgService`;
