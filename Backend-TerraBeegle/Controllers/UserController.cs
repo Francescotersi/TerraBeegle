@@ -1,62 +1,76 @@
 using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
+using Backend_TerraBeegle.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;                 // pentru FindFirstValue
 using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
+using Microsoft.AspNetCore.Identity;
 using Npgsql;
 using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/users")]
-public class UserController(AppDbContext db) : ControllerBase
+public class UserController(AppDbContext db, IPasswordHasher<User> passwordHasher) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
-        // Ordering is required, otherwise Postgres can return the rows in a different order on each page
-        var query = db.Users.OrderBy(u => u.Id);
-
-        var totalCount = await query.CountAsync();
+        var totalCount = await db.Users.CountAsync();
 
         // Retrieving only the users from the requested page and projecting them to UserPublicResponseDTO
-        var users = await query
+        var users = await db.Users
+            .OrderBy(u => u.Id)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
 
-        return new PagedResponseDTO<UserPublicResponseDTO>
-        {
-            Items = users,
-            Page = pagination.Page,
-            PageSize = pagination.PageSize,
-            TotalCount = totalCount,
-            TotalPages = (totalCount + pagination.PageSize - 1) / pagination.PageSize
-        };
+        return Ok(Utils.CreatePagedResponse(
+            users,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+        ));
     }
 
-    [Authorize]
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<UserPublicResponseDTO>>> Search(string query)
+    public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> Search([FromQuery] string username, [FromQuery] PaginationDTO pagination)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (string.IsNullOrWhiteSpace(username))
         {
-            return Problem(detail: "Query cannot be empty.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest("Username cannot be empty.");
         }
 
-        var trimmedQuery = query.Trim();
+        var trimmedUsername = username.Trim();
+
+        var totalCount = await db.Users.CountAsync(u => u.Username.Contains(trimmedUsername));
+
+        if (totalCount == 0)
+        {
+            return NotFound("No users found with the specified username.");
+        }
+
         var users = await db.Users
-            .Where(u => u.Username.Contains(trimmedQuery))
+            .Where(u => u.Username.Contains(trimmedUsername) && u.EmailVerified) // Only return users with confirmed emails
+            .OrderBy(u => u.Username)
+            .Skip((pagination.Page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
-        return users;
+
+        return Ok(Utils.CreatePagedResponse(
+            users,
+            totalCount,
+            pagination,
+            page => Url.Action(nameof(Search), new { username, Page = page, pagination.PageSize })
+        ));
     }
 
-    [Authorize]
     [HttpGet("{id:long}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetById(long id)
     {
@@ -70,7 +84,6 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserPublicResponseDTO>();
     }
 
-    [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<UserResponseDTO>> GetMe()
     {
@@ -86,11 +99,10 @@ public class UserController(AppDbContext db) : ControllerBase
         return user.Adapt<UserResponseDTO>();
     }
 
-    [Authorize]
     [HttpPatch("{id:long}")]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser(long id, UpdateUserDTO dto)
     {
-        if(!IsCurrentUser(id))
+        if(!Utils.IsCurrentUser(User, id))
             return Forbid();
 
         // Patch which does not allow empty string or whitespaces.
@@ -108,7 +120,8 @@ public class UserController(AppDbContext db) : ControllerBase
             ModelState.AddModelError(nameof(dto.FamilyName), "Surname cannot be empty.");
 
         // Empty ImageProfile is for removing the picture
-        if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) && !IsHttpUrl(dto.ImageProfile.Trim()))
+        if(dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) 
+            && !Utils.IsHttpUrl(dto.ImageProfile.Trim()))
             ModelState.AddModelError(nameof(dto.ImageProfile), "Image profile must be a valid http or https URL.");
 
         if(dto.Theme is not null && !Enum.IsDefined(dto.Theme.Value))
@@ -129,7 +142,7 @@ public class UserController(AppDbContext db) : ControllerBase
             var username = dto.Username.Trim();
             bool duplicate = await db.Users.AnyAsync(u => u.Username == username && u.Id != id);
             if(duplicate)
-                return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
+                return Conflict("Username already exists.");
             user.Username = username;
         }
 
@@ -151,17 +164,34 @@ public class UserController(AppDbContext db) : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Problem(detail: "Username already exists.", statusCode: StatusCodes.Status409Conflict);
+            return Conflict("Username already exists.");
         }
         
         return user.Adapt<UserResponseDTO>();
     }
 
-    [Authorize]
+    [HttpPatch("{id:long}/password")]
+    public async Task<ActionResult> ChangePassword(long id, UpdatePasswordDTO dto)
+    {
+        if(!Utils.IsCurrentUser(User, id))
+            return Forbid();
+        
+        var user = await db.Users.FindAsync(id);
+        if(user is null)
+            return NotFound();
+
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.OldPassword) == PasswordVerificationResult.Failed)
+            return Unauthorized("Old password is incorrect.");
+
+        user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
+        
+        return Ok("Password changed successfully.");
+    }
+
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
     {
-        if(!IsCurrentUser(id))
+        if(!Utils.IsCurrentUser(User, id))
             return Forbid();
         
         var user = await db.Users.FindAsync(id);
@@ -179,17 +209,5 @@ public class UserController(AppDbContext db) : ControllerBase
         await transaction.CommitAsync();
 
         return NoContent();
-    }
-
-    private bool IsCurrentUser(long id)
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
-    }
-
-    private static bool IsHttpUrl(string value)
-    {
-        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

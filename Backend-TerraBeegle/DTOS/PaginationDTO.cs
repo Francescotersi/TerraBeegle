@@ -17,5 +17,7 @@ public class PagedResponseDTO<T>
     public int Page { get; set; }
     public int PageSize { get; set; }
     public int TotalCount { get; set; }
-    public int TotalPages { get; set; } 
+    public int TotalPages { get; set; }
+    public string? PreviousPageUrl { get; set; }
+    public string? NextPageUrl { get; set; }
 }

@@ -26,10 +26,3 @@ public class FriendshipResponseDTO
     public string Status { get; set; } = null!;
     public DateTime UpdatedAt { get; set; }
 }
-
-public class FriendsListDTO
-{
-    public IEnumerable<FriendshipResponseDTO> Friends { get; set; } = null!;
-    public IEnumerable<FriendshipResponseDTO> FriendshipsSent { get; set; } = null!;
-    public IEnumerable<FriendshipResponseDTO> FriendshipsReceived { get; set; } = null!;
-}

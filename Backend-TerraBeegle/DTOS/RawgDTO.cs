@@ -2,7 +2,30 @@ using System.Text.Json.Serialization;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class RawgResponseDTO
+public class RawgSearchDTO
+{
+    public int Count { get; set; }
+    public string? Next { get; set; }
+    public string? Previous { get; set; }
+    public IEnumerable<RawgGameDTO> Results { get; set; } = [];
+}
+
+public class RawgGameDTO
+{
+    public int Id { get; set; }
+    public string Slug { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public int? Metacritic { get; set; }
+    public string? Released { get; set; }
+    public bool Tba { get; set; }
+    public string? BackgroundImage { get; set; }
+    public double Rating { get; set; }
+    public IEnumerable<RawgParentPlatformListDTO> ParentPlatforms { get; set; } = [];
+    public IEnumerable<RawgPlatformListDTO> Platforms { get; set; } = [];
+    public IEnumerable<RawgGenreDTO> Genres { get; set; } = [];
+}
+
+public class RawgGameIdDTO
 {
     public int Id { get; set; }
     public string Slug { get; set; } = null!;
@@ -15,6 +38,7 @@ public class RawgResponseDTO
     public string? BackgroundImage { get; set; }
     public double Rating { get; set; }
     public string Website { get; set; } = null!;
+    public IEnumerable<RawgParentPlatformListDTO> ParentPlatforms { get; set; } = [];
     public IEnumerable<RawgPlatformListDTO> Platforms { get; set; } = [];
     public IEnumerable<RawgGenreDTO> Genres { get; set; } = [];
 }
@@ -28,6 +52,12 @@ public class RawgPlatformListDTO
     public string? ReleasedAt { get; set; }
 }
 
+public class RawgParentPlatformListDTO
+{
+    [JsonPropertyName("platform")]
+    public RawgPlatformDTO Platform { get; set; } = null!;
+}
+
 public class RawgPlatformDTO
 {
     public int Id { get; set; }
@@ -36,6 +66,13 @@ public class RawgPlatformDTO
 }
 
 public class RawgGenreDTO
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+}
+
+public class RawgObjectDTO
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

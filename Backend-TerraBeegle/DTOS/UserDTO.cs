@@ -9,8 +9,6 @@ public class UserPublicResponseDTO
     public long Id { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
-    public List<GameResponseDTO>? Favorites { get; set; }
-    public List<GameResponseDTO>? Whishlist { get; set; }
 }
 
 public class UserResponseDTO
@@ -19,6 +17,7 @@ public class UserResponseDTO
     public string Name { get; set; } = string.Empty;
     public string FamilyName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public bool EmailVerified { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
     public Theme Theme { get; set; }
@@ -30,7 +29,7 @@ public class UpdateUserDTO
     public string? Name { get; set; }
 
     [MaxLength(100)]
-    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores.")]
+    [RegularExpression(@"^[-a-zA-Z0-9_]+$", ErrorMessage = "Username can only contain letters, numbers, and underscores or dashes.")]
     public string? Username { get; set; }
 
     [MaxLength(100)]
@@ -43,6 +42,7 @@ public class UpdateEmailDTO
 {
     [Required]
     [EmailAddress]
+    [MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 }
 
@@ -50,7 +50,17 @@ public class UpdatePasswordDTO
 {
     [Required]
     [MinLength(8)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#$!%*?&])[A-Za-z\d@#$!%*?&]{8,}$", 
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}])[-A-Za-z\d`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}]{8,}$",
         ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
-    public string Password { get; set; } = string.Empty;
+    public string OldPassword { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}])[-A-Za-z\d`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}]{8,}$",
+        ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required]
+    [Compare(nameof(NewPassword), ErrorMessage = "The new password and confirmation password do not match.")]
+    public string ConfirmNewPassword { get; set; } = string.Empty;
 }
