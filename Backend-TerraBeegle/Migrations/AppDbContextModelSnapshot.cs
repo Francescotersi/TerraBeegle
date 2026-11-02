@@ -91,6 +91,11 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<int?>("Metacritic")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("NameOriginal")
                         .HasColumnType("text");
 
@@ -134,11 +139,6 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<bool>("Tba")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -150,6 +150,9 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RawgGameId")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
                         .IsUnique();
 
                     b.ToTable("Games");
@@ -172,6 +175,9 @@ namespace Backend_TerraBeegle.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.HasIndex("RawgGenreId")
                         .IsUnique();
