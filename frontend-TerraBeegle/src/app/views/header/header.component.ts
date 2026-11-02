@@ -49,34 +49,62 @@ import { AuthService } from '../../services/auth.service';
                   Home
                 </a>
               </li>
-              <!-- da implementare Immagine profilo -->
-              <li class="nav-item">
-                <a
-                  routerLink="/profile"
-                  routerLinkActive="active"
-                  class="nav-link fw-semibold px-3 py-1"
-                  (click)="isMenuOpen.set(false)"
-                >
-                  Profile
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link fw-semibold px-3 py-1"
-                  (click)="isMenuOpen.set(false)"
-                >
-                  Wishlist
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link fw-semibold px-3 py-1"
-                  (click)="isMenuOpen.set(false)"
-                >
-                  Favorites
-                </a>
-              </li>
+
+              @if (authService.isLoggedIn()) {
+                <li class="nav-item">
+                  <a
+                    routerLink="/profile"
+                    routerLinkActive="active"
+                    class="nav-link fw-semibold px-3 py-1"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Profile
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    routerLink="/wishlist"
+                    routerLinkActive="active"
+                    class="nav-link fw-semibold px-3 py-1"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Wishlist
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    routerLink="/favorites"
+                    routerLinkActive="active"
+                    class="nav-link fw-semibold px-3 py-1"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Favorites
+                  </a>
+                </li>
+              } @else {
+                <li class="nav-item">
+                  <a
+                    routerLink="/login"
+                    routerLinkActive="active"
+                    class="nav-link nav-btn-login fw-semibold px-3 py-1"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Log In
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    routerLink="/register"
+                    routerLinkActive="active"
+                    class="nav-link nav-btn-signup fw-semibold px-3 py-1"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Sign Up
+                  </a>
+                </li>
+              }
             </ul>
+
             <form
               class="d-flex align-items-center header-search-form ms-lg-2"
               role="search"
@@ -92,28 +120,6 @@ import { AuthService } from '../../services/auth.service';
                 Search
               </button>
             </form>
-
-            <!-- Pulsanti Login e Register a destra -->
-            <div class="d-flex align-items-center gap-2 ms-lg-3 header-auth-group">
-            @if (!authService.isLoggedIn()) {
-              <a
-                class="btn btn-sm auth-btn btn-login text-decoration-none"
-                routerLink="/login"
-                (click)="isMenuOpen.set(false)"
-              >
-                Log In
-              </a>
-              <a
-                class="btn btn-sm auth-btn btn-register text-decoration-none"
-                routerLink="/register"
-                (click)="isMenuOpen.set(false)"
-              >
-                Register
-              </a>
-            } @else {
-                Ciao {{ authService.currentUser()?.name }}!
-            }
-            </div>
           </div>
         </div>
       </nav>
@@ -169,6 +175,48 @@ import { AuthService } from '../../services/auth.service';
       font-weight: 600;
     }
 
+    /* Pulsanti in evidenza per Login e Sign Up */
+    .nav-btn-login {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(244, 114, 182, 0.5);
+      color: #db2777 !important;
+      box-shadow: 0 2px 8px rgba(219, 39, 119, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn-login:hover {
+      background: rgba(244, 114, 182, 0.18);
+      color: #be185d !important;
+      border-color: rgba(244, 114, 182, 0.8);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(219, 39, 119, 0.2);
+    }
+
+    .nav-btn-login.active {
+      background: rgba(244, 114, 182, 0.25);
+      border-color: #db2777;
+      color: #9d174d !important;
+    }
+
+    .nav-btn-signup {
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      color: #ffffff !important;
+      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn-signup:hover {
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      box-shadow: 0 4px 16px rgba(244, 114, 182, 0.5);
+      transform: translateY(-1px);
+      color: #ffffff !important;
+    }
+
+    .nav-btn-signup.active {
+      box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.35), 0 4px 16px rgba(244, 114, 182, 0.5);
+    }
+
     .header-search-form {
       flex-shrink: 0;
     }
@@ -210,46 +258,6 @@ import { AuthService } from '../../services/auth.service';
       transform: translateY(-1px);
     }
 
-    .header-auth-group {
-      flex-shrink: 0;
-    }
-
-    .auth-btn {
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.35rem 0.95rem;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-
-    .btn-login {
-      color: #db2777;
-      background: rgba(255, 255, 255, 0.55);
-      border: 1px solid rgba(244, 114, 182, 0.45);
-    }
-
-    .btn-login:hover {
-      background: rgba(244, 114, 182, 0.15);
-      color: #be185d;
-      border-color: rgba(244, 114, 182, 0.7);
-      transform: translateY(-1px);
-    }
-
-    .btn-register {
-      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.3);
-    }
-
-    .btn-register:hover {
-      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
-      box-shadow: 0 4px 16px rgba(244, 114, 182, 0.45);
-      transform: translateY(-1px);
-      color: #ffffff;
-    }
-
     @media (max-width: 991px) {
       .navbar-nav {
         flex-direction: column !important;
@@ -263,13 +271,9 @@ import { AuthService } from '../../services/auth.service';
       .search-input {
         width: 100% !important;
       }
-      .header-auth-group {
+      .nav-btn-login,
+      .nav-btn-signup {
         width: 100%;
-        margin-top: 0.75rem;
-        justify-content: center;
-      }
-      .auth-btn {
-        flex: 1;
         text-align: center;
       }
     }
