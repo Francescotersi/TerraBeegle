@@ -41,8 +41,6 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         {
             return new GameSearchResponseDTO { 
                 Results = [],
-                Next = null,
-                Previous = null,
                 Count = 0
             };
         }
@@ -51,8 +49,6 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         // The controller builds them with our own parameters
         return new GameSearchResponseDTO {
             Results = [.. response.Results.Select(ToGameCardDTO)],
-            Next = null,
-            Previous = null,
             Count = response.Count
         };
     }

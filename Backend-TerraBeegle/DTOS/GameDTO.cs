@@ -32,6 +32,7 @@ public class GameCardDTO
     public List<GenreDTO> Genres { get; set; } = [];
     public List<PlatformDTO> Platforms { get; set; } = [];
     //public List<ParentPlatformDTO> ParentPlatforms { get; set; } = [];
+    public List<ReviewResponseDTO> Reviews { get; set; } = [];
 }
 
 public class GameSearchDTO
@@ -72,7 +73,5 @@ public class GameSearchDTO
 public class GameSearchResponseDTO
 {
     public int Count { get; set; }
-    public string? Next { get; set; }
-    public string? Previous { get; set; }
     public IEnumerable<GameCardDTO> Results { get; set; } = [];
 }

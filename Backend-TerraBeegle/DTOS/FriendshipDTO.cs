@@ -2,13 +2,13 @@ using Backend_TerraBeegle.Enums;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class FriendshipRequestDTO
+public class FriendshipCreateDTO
 {
     public long SenderId { get; set; }
     public long ReceiverId { get; set; }
 }
 
-public class FriendshipRequestUpdateDTO
+public class FriendshipUpdateDTO
 {
     public long Id { get; set; }
     public long SenderId { get; set; }

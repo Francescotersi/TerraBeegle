@@ -19,13 +19,16 @@ public class FriendshipController(AppDbContext db) : ControllerBase
 {
     // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
     [HttpGet("friends")]
-    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriends(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "friends");
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetFriends(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "friends");
 
     [HttpGet("received")]
-    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetReceivedFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "received");
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetReceivedFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "received");
 
     [HttpGet("sent")]
-    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetSentFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "sent");
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetSentFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "sent");
 
     private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, string search)
     {
@@ -78,7 +81,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipRequestDTO dto)
+    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipCreateDTO dto)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
@@ -143,7 +146,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPatch]
-    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(long userId, FriendshipRequestUpdateDTO dto)
+    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(long userId, FriendshipUpdateDTO dto)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
