@@ -152,6 +152,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		if(user is null)
 			return Ok(message);
 
+        user.ForgotPasswordRequested = true;
 		var code = emailVerificationService.SetNewCode(user);
 
 		await db.SaveChangesAsync();
@@ -176,7 +177,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
-        if(user is null)
+        if(user is null || !user.ForgotPasswordRequested)
             return Ok("Invalid Credentials.");
 
         var result = emailVerificationService.VerifyCode(user, dto.Code);
@@ -194,6 +195,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             };
         }
 
+        user.ForgotPasswordRequested = false;
         user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
         await db.SaveChangesAsync();
 

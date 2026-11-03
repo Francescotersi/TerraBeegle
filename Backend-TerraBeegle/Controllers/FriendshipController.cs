@@ -18,8 +18,16 @@ namespace Backend_TerraBeegle.Controllers;
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
     // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
-    [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, [FromQuery] string search = "friends")
+    [HttpGet("friends")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriends(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "friends");
+
+    [HttpGet("received")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetReceivedFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "received");
+
+    [HttpGet("sent")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetSentFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "sent");
+
+    private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, string search)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
@@ -36,7 +44,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         };
 
         if (filter is null)
-            return BadRequest("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.");
+            return BadRequest("Invalid search parameter. Allowed values are: friends, sent, received.");
         
         var totalCount = await db.Friendships.CountAsync(filter);
         var friendships = new List<FriendshipResponseDTO>();
@@ -54,13 +62,9 @@ public class FriendshipController(AppDbContext db) : ControllerBase
                 ReceiverId = f.ReceiverId,
                 Status = f.Status.ToString(),
                 UpdatedAt = f.UpdatedAt,
+
                 // EF translates the navigations to a JOIN with Users, no Include needed
-                User = new UserPublicResponseDTO
-                {
-                    Id = f.User1Id == userId ? f.User2Id : f.User1Id,
-                    Username = f.User1Id == userId ? f.User2.Username : f.User1.Username,
-                    ImageProfile = f.User1Id == userId ? f.User2.ImageProfile : f.User1.ImageProfile
-                }
+                User = f.User1Id == userId ? f.User2.Adapt<UserPublicResponseDTO>() : f.User1.Adapt<UserPublicResponseDTO>()
             })
             .ToListAsync();
         }
@@ -139,7 +143,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPatch]
-    public async Task<ActionResult<FriendshipDTO>> UpdateFriendship(long userId, FriendshipDTO dto)
+    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(long userId, FriendshipRequestUpdateDTO dto)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
@@ -148,10 +152,13 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
 
         var friendship = await db.Friendships.FindAsync(dto.Id);
+        var user1Id = Math.Min(dto.SenderId, dto.ReceiverId);
+        var user2Id = Math.Max(dto.SenderId, dto.ReceiverId);
+
         if (friendship is null)
             return NotFound("Friendship not found.");
 
-        if (friendship.User1Id != userId && friendship.User2Id != userId)
+        if (friendship.User1Id != user1Id || friendship.User2Id != user2Id)
             // Forbid("...") expects an authentication scheme name, not a message, so StatusCode(403, ...) is used
             return StatusCode(StatusCodes.Status403Forbidden, "Only the users involved in the friendship can update it.");
 
@@ -174,7 +181,14 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot update friendship due to database constraints.");
         }
 
-        return Ok(friendship.Adapt<FriendshipDTO>());
+        return Ok(new FriendshipResponseDTO {
+            Id = friendship.Id,
+            SenderId = friendship.User1Id == friendship.ReceiverId ? friendship.User2Id : friendship.User1Id,
+            ReceiverId = friendship.ReceiverId,
+            Status = friendship.Status.ToString(),
+            UpdatedAt = friendship.UpdatedAt,
+            User = friendship.User1Id == userId ? friendship.User2.Adapt<UserPublicResponseDTO>() : friendship.User1.Adapt<UserPublicResponseDTO>()
+        });
     }
 
     [HttpDelete("{id:long}")]
