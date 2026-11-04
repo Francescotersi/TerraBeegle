@@ -169,7 +169,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         return user.Adapt<UserResponseDTO>();
     }
-
+	
     [HttpPatch("{id:long}/password")]
     public async Task<ActionResult> ChangePassword(long id, UpdatePasswordDTO dto)
     {
@@ -190,6 +190,9 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         return Ok("Password changed successfully.");
     }
+
+	[HttpPatch("{id:long}/email")]
+	public async Task<ActionResult> ChangeEmail(long id, UpdateEmailDTO dto)
 
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
