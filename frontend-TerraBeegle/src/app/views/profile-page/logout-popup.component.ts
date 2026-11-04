@@ -12,7 +12,7 @@ import { AuthService } from '../../services/auth.service';
         <div class="modal-dialog-custom" (click)="$event.stopPropagation()">
           <app-liquid-glass
             borderRadius="24px"
-            background="rgba(255, 255, 255, 0.55)"
+            background="var(--tb-glass-bg)"
             [scale]="95"
           >
             <div class="p-4 text-center">
@@ -24,8 +24,8 @@ import { AuthService } from '../../services/auth.service';
                 </svg>
               </div>
 
-              <h3 class="h5 fw-bold text-dark mb-2">Log Out</h3>
-              <p class="text-secondary small mb-4">Are you sure you want to log out?</p>
+              <h3 class="h5 fw-bold text-body mb-2">Log Out</h3>
+              <p class="text-body-secondary small mb-4">Are you sure you want to log out?</p>
 
               <div class="d-flex justify-content-center gap-3">
                 <button
@@ -82,9 +82,9 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .btn-cancel-custom {
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      color: #475569;
+      background: var(--tb-glass-bg);
+      border: 1px solid var(--tb-glass-border);
+      color: var(--tb-text);
       font-weight: 600;
       padding: 0.5rem 1.25rem;
       border-radius: 12px;
@@ -92,8 +92,8 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .btn-cancel-custom:hover {
-      background: rgba(255, 255, 255, 0.95);
-      color: #1e293b;
+      background: var(--tb-input-bg-focus);
+      color: var(--tb-text);
     }
 
     .btn-confirm-custom {

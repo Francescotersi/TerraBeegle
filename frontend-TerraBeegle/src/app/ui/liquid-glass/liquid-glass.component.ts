@@ -82,18 +82,18 @@ let nextLiquidGlassId = 0;
       width: 100%;
       border-radius: var(--lg-radius, 24px);
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.18);
+      background: var(--tb-glass-bg);
 
       /* Distorsione ottica liquida accentuata + blur minimale */
       backdrop-filter: var(--lg-filter-url) blur(var(--lg-blur, 2px)) saturate(180%);
       -webkit-backdrop-filter: var(--lg-filter-url) blur(var(--lg-blur, 2px)) saturate(180%);
 
-      border: 1px solid rgba(255, 255, 255, 0.65);
+      border: 1px solid var(--tb-glass-border);
       box-shadow:
-        0 16px 36px rgba(0, 0, 0, 0.08),
-        inset 0 1px 1px rgba(255, 255, 255, 0.8),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.25);
-      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+        0 16px 36px var(--tb-glass-shadow),
+        inset 0 1px 1px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+      transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
       transform: translateZ(0);
     }
 
@@ -122,7 +122,7 @@ export class LiquidGlassComponent {
   readonly borderRadius = input<string>('24px');
   readonly blur = input<string>('2px');
   readonly scale = input<number>(85);
-  readonly background = input<string>('rgba(255, 255, 255, 0.18)');
+  readonly background = input<string>('var(--tb-glass-bg)');
   readonly customStyle = input<Record<string, string>>({});
   readonly sharedFilterId = input<string | null>(null);
 

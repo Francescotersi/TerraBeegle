@@ -1,2 +1,90 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* VARIABILI PER IL TEMA LIGHT (Default) */
+:root, [data-bs-theme="light"] {
+  /* Integrazione variabili Bootstrap 5.3 */
+  --bs-body-bg: #faf6fa;
+  --bs-body-color: #1e293b;
+  --bs-body-color-rgb: 30, 41, 59;
+  --bs-secondary-color: #64748b;
+  --bs-secondary-color-rgb: 100, 116, 139;
+  --bs-tertiary-bg: rgba(255, 255, 255, 0.5);
+  --bs-border-color: rgba(244, 114, 182, 0.2);
+
+  --tb-bg: #faf6fa;
+  --tb-text: #1e293b;
+  --tb-text-muted: #64748b;
+  --tb-accent: #db2777;
+  --tb-accent-hover: #be185d;
+  --tb-accent-glow: rgba(244, 114, 182, 0.4);
+  --tb-accent-subtle: rgba(244, 114, 182, 0.12);
+
+  /* Bottoni e Gradienti Light */
+  --tb-btn-gradient: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
+  --tb-btn-gradient-hover: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+  --tb-btn-gradient-shadow: rgba(244, 114, 182, 0.35);
+
+  /* Liquid Glass Light */
+  --tb-glass-bg: rgba(255, 255, 255, 0.22);
+  --tb-glass-border: rgba(255, 255, 255, 0.65);
+  --tb-glass-shadow: rgba(0, 0, 0, 0.08);
+
+  /* Input Light */
+  --tb-input-bg: rgba(255, 255, 255, 0.45);
+  --tb-input-bg-focus: rgba(255, 255, 255, 0.75);
+  --tb-input-border: rgba(255, 255, 255, 0.6);
+
+  /* Sfere di sfondo Light */
+  --tb-ball-1: #f472b6;
+  --tb-ball-2: #a78bfa;
+  --tb-ball-3: #fb7185;
+  --tb-ball-4: #34d399;
+}
+
+/* VARIABILI PER IL TEMA DARK (Star Wars Palette coordinata con lo Switch) */
+[data-bs-theme="dark"] {
+  /* Integrazione variabili Bootstrap 5.3 per uniformità globale */
+  --bs-body-bg: #081226;
+  --bs-body-color: #f0f6fc;
+  --bs-body-color-rgb: 240, 246, 252;
+  --bs-secondary-color: #8ca3c7;
+  --bs-secondary-color-rgb: 140, 163, 199;
+  --bs-tertiary-bg: #071F49;
+  --bs-border-color: rgba(46, 217, 231, 0.2);
+
+  /* Variabili TerraBeegle ispirate alla palette dello switch Star Wars */
+  --tb-bg: #081226;                 /* --dark-color-background */
+  --tb-text: #f0f6fc;
+  --tb-text-muted: #8ca3c7;
+  --tb-accent: #2ED9E7;             /* --dark-color-tertiary: Lightsaber Cyan */
+  --tb-accent-hover: #5ce3ee;
+  --tb-accent-glow: rgba(46, 217, 231, 0.45);
+  --tb-accent-subtle: rgba(46, 217, 231, 0.15);
+
+  /* Bottoni e Gradienti Dark (Cyan & Blue Jedi) */
+  --tb-btn-gradient: linear-gradient(135deg, #2C7BA1 0%, #2ED9E7 100%);
+  --tb-btn-gradient-hover: linear-gradient(135deg, #236585 0%, #5ce3ee 100%);
+  --tb-btn-gradient-shadow: rgba(46, 217, 231, 0.35);
+
+  /* Liquid Glass Dark (Deep Space Surface #071F49 con bordo neon) */
+  --tb-glass-bg: rgba(7, 31, 73, 0.65);
+  --tb-glass-border: rgba(46, 217, 231, 0.28);
+  --tb-glass-shadow: rgba(0, 0, 0, 0.55);
+
+  /* Input Dark */
+  --tb-input-bg: rgba(7, 31, 73, 0.6);
+  --tb-input-bg-focus: rgba(7, 31, 73, 0.9);
+  --tb-input-border: rgba(46, 217, 231, 0.4);
+
+  /* Sfere di sfondo Dark (Esatti 4 colori dello switch Star Wars) */
+  --tb-ball-1: #2ED9E7; /* Lightsaber Cyan (--dark-color-tertiary) */
+  --tb-ball-2: #F349A4; /* Sith Pink/Magenta (--dark-color-secondary) */
+  --tb-ball-3: #FFE629; /* Star Wars Yellow (--dark-color-primary) */
+  --tb-ball-4: #671086; /* Imperial Purple (--dark-color-secondary-variant-2) */
+}
+body {
+  background-color: var(--tb-bg);
+  color: var(--tb-text);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}

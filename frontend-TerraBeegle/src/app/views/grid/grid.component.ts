@@ -82,10 +82,10 @@ export interface GridComponentProps {
                       borderRadius="0 0 14px 14px"
                       blur="3px"
                       [scale]="85"
-                      background="rgba(255, 255, 255, 0.32)"
-                      [customStyle]="{ 'border-top': 'none', 'border-color': 'rgba(255, 255, 255, 0.75)', 'border-bottom-left-radius': '14px', 'border-bottom-right-radius': '14px' }"
+                      background="var(--tb-glass-bg)"
+                      [customStyle]="{ 'border-top': 'none', 'border-color': 'var(--tb-glass-border)', 'border-bottom-left-radius': '14px', 'border-bottom-right-radius': '14px' }"
                     >
-                      <div class="p-3 text-dark details-inner">
+                      <div class="p-3 text-body details-inner">
                         <div class="d-flex align-items-center gap-2 mb-2 action-buttons">
 
                           <button class="btn-action-circle" type="button" title="Add to Wishlist">
@@ -125,7 +125,7 @@ export interface GridComponentProps {
                             </span>
                           }
                           @if (game.released) {
-                            <span class="text-dark small fw-medium">
+                            <span class="text-body-secondary small fw-medium">
                               {{ getReleaseYear(game.released) }}
                             </span>
                           }
@@ -270,14 +270,14 @@ export interface GridComponentProps {
       margin-top: 0.1rem;
     }
 
-    /* Pulsanti circolari per tema chiaro: 32px rotondi */
+    /* Pulsanti circolari: 32px rotondi */
     .btn-action-circle {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 1px solid rgba(244, 114, 182, 0.45);
-      background: rgba(255, 255, 255, 0.75);
-      color: #db2777;
+      border: 1px solid var(--tb-accent);
+      background: var(--tb-glass-bg);
+      color: var(--tb-accent);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -288,22 +288,23 @@ export interface GridComponentProps {
     }
 
     .btn-action-circle:hover {
-      background: rgba(244, 114, 182, 0.25);
-      border-color: #db2777;
-      color: #be185d;
+      background: var(--tb-accent);
+      border-color: var(--tb-accent-hover);
+      color: #ffffff;
       transform: scale(1.08);
+      box-shadow: 0 0 10px var(--tb-accent-glow);
     }
 
     .btn-action-circle.btn-more {
-      background: rgba(255, 255, 255, 0.75);
-      border-color: rgba(0, 0, 0, 0.15);
-      color: #475569;
+      background: var(--tb-glass-bg);
+      border-color: var(--tb-glass-border);
+      color: var(--tb-text-muted);
     }
 
     .btn-action-circle.btn-more:hover {
-      background: #ffffff;
-      border-color: #94a3b8;
-      color: #0f172a;
+      background: var(--tb-accent);
+      border-color: var(--tb-accent);
+      color: #ffffff;
       transform: scale(1.08);
     }
 
@@ -311,7 +312,7 @@ export interface GridComponentProps {
       font-size: 0.8rem;
       font-weight: 600;
       letter-spacing: 0.01em;
-      color: #131313;
+      color: var(--tb-text);
     }
 
     /* Badge Metacritic in stile originale con codifica colori dinamica */
@@ -364,17 +365,17 @@ export interface GridComponentProps {
     }
 
     .btn-show-more {
-      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
-      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: var(--tb-btn-gradient);
+      border: 1px solid var(--tb-glass-border);
       backdrop-filter: blur(8px);
       border-radius: 20px;
       color: #fff;
       transition: all 0.2s ease;
-      box-shadow: 0 2px 10px rgba(244, 114, 182, 0.3);
+      box-shadow: 0 2px 10px var(--tb-btn-gradient-shadow);
     }
     .btn-show-more:hover {
-      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
-      box-shadow: 0 4px 16px rgba(244, 114, 182, 0.45);
+      background: var(--tb-btn-gradient-hover);
+      box-shadow: 0 4px 16px var(--tb-btn-gradient-shadow);
       transform: translateY(-2px);
       color: #fff;
     }

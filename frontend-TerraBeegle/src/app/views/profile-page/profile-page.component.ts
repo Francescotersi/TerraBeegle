@@ -51,11 +51,11 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                   </div>
 
                   <div class="d-flex flex-column">
-                    <h1 class="h3 fw-bold text-dark text-uppercase mb-0 tracking-wide">
+                    <h1 class="h3 fw-bold text-body text-uppercase mb-0 tracking-wide">
                       {{ user()?.username || user()?.name || 'USERNAME' }}
                     </h1>
                     @if (user()?.name && user()?.familyName) {
-                      <span class="text-secondary small fw-medium">
+                      <span class="text-body-secondary small fw-medium">
                         {{ user()?.name }} {{ user()?.familyName }}
                       </span>
                     }
@@ -63,7 +63,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                 </div>
 
                 <!-- DETAILS | STATISTICS | FRIENDLIST | SETTINGS -->
-                <div class="profile-tabs-nav d-flex align-items-center gap-3 gap-sm-4 pb-2 mb-4 border-bottom border-white-50">
+                <div class="profile-tabs-nav d-flex align-items-center gap-3 gap-sm-4 pb-2 mb-4 border-bottom border-secondary border-opacity-25">
                   <button
                     type="button"
                     class="profile-tab-btn"
@@ -117,7 +117,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                 </div>
 
                 <!-- Footer -->
-                <div class="d-flex justify-content-end pt-3 mt-4 border-top border-white-50">
+                <div class="d-flex justify-content-end pt-3 mt-4 border-top border-secondary border-opacity-25">
                   <button
                     type="button"
                     class="logout-link"
@@ -194,18 +194,18 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       font-weight: 700;
       font-size: 0.88rem;
       letter-spacing: 0.05em;
-      color: #64748b;
+      color: var(--tb-text-muted);
       cursor: pointer;
       position: relative;
       transition: color 0.2s ease;
     }
 
     .profile-tab-btn:hover {
-      color: #db2777;
+      color: var(--tb-accent);
     }
 
     .profile-tab-btn.active {
-      color: #db2777;
+      color: var(--tb-accent);
     }
 
     .profile-tab-btn.active::after {
@@ -215,7 +215,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, #f472b6, #fb7185);
+      background: var(--tb-btn-gradient);
       border-radius: 3px 3px 0 0;
     }
 

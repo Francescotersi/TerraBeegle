@@ -19,14 +19,15 @@ import { Component } from '@angular/core';
 			inset: 0;
 			z-index: 0;
 			pointer-events: none;
-			background-color: #faf6fa;
+			background-color: var(--tb-bg);
 			overflow: hidden;
+			transition: background-color 0.4s ease;
 		}
 
 		.glow-effect {
 			width: 100%;
 			height: 100%;
-			background: radial-gradient(circle at 50% 15%, rgba(244, 114, 182, 0.18), rgba(251, 146, 60, 0.08) 45%, transparent 70%);
+			background: radial-gradient(circle at 50% 15%, var(--tb-accent-glow), transparent 70%);
 		}
 
 		.moving-ball {
@@ -36,17 +37,18 @@ import { Component } from '@angular/core';
 			width: 320px;
 			height: 320px;
 			border-radius: 50%;
-			background: #f472b6;
-			box-shadow: 0 0 24px 8px rgba(244, 114, 182, 0.5);
+			background: var(--tb-ball-1);
+			box-shadow: 0 0 28px 8px var(--tb-accent-glow);
 			will-change: transform;
 			animation: move-ball 12s linear infinite alternate;
+			transition: background-color 0.4s ease;
 		}
 
-		.ball-2 { animation-delay: -2s; background: #a78bfa; box-shadow: 0 0 24px 8px rgba(167, 139, 250, 0.55); }
-		.ball-3 { animation-delay: -4s; background: #fb7185; box-shadow: 0 0 24px 8px rgba(251, 113, 133, 0.55); }
-		.ball-4 { animation-delay: -6s; background: #34d399; box-shadow: 0 0 24px 8px rgba(52, 211, 153, 0.55); }
-		.ball-5 { animation-delay: -8s; background: #fbbf24; box-shadow: 0 0 24px 8px rgba(251, 191, 36, 0.55); }
-		.ball-6 { animation-delay: -10s; background: #f472b6; box-shadow: 0 0 24px 8px rgba(244, 114, 182, 0.55); }
+		.ball-2 { animation-delay: -2s; background: var(--tb-ball-2); }
+		.ball-3 { animation-delay: -4s; background: var(--tb-ball-3); }
+		.ball-4 { animation-delay: -6s; background: var(--tb-ball-4); }
+		.ball-5 { animation-delay: -8s; background: var(--tb-ball-2); }
+		.ball-6 { animation-delay: -10s; background: var(--tb-ball-1); }
 
 		@keyframes move-ball {
 			0% { transform: translate(0, 0); }

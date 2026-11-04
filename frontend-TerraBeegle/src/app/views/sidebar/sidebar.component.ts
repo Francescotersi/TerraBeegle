@@ -181,28 +181,33 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       width: 100%;
     }
     .sidebar-search {
-      background-color: rgba(255, 255, 255, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.6);
+      background-color: var(--tb-input-bg);
+      border: 1px solid var(--tb-input-border);
       border-radius: 20px;
       font-size: 0.85rem;
       padding: 0.4rem 0.75rem;
-      color: inherit;
-      transition: background 0.2s ease, box-shadow 0.2s ease;
+      color: var(--tb-text);
+      transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar-search::placeholder {
+      color: var(--tb-text-muted);
+      opacity: 0.8;
     }
     .sidebar-search:focus {
-      background-color: rgba(255, 255, 255, 0.75);
-      border-color: rgba(244, 114, 182, 0.6);
-      box-shadow: 0 0 0 0.25rem rgba(244, 114, 182, 0.25);
+      background-color: var(--tb-input-bg-focus);
+      border-color: var(--tb-accent);
+      box-shadow: 0 0 0 0.25rem var(--tb-accent-glow);
+      color: var(--tb-text);
     }
     /* Pulsante dell'intestazione categoria */
     .category-btn {
       background: transparent;
-      color: #334155;
+      color: var(--tb-text);
       transition: background 0.2s ease, color 0.2s ease;
     }
     .category-btn:hover {
-      background-color: rgba(244, 114, 182, 0.12);
-      color: #db2777;
+      background-color: var(--tb-accent-subtle);
+      color: var(--tb-accent);
     }
     /* Freccetta che ruota quando la sezione è aperta */
     .chevron {
@@ -210,18 +215,18 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       transition: transform 0.2s ease, color 0.2s ease;
       display: inline-block;
       transform: rotate(-90deg);
-      color: #94a3b8;
+      color: var(--tb-text-muted);
     }
     .chevron.open {
       transform: rotate(0deg);
-      color: #db2777;
+      color: var(--tb-accent);
     }
     /* Elenco interno a tendina in vera lista verticale con scrollbar sottile */
     .category-list {
       max-height: 180px;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: rgba(244, 114, 182, 0.4) transparent;
+      scrollbar-color: var(--tb-accent) transparent;
       padding-left: 0.5rem;
       padding-right: 0.25rem;
     }
@@ -229,7 +234,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       width: 4px;
     }
     .category-list::-webkit-scrollbar-thumb {
-      background: rgba(244, 114, 182, 0.35);
+      background: var(--tb-accent-glow);
       border-radius: 4px;
     }
     .category-item {
@@ -237,7 +242,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
     }
     /* Singola voce della lista verticale */
     .sidebar-list-link {
-      color: #475569;
+      color: var(--tb-text-muted);
       font-size: 0.85rem;
       padding: 0.35rem 0.65rem;
       text-decoration: none;
@@ -246,30 +251,30 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       transition: all 0.15s ease;
     }
     .sidebar-list-link:hover {
-      background-color: rgba(244, 114, 182, 0.12);
-      color: #db2777;
+      background-color: var(--tb-accent-subtle);
+      color: var(--tb-accent);
       transform: translateX(4px);
     }
     .sidebar-list-link.active {
-      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%) !important;
+      background: var(--tb-btn-gradient) !important;
       color: #ffffff !important;
       font-weight: 600;
-      box-shadow: 0 3px 10px rgba(244, 114, 182, 0.35);
+      box-shadow: 0 3px 10px var(--tb-btn-gradient-shadow);
     }
     .sidebar-item {
-      color: #1e293b;
+      color: var(--tb-text);
       padding: 0.5rem 0.75rem;
       text-decoration: none;
       display: flex;
       transition: all 0.15s ease;
     }
     .sidebar-item:hover {
-      background-color: rgba(244, 114, 182, 0.12);
-      color: #db2777;
+      background-color: var(--tb-accent-subtle);
+      color: var(--tb-accent);
     }
     .sidebar-item.active {
-      background-color: rgba(244, 114, 182, 0.18);
-      color: #db2777;
+      background-color: var(--tb-accent-subtle);
+      color: var(--tb-accent);
       font-weight: 600;
     }
   `,

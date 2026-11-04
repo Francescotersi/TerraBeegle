@@ -143,9 +143,9 @@ interface UserModel {
       min-height: 75vh;
     }
     .glass-input {
-      background: rgba(255, 255, 255, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.8);
-      color: #0f172a;
+      background: var(--tb-input-bg);
+      border: 1px solid var(--tb-input-border);
+      color: var(--tb-text);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       border-radius: 12px;
@@ -153,35 +153,36 @@ interface UserModel {
       transition: all 0.25s ease;
     }
     .glass-input::placeholder {
-      color: #94a3b8;
+      color: var(--tb-text-muted);
     }
     .glass-input:focus {
-      background: rgba(255, 255, 255, 0.75);
-      border-color: #f472b6;
-      box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.22);
+      background: var(--tb-input-bg-focus);
+      border-color: var(--tb-accent);
+      box-shadow: 0 0 0 4px var(--tb-accent-glow);
+      color: var(--tb-text);
       outline: none;
     }
     .glass-btn {
-      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
-      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: var(--tb-btn-gradient);
+      border: 1px solid var(--tb-glass-border);
       border-radius: 12px;
       transition: all 0.25s ease;
     }
     .glass-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(244, 114, 182, 0.4) !important;
-      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      box-shadow: 0 8px 20px var(--tb-btn-gradient-shadow) !important;
+      background: var(--tb-btn-gradient-hover);
     }
     .glass-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
     .glass-link {
-      color: #db2777;
+      color: var(--tb-accent);
       transition: color 0.2s ease;
     }
     .glass-link:hover {
-      color: #be185d;
+      color: var(--tb-accent-hover);
       text-decoration: underline !important;
     }
   `,
