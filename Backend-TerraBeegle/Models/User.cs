@@ -19,7 +19,8 @@ public class User
     public string? EmailVerificationCodeHash { get; set; }
     public DateTime? EmailVerificationCodeExpiration { get; set; }
     public int EmailVerificationAttempts { get; set; }
-    public bool IsChangingMail { get; set; } = false;
+    
+    public string? PendingEmail { get; set; }
     public bool ForgotPasswordRequested { get; set; } = false;
     
     public ICollection<Friendship> FriendRequestsAsUser1 { get; set; } = [];
