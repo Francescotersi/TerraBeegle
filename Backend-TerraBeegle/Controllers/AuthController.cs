@@ -67,7 +67,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             logger.LogError(ex, "Error sending verification code to {Email}", user.Email);
         }
         
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id }, user.Adapt<UserResponseDTO>());
+        return CreatedAtAction(nameof(UserController.GetByUsername), "User", new { username = user.Username }, user.Adapt<UserResponseDTO>());
     }
     
     [EnableRateLimiting("login")]
@@ -78,7 +78,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
-        if(user == null)
+        if (user is null)
             return Unauthorized("Invalid credentials.");
 
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
@@ -201,5 +201,4 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         return Ok("Password has been reset successfully.");
     }
-    
 }

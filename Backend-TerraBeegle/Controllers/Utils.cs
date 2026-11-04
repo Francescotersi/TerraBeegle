@@ -12,6 +12,16 @@ public static class Utils
         return long.TryParse(sub, out var tokenUserId) && tokenUserId == id;
     }
 
+    public static long? GetCurrentUserId(ClaimsPrincipal user)
+    {
+        var sub = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (long.TryParse(sub, out var tokenUserId))
+        {
+            return tokenUserId;
+        }
+        return null;
+    }
+
     public static bool IsHttpUrl(string value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)

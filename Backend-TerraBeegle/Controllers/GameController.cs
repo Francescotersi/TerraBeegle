@@ -142,9 +142,10 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
 	// retrieving all games from the database and projecting them to GameResponseDTO
     [HttpGet("all")]
-    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
+    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
     {
         var games = await db.Games
+            .Where(g => !g.IsPlaceholder || IncludePlaceholders) // Only return games that are not placeholders, unless 'IncludePlaceholders' is true
             .OrderBy(g => g.Name) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
@@ -155,7 +156,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
             games,
             await db.Games.CountAsync(),
             pagination,
-            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
     }
 
@@ -164,7 +165,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
     public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
     {
         var game = await db.Games
-            .Where(g => g.RawgGameId == rawgGameId)
+            .Where(g => g.RawgGameId == rawgGameId && !g.IsPlaceholder) // Only return games that are not placeholders
             .ProjectToType<GameResponseDTO>()
             .FirstOrDefaultAsync();
 

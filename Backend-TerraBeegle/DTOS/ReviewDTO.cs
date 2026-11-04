@@ -25,5 +25,7 @@ public class ReviewResponseDTO
     [Range(1, 5)]
     public int Rating { get; set; }               // 1-5
     public string? Content { get; set; }
-    public UserPublicResponseDTO User { get; set; } = null!;
+    public DateTime CreatedAt { get; set; }
+    public UserPublicResponseDTO? User { get; set; }
+    public GameMinDTO? Game { get; set; }
 }

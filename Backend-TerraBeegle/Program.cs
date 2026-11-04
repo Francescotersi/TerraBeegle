@@ -129,7 +129,30 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 3,
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0
-            }));
+            }
+        ));
+    
+    options.AddPolicy("forgot-password-request", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions()
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0
+            }
+        ));
+
+    options.AddPolicy("forgot-password", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions()
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }
+        ));
     // qui si potrebbe aggiungere un altro policy
 });
 

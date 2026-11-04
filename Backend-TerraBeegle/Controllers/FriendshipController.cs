@@ -14,26 +14,35 @@ namespace Backend_TerraBeegle.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/users/{userId:long}/friendship")]
+[Route("api/users/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
     // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
     [HttpGet("friends")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
-    GetFriends(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "friends");
+    GetFriends([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "friends");
 
     [HttpGet("received")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
-    GetReceivedFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "received");
+    GetReceivedFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "received");
 
     [HttpGet("sent")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
-    GetSentFriendships(long userId, [FromQuery] PaginationDTO pagination) => GetFriendships(userId, pagination, "sent");
+    GetSentFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "sent");
 
-    private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, string search)
+    private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships([FromQuery] PaginationDTO pagination, string search)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
 
         Expression<Func<Friendship, bool>>? filter = search.ToLowerInvariant() switch
         {
@@ -81,10 +90,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipCreateDTO dto)
+    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(FriendshipCreateDTO dto)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         if (dto.SenderId != userId)
             return BadRequest("SenderId must match the authenticated user's ID.");
@@ -146,10 +164,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPatch]
-    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(long userId, FriendshipUpdateDTO dto)
+    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(FriendshipUpdateDTO dto)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
             return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
@@ -195,10 +222,19 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    public async Task<ActionResult> DeleteFriendship(long userId, long id)
+    public async Task<ActionResult> DeleteFriendship(long id)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         var friendship = await db.Friendships.FindAsync(id);
         if (friendship is null)
