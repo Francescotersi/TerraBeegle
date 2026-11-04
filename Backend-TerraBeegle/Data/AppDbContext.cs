@@ -40,6 +40,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.PasswordHash)
                 .IsRequired()
                 .HasMaxLength(255);
+            
+            e.Property(u => u.PendingEmail)
+                .HasMaxLength(255);
 
             e.Property(u => u.Theme)
                 .HasConversion<string>()

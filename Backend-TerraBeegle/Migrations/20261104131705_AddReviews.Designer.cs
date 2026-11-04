@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend_TerraBeegle.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261102151107_RenameTitleToNameAndAddIndexes")]
-    partial class RenameTitleToNameAndAddIndexes
+    [Migration("20261104131705_AddReviews")]
+    partial class AddReviews
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -91,6 +91,9 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<bool>("IsPlaceholder")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("Metacritic")
                         .HasColumnType("integer");
 
@@ -151,6 +154,8 @@ namespace Backend_TerraBeegle.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name");
 
                     b.HasIndex("RawgGameId")
                         .IsUnique();
@@ -244,6 +249,36 @@ namespace Backend_TerraBeegle.Migrations
                     b.ToTable("Platforms");
                 });
 
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Review", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text");
+
+                    b.Property<long>("GameId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GameId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("Reviews");
+                });
+
             modelBuilder.Entity("Backend_TerraBeegle.Models.User", b =>
                 {
                     b.Property<long>("Id")
@@ -278,6 +313,9 @@ namespace Backend_TerraBeegle.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("ForgotPasswordRequested")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ImageProfile")
                         .HasColumnType("text");
@@ -336,6 +374,21 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasIndex("GenresId");
 
                     b.ToTable("game_genres", (string)null);
+                });
+
+            modelBuilder.Entity("GameParentPlatform", b =>
+                {
+                    b.Property<long>("GamesId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ParentPlatformsId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("GamesId", "ParentPlatformsId");
+
+                    b.HasIndex("ParentPlatformsId");
+
+                    b.ToTable("game_parent_platforms", (string)null);
                 });
 
             modelBuilder.Entity("GamePlatform", b =>
@@ -511,6 +564,25 @@ namespace Backend_TerraBeegle.Migrations
                     b.Navigation("ParentPlatform");
                 });
 
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Review", b =>
+                {
+                    b.HasOne("Backend_TerraBeegle.Models.Game", "Game")
+                        .WithMany("Reviews")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend_TerraBeegle.Models.User", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GameGenre", b =>
                 {
                     b.HasOne("Backend_TerraBeegle.Models.Game", null)
@@ -522,6 +594,21 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasOne("Backend_TerraBeegle.Models.Genre", null)
                         .WithMany()
                         .HasForeignKey("GenresId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GameParentPlatform", b =>
+                {
+                    b.HasOne("Backend_TerraBeegle.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GamesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend_TerraBeegle.Models.ParentPlatform", null)
+                        .WithMany()
+                        .HasForeignKey("ParentPlatformsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -571,6 +658,11 @@ namespace Backend_TerraBeegle.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Game", b =>
+                {
+                    b.Navigation("Reviews");
+                });
+
             modelBuilder.Entity("Backend_TerraBeegle.Models.ParentPlatform", b =>
                 {
                     b.Navigation("Platforms");
@@ -581,6 +673,8 @@ namespace Backend_TerraBeegle.Migrations
                     b.Navigation("FriendRequestsAsUser1");
 
                     b.Navigation("FriendRequestsAsUser2");
+
+                    b.Navigation("Reviews");
                 });
 #pragma warning restore 612, 618
         }

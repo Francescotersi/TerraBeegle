@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;                 // pentru FindFirstValue
 using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
 using Microsoft.AspNetCore.Identity;
+using Backend_TerraBeegle.Services;
+using Backend_TerraBeegle.Enums;
 using Npgsql;
 using Mapster;
 
@@ -15,7 +17,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/users")]
-public class UserController(AppDbContext db, IPasswordHasher<User> passwordHasher) : ControllerBase
+public class UserController(AppDbContext db, IPasswordHasher<User> passwordHasher, IEmailVerificationService emailVerificationService, ILogger<UserController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
@@ -190,10 +192,90 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         return Ok("Password changed successfully.");
     }
-
+	
 	[HttpPatch("{id:long}/email")]
 	public async Task<ActionResult> ChangeEmail(long id, UpdateEmailDTO dto)
+	{
+		if(!Utils.IsCurrentUser(User, id))
+            return Forbid();
 
+		var user = await db.Users.FindAsync(id);
+        if(user is null)
+            return NotFound();
+
+		if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+            return BadRequest("Password is incorrect.");
+
+		dto.Email = dto.Email.Trim().ToLowerInvariant();
+
+		if(dto.Email == user.Email)
+			return BadRequest("New email is the same as the old one.");
+		
+		bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
+		if(EmailExists)
+			return Conflict("Email already exists.");
+
+		user.PendingEmail = dto.Email;
+		user.ForgotPasswordRequested = false;
+		var code = emailVerificationService.SetNewCode(user);
+		user.UpdatedAt = DateTime.UtcNow;
+		await db.SaveChangesAsync();
+		
+		try{
+			await emailVerificationService.SendCodeAsync(user.PendingEmail, code);
+		}
+		catch(Exception ex){
+			logger.LogError(ex, "Error sending email change code to {Email}", user.PendingEmail);
+			return StatusCode(500, "Could not send the code. Try again.");
+		}
+
+		return Ok("Verification code sent to the new email.");
+	}
+
+	[HttpPost("{id:long}/email/confirm")]
+	public async Task<ActionResult> ConfirmNewEmail(long id, ConfirmEmailDTO dto)
+	{
+		if (!Utils.IsCurrentUser(User, id))
+        return Forbid();
+
+    	var user = await db.Users.FindAsync(id);
+    	if (user is null)
+        	return NotFound();
+
+    	if (user.PendingEmail is null)
+        	return BadRequest("No email change in progress.");
+
+    	var result = emailVerificationService.VerifyCode(user, dto.Code);
+
+    	if (result != CodeVerificationResult.Valid)
+    	{
+        	await db.SaveChangesAsync();
+
+        	return result switch
+        	{
+            	CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+            	CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+            	CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+            	_ => throw new InvalidOperationException("Unexpected code verification result.")
+        	};
+    	}
+
+    	user.Email = user.PendingEmail;
+    	user.PendingEmail = null;
+    	user.UpdatedAt = DateTime.UtcNow;
+
+    	try
+    	{
+        	await db.SaveChangesAsync();
+    	}
+    	catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+    	{
+        	return Conflict("Email already exists.");
+    	}
+
+    	return Ok("Email changed successfully.");
+	}
+	
     [HttpDelete("{id:long}")]
     public async Task<ActionResult> DeleteUser(long id)
     {

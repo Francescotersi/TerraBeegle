@@ -153,6 +153,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 			return Ok(message);
 
         user.ForgotPasswordRequested = true;
+		user.PendingEmail = null;
 		var code = emailVerificationService.SetNewCode(user);
 
 		await db.SaveChangesAsync();
