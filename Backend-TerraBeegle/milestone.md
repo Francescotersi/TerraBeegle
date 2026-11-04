@@ -19,7 +19,7 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   - [x] la pornire, verificare că `RAWG_API_KEY` există (ca la `Jwt:Key`) — fără cheie nimic nu merge
   - [x] `GameController` devine subțire: doar apelează serviciul și întoarce rezultatul
 
-- [ ] **32. 🔴 Favorite (obligatoriu, IV.1.6) + wishlist (bonus, VII.4)**
+- [x] **32. 🔴 Favorite (obligatoriu, IV.1.6) + wishlist (bonus, VII.4)**
   Subiectul cere ca userul să poată adăuga / scoate jocuri din favorite și să le vadă într-o secțiune separată.
   Wishlist-ul e bonus, dar e aproape același cod. Modelele și tabelele (`favorite_games`, `wishlist_games`) există deja.
   - Problema inițială: `UserPublicResponseDTO` are `Favorites` / `Whishlist`. `Whishlist` e mereu `null`
@@ -33,11 +33,18 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
         - `DELETE /api/users/{userId}/favorites/{rawgGameId}` — scoate
         - aceleași trei pentru `/wishlist`
   - [x] `POST` / `DELETE` doar pentru userul din token (`IsCurrentUser`)
-  - [ ] `GET` favorite / wishlist doar pentru proprietar și prietenii lui (prietenie `Accepted`), altfel 403
+  - [x] `GET` favorite / wishlist doar pentru proprietar și prietenii lui (prietenie `Accepted`), altfel 403
         - perechea din `Friendships` e salvată ordonată (`User1Id` = id-ul mai mic), deci verificarea cu
           `Math.Min` / `Math.Max`, ca în `FriendshipController`
         - id-ul userului din token ca număr → extension method `User.GetUserId()` pe `ClaimsPrincipal`,
           folosit în locul celor 3 copii de `IsCurrentUser` (User, Friendship, UserGames)
+        → făcut pe 04.11: `CanSeeUserGamesAsync(viewerId, ownerId)` (private în `UserGamesController`) — el însuși →
+        `true`, altfel `AnyAsync` pe perechea Min / Max cu `Status == Accepted` (`Pending` / `Rejected` nu dau acces).
+        `GetFavorites` / `GetWishlist`: fără id în token → 401, user inexistent → 404, fără acces → 403.
+        Id-ul din token vine din `Utils.GetCurrentUserId` (adăugat de coleg), nu din extension method-ul
+        `User.GetUserId()` — rămâne la punctul 54
+  - [ ] testat cu 3 useri (A și B prieteni `Accepted`, C nu): A → A 200, B → A 200, C → A 403,
+        C cu cerere `Pending` la A → 403, A → user inexistent 404
   - [x] joc adăugat de două ori → de decis: 409 sau 204 fără eroare (mai simplu pentru frontend) → decis: 204
         (`DELETE` pentru un joc care nu e în listă → 404)
   - [x] adăugare cu `Include(u => u.Favorites.Where(g => g.Id == game.Id))` + `user.Favorites.Add(game)`;

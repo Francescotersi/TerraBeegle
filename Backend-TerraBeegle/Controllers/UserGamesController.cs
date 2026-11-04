@@ -10,6 +10,7 @@ using Backend_TerraBeegle.Services;
 using Npgsql;
 using Mapster;
 using Backend_TerraBeegle.RateLimiting;
+using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Backend_TerraBeegle.Controllers;
@@ -25,11 +26,20 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     [HttpGet("favorites")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
+        var viewerId = Utils.GetCurrentUserId(User);
+        if (viewerId is null)
+        {
+            return Unauthorized();
+        }
+
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
         {
             return NotFound("User not found.");
         }
+        
+        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
+            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's favorites.");
 
         var totalCount = await db.Users
             .Where(u => u.Id == userId)
@@ -135,11 +145,20 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     [HttpGet("wishlist")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {
+        var viewerId = Utils.GetCurrentUserId(User);
+        if (viewerId is null)
+        {
+            return Unauthorized();
+        }
+
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
         {
             return NotFound("User not found.");
         }
+        
+        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
+            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's wishlist.");
 
         var totalCount = await db.Users
             .Where(u => u.Id == userId)
@@ -238,5 +257,16 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
 
         return NoContent();
+    }
+    
+    private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
+    {
+        if(viewerId == ownerId)
+            return true;
+        
+        var user1Id = Math.Min(viewerId, ownerId);
+        var user2Id = Math.Max(viewerId, ownerId);
+        
+        return await db.Friendships.AnyAsync(f => f.User1Id == user1Id && f.User2Id == user2Id && f.Status == FriendshipStatus.Accepted);
     }
 }
