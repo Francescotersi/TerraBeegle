@@ -257,6 +257,11 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<string>("Content")
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
                     b.Property<long>("GameId")
                         .HasColumnType("bigint");
 

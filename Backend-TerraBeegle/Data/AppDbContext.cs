@@ -247,6 +247,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(r => r.UserId).IsRequired();
             e.Property(r => r.GameId).IsRequired();
 
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("NOW()");
+
             e.HasIndex(r => new { r.GameId, r.UserId }).IsUnique();
             e.HasIndex(r => r.UserId);
 
