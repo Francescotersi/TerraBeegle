@@ -1,8 +1,12 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home.component';
-import { GridComponent } from './grid/grid.component';
-import { LogInUser } from './user/log-in-user/log-in-user.component';
-import { RegisterUser } from './user/register-user/register-user.component';
+import { Home } from './views/home/home.component';
+import { LogInUser } from './views/user/log-in-user/log-in-user.component';
+import { RegisterUser } from './views/user/register-user/register-user.component';
+import { authGuard } from './guards/auth.guard';
+import { ProfilePageComponent } from './views/profile-page/profile-page.component';
+import { FavoritePageComponent } from './views/favorite-page/favorite-page.component';
+import { CatalogPage } from './views/catalog-page/catalog-page.component';
+import { WishlistPageComponent } from './views/wishlist-page/wishlist-page.component';
 
 export const routes: Routes = [
     {
@@ -11,15 +15,17 @@ export const routes: Routes = [
         children: [
             {
                 path: '',
-                component: GridComponent,
+                component: CatalogPage,
             },
             {
                 path: 'favorites',
-                component: GridComponent,
+                component: FavoritePageComponent,
+                canActivate: [authGuard],
             },
             {
                 path: 'wishlist',
-                component: GridComponent,
+                component: WishlistPageComponent,
+                canActivate: [authGuard],
             },
         ]
     },
@@ -30,5 +36,10 @@ export const routes: Routes = [
     {
         path:'register',
         component: RegisterUser
+    },
+    {
+        path: 'profile',
+        component: ProfilePageComponent,
+        canActivate: [authGuard],
     }
 ];

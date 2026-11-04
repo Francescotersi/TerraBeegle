@@ -16,29 +16,30 @@ namespace Backend_TerraBeegle.Controllers;
 [ApiController]
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher,
-                            ITokenService tokenService, IEmailVerificationService emailVerificationService, 
-                            ILogger<AuthController> logger) : ControllerBase
+    ITokenService tokenService, IEmailVerificationService emailVerificationService, 
+    ILogger<AuthController> logger) : ControllerBase
 {
     [EnableRateLimiting("register")]
     [HttpPost("register")]
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
-        var email = dto.Email.Trim().ToLowerInvariant();
-        var username = dto.Username.Trim();
+        dto.Email = dto.Email.Trim().ToLowerInvariant();
+        dto.Username = dto.Username.Trim();
 
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
-        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
+        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == dto.Username);
 
         if(EmailExists)
             return Conflict("Email already exists.");
         if(UsernameExists)
             return Conflict("Username already exists.");
+
+        dto.Name = dto.Name.Trim();
+        dto.FamilyName = dto.FamilyName.Trim();
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();
-        user.Email = email;
-        user.Username = username;
         user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
         
         // Adding the user to the database and saving changes
@@ -76,6 +77,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var email = dto.EmailOrUsername.Trim().ToLowerInvariant();
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
+
         if(user == null)
             return Unauthorized("Invalid credentials.");
 
@@ -93,14 +95,15 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             // Saved in every case: a wrong code increases the attempts, a correct one marks the email as verified
             await db.SaveChangesAsync();
 
-            switch (result)
+            if (result != CodeVerificationResult.Valid)
             {
-                case CodeVerificationResult.Expired:
-                    return BadRequest("The code has expired. Ask for a new one.");
-                case CodeVerificationResult.TooManyAttempts:
-                    return BadRequest("Too many attempts. Ask for a new code.");
-                case CodeVerificationResult.Invalid:
-                    return BadRequest("Invalid code.");
+                return result switch
+                {
+                    CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+                    CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+                    CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+                    _ => throw new InvalidOperationException("Unexpected code verification result.")
+                };
             }
         }
 
@@ -110,7 +113,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 	[EnableRateLimiting("resend-email")]
 	[HttpPost("resend-email")]
-	public async Task<IActionResult> ResendEmail(ResendEmailDTO dto)
+	public async Task<IActionResult> ResendEmail(SendEmailDTO dto)
 	{
 		// The same answer in every case, so the endpoint cannot be used to find out which emails are registered
 		const string message = "If the account exists and is not verified, a new code has been sent.";
@@ -136,4 +139,67 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		return Ok(message);
 	}
+
+	[EnableRateLimiting("forgot-password-request")]
+	[HttpPost("forgot-password-request")]
+	public async Task<IActionResult> ForgotPasswordRequest(SendEmailDTO dto)
+	{
+		const string message = "If the account exists, a code has been sent to reset the password.";
+
+		var email = dto.Email.Trim().ToLowerInvariant();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+		if(user is null)
+			return Ok(message);
+
+        user.ForgotPasswordRequested = true;
+		var code = emailVerificationService.SetNewCode(user);
+
+		await db.SaveChangesAsync();
+
+		try
+		{
+			await emailVerificationService.SendCodeAsync(user.Email, code);
+		}
+		catch(Exception ex)
+		{
+			logger.LogError(ex, "Error resending verification code to {Email}", user.Email);
+		}
+
+		return Ok(message);
+	}
+
+    [EnableRateLimiting("forgot-password")]
+    [HttpPatch("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)
+    {
+        var email = dto.EmailOrUsername.Trim().ToLowerInvariant();
+        var username = dto.EmailOrUsername.Trim();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
+
+        if(user is null || !user.ForgotPasswordRequested)
+            return Ok("Invalid Credentials.");
+
+        var result = emailVerificationService.VerifyCode(user, dto.Code);
+
+        if(result != CodeVerificationResult.Valid)
+        {
+            await db.SaveChangesAsync();
+
+            return result switch
+            {
+                CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+                CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+                CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+                _ => throw new InvalidOperationException("Unexpected code verification result.")
+            };
+        }
+
+        user.ForgotPasswordRequested = false;
+        user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
+        await db.SaveChangesAsync();
+
+        return Ok("Password has been reset successfully.");
+    }
+    
 }

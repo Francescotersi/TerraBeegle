@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, signal, inject } from '@angular/core';
+import { RouterLink, Router } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
-import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../../../services/auth.service';
 
 interface LoginData {
   identifier: string;
@@ -69,12 +70,24 @@ interface LoginData {
                 }
               </div>
 
+              <!-- Errore credenziali -->
+              @if (errorMessage()) {
+                <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
+                  {{ errorMessage() }}
+                </div>
+              }
+
               <button
                 type="submit"
                 class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm"
-                [disabled]="loginForm().invalid()"
+                [disabled]="loginForm().invalid() || isLoading()"
               >
-                Login
+                @if (isLoading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Logging in...
+                } @else {
+                  Login
+                }
               </button>
 
               <div class="text-center mt-4">
@@ -114,13 +127,13 @@ interface LoginData {
 
     .glass-input:focus {
       background: rgba(255, 255, 255, 0.75);
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.22);
+      border-color: #f472b6;
+      box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.22);
       outline: none;
     }
 
     .glass-btn {
-      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      background: linear-gradient(135deg, #fb7185 0%, #f472b6 100%);
       border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 12px;
       transition: all 0.25s ease;
@@ -128,8 +141,8 @@ interface LoginData {
 
     .glass-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4) !important;
-      background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+      box-shadow: 0 8px 20px rgba(244, 114, 182, 0.4) !important;
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
     }
 
     .glass-btn:disabled {
@@ -138,17 +151,22 @@ interface LoginData {
     }
 
     .glass-link {
-      color: #0284c7;
+      color: #db2777;
       transition: color 0.2s ease;
     }
 
     .glass-link:hover {
-      color: #0369a1;
+      color: #be185d;
       text-decoration: underline !important;
     }
   `,
 })
 export class LogInUser {
+  protected readonly isLoading = signal(false);
+  protected readonly errorMessage = signal<string | null>(null)
+  protected readonly authService = inject(AuthService);
+  protected readonly router = inject(Router);
+
   protected readonly loginModel = signal<LoginData>({
     identifier: '',
     password: '',
@@ -159,14 +177,33 @@ export class LogInUser {
     minLength(schema.identifier, 1, {message: 'Insert Email or Username'});
 
     required(schema.password, {message: 'Password is required'});
-    minLength(schema.password, 6, {message: 'Password must be at least 6 characters long'});
+    minLength(schema.password, 8, {message: 'Password must be at least 8 characters long'});
   });
 
   protected onSubmit(): void {
-    if (this.loginForm().valid()) {
-      const data = this.loginModel();
-      console.log('Dati di login pronti per il backend .NET:', data);
-      // send stuff to backend
+    if (this.loginForm().invalid() || this.isLoading()) {
+      return;
     }
+    const data = this.loginModel();
+    console.log('Dati di login pronti per il backend .NET:', data);
+    
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.authService.login({
+      emailOrUsername: data.identifier,
+      password: data.password
+    }).subscribe({
+      next: (response) => {
+        this.isLoading.set(false);
+        console.log('Login was successful', response);
+        console.log('Dati utente:', response.user);
+        this.router.navigate(['/']);
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(error.error?.detail || 'Login failed. Please check your credentials.');
+        console.error('Login error:', error);
+      }
+    });
   }
 }

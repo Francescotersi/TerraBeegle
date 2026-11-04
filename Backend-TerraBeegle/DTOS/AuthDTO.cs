@@ -45,12 +45,32 @@ public class LoginDTO
     public string? Code { get; set; }
 }
 
-public class ResendEmailDTO
+public class SendEmailDTO
 {
     [Required]
     [EmailAddress]
     [MaxLength(255)]
     public string Email { get; set; } = string.Empty;
+}
+
+public class ForgotPasswordDTO
+{
+    [Required]
+    public string EmailOrUsername { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(8, MinimumLength = 8)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}])[-A-Za-z\d`~!@#$%^&*()_=+\\|/?.,;:<>\[\]{}]{8,}$", 
+        ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required]
+    [Compare("NewPassword", ErrorMessage = "Passwords do not match.")]
+    public string ConfirmNewPassword { get; set; } = string.Empty;
 }
 
 public class AuthResponseDTO

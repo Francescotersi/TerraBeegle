@@ -12,7 +12,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
     private const int MaxAttempts = 5;
 
-    private string HashCode(string code)
+    private static string HashCode(string code)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(code.Trim().ToUpperInvariant())));
     }
