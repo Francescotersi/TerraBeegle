@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
+using Backend_TerraBeegle.RateLimiting;
 using Npgsql;
 
 using Mapster;
@@ -19,7 +20,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
     ITokenService tokenService, IEmailVerificationService emailVerificationService, 
     ILogger<AuthController> logger) : ControllerBase
 {
-    [EnableRateLimiting("register")]
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     [HttpPost("register")]
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
@@ -70,7 +71,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return CreatedAtAction(nameof(UserController.GetByUsername), "User", new { username = user.Username }, user.Adapt<UserResponseDTO>());
     }
     
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {
@@ -111,7 +112,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
     }
 
-	[EnableRateLimiting("resend-email")]
+	[EnableRateLimiting(RateLimitPolicies.ResendEmail)]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail(SendEmailDTO dto)
 	{
@@ -140,7 +141,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
-	[EnableRateLimiting("forgot-password-request")]
+	[EnableRateLimiting(RateLimitPolicies.ForgotPasswordRequest)]
 	[HttpPost("forgot-password-request")]
 	public async Task<IActionResult> ForgotPasswordRequest(SendEmailDTO dto)
 	{
@@ -170,7 +171,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
-    [EnableRateLimiting("forgot-password")]
+    [EnableRateLimiting(RateLimitPolicies.ForgotPassword)]
     [HttpPatch("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)
     {

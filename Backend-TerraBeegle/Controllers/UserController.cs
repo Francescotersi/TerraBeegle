@@ -11,6 +11,8 @@ using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Enums;
 using Npgsql;
 using Mapster;
+using Backend_TerraBeegle.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -106,6 +108,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     }
 
     [Authorize]
+	[EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser([FromBody] UpdateUserDTO dto)
     {
@@ -181,6 +184,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     }
 
     [Authorize]
+	[EnableRateLimiting(RateLimitPolicies.ChangePassword)]
     [HttpPatch("password")]
     public async Task<ActionResult> ChangePassword(UpdatePasswordDTO dto)
     {
@@ -205,6 +209,8 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Password changed successfully.");
     }
 	
+	[Authorize]
+	[EnableRateLimiting(RateLimitPolicies.ChangeEmail)]
 	[HttpPatch("{id:long}/email")]
 	public async Task<ActionResult> ChangeEmail(long id, UpdateEmailDTO dto)
 	{
@@ -244,6 +250,8 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok("Verification code sent to the new email.");
 	}
 
+	[Authorize]
+	[EnableRateLimiting(RateLimitPolicies.ConfirmEmail)]
 	[HttpPost("{id:long}/email/confirm")]
 	public async Task<ActionResult> ConfirmNewEmail(long id, ConfirmEmailDTO dto)
 	{
@@ -290,6 +298,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 	
 
     [Authorize]
+	[EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete]
     public async Task<ActionResult> DeleteUser() {
         var userId = Utils.GetCurrentUserId(User);

@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Enums;
 using System.Linq.Expressions;
+using Backend_TerraBeegle.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 using Npgsql;
 using Mapster;
@@ -90,6 +92,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(FriendshipCreateDTO dto)
     {
         var userId = Utils.GetCurrentUserId(User);
@@ -164,6 +167,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpPatch]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(FriendshipUpdateDTO dto)
     {
         var userId = Utils.GetCurrentUserId(User);
@@ -222,6 +226,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult> DeleteFriendship(long id)
     {
         var userId = Utils.GetCurrentUserId(User);

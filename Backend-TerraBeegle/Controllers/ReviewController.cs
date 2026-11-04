@@ -6,6 +6,8 @@ using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Models;
+using Backend_TerraBeegle.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 using Mapster;
 
@@ -85,6 +87,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPost]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
     {
@@ -148,6 +151,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
     public async Task<ActionResult<ReviewResponseDTO>> UpdateReview(int gameId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
     {
@@ -199,6 +203,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
     }
 
     [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteReview(int gameId, long id)
     {

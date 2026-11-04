@@ -9,15 +9,19 @@ using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
 using Npgsql;
 using Mapster;
+using Backend_TerraBeegle.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Backend_TerraBeegle.Controllers;
 
 [Authorize]
 [ApiController]
+[EnableRateLimiting(RateLimitPolicies.UserGames)]
 [Route("api/users/{userId:long}")]
 public class UserGamesController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     // favorites
+    [DisableRateLimiting]
     [HttpGet("favorites")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
@@ -127,6 +131,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     }
 
     // wishlist
+    [DisableRateLimiting]
     [HttpGet("wishlist")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {

@@ -11,6 +11,7 @@ using Microsoft.OpenApi;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
+using Backend_TerraBeegle.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,60 +100,17 @@ builder.Services.AddRateLimiter(options =>
             Detail = "Too many requests. Try again in a minute."
         }, cancellationToken);
     };
-
-    // policy "login": ogni IP a un singolo contor
-    options.AddPolicy("login", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 5,                    // max 5 request
-                Window = TimeSpan.FromMinutes(1),   // per minut
-                QueueLimit = 0
-            }));
-
-    options.AddPolicy("register", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions()
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
     
-    options.AddPolicy("resend-email", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions()
-            {
-                PermitLimit = 3,
-                Window = TimeSpan.FromMinutes(10),
-                QueueLimit = 0
-            }
-        ));
-    
-    options.AddPolicy("forgot-password-request", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions()
-            {
-                PermitLimit = 3,
-                Window = TimeSpan.FromMinutes(10),
-                QueueLimit = 0
-            }
-        ));
-
-    options.AddPolicy("forgot-password", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions()
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }
-        ));
+    options.AddFixedWindowPolicy(RateLimitPolicies.Login, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.Register, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ResendEmail, 3, TimeSpan.FromMinutes(10), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ForgotPasswordRequest, 3, TimeSpan.FromMinutes(10), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ForgotPassword, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ChangeEmail, 3, TimeSpan.FromMinutes(10), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ConfirmEmail, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.ChangePassword, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.UserWrite, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.UserGames, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
     // qui si potrebbe aggiungere un altro policy
 });
 
@@ -228,10 +186,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseStatusCodePages();
 app.UseCors("AllowAngularDev");
-app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 // --- Endpoints API ---
