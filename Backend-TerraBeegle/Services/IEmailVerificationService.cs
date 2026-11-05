@@ -7,5 +7,5 @@ public interface IEmailVerificationService
 {
     string SetNewCode(User user);
     CodeVerificationResult VerifyCode(User user, string code);
-    Task SendCodeAsync(string email, string code);
+    Task SendCodeAsync(string email, string code, EmailCodePurpose purpose);
 }

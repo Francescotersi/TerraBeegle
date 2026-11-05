@@ -8,7 +8,7 @@ public class User
     public string Name { get; set; } = null!;
     public string FamilyName { get; set; } = null!;
     public string Email { get; set; } = null!;
-    public string? ImageProfile { get; set; }          // URL imagine
+    public string? ImageProfile { get; set; }          // image URL
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
@@ -19,10 +19,14 @@ public class User
     public string? EmailVerificationCodeHash { get; set; }
     public DateTime? EmailVerificationCodeExpiration { get; set; }
     public int EmailVerificationAttempts { get; set; }
-    public bool IsChangingMail { get; set; } = false;
+    
+    public string? PendingEmail { get; set; }
+    public bool ForgotPasswordRequested { get; set; } = false;
     
     public ICollection<Friendship> FriendRequestsAsUser1 { get; set; } = [];
     public ICollection<Friendship> FriendRequestsAsUser2 { get; set; } = [];
+
+    public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<Game> Favorites { get; set; } = [];
     public ICollection<Game> WishlistItems { get; set; } = [];
 }

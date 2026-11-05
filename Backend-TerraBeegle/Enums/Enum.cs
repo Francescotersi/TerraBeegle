@@ -130,3 +130,12 @@ public enum CodeVerificationResult
     Expired,
     TooManyAttempts
 }
+
+// Why a code is sent: each one gets its own email text
+public enum EmailCodePurpose
+{
+    Register,
+    ResendVerification,
+    ForgotPassword,
+    ChangeEmail
+}

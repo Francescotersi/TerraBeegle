@@ -12,7 +12,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
     private const int MaxAttempts = 5;
 
-    private string HashCode(string code)
+    private static string HashCode(string code)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(code.Trim().ToUpperInvariant())));
     }
@@ -56,29 +56,51 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
         return CodeVerificationResult.Valid;
     }
 
-    public async Task SendCodeAsync(string email, string code)
+    public async Task SendCodeAsync(string email, string code, EmailCodePurpose purpose)
     {
-        string subject = "TerraBeegle Verification Code";
-        string text = 
+        // Only the subject, the first paragraph and the "did not request" line change;
+        // the code, its lifetime and the security warning are the same in every email
+        var (subject, intro, ignoreText) = purpose switch
+        {
+            EmailCodePurpose.Register => (
+                "Welcome to TerraBeegle - verify your email",
+                "Thank you for creating an account with TerraBeegle. To verify your email address, enter this code the first time you log in:",
+                "If you did not create a TerraBeegle account, you can safely ignore this email. The unverified account is deleted automatically after 2 days."),
+
+            EmailCodePurpose.ResendVerification => (
+                "Your new TerraBeegle verification code",
+                "You asked for a new verification code. Enter it when you log in to verify your email address. Any code sent before this one no longer works:",
+                "If you did not ask for a new code, you can safely ignore this email."),
+
+            EmailCodePurpose.ForgotPassword => (
+                "Reset your TerraBeegle password",
+                "We received a request to reset the password of your TerraBeegle account. Enter this code to choose a new password:",
+                "If you did not ask to reset your password, you can safely ignore this email. Your password stays the same."),
+
+            EmailCodePurpose.ChangeEmail => (
+                "Confirm your new TerraBeegle email address",
+                "You asked to use this email address for your TerraBeegle account. Enter this code to confirm the change:",
+                "If you did not ask for this change, you can safely ignore this email. The email address of the account stays the same."),
+
+            _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "Unknown email code purpose.")
+        };
+
+        string text =
 $@"Hello,
 
-Thank you for creating an account with TerraBeegle.
-
-To complete the verification of your email address, please enter the following one-time verification code:
+{intro}
 
 {code}
 
 This code is valid for {CodeLifetime.TotalMinutes} minutes and can be used only once.
 
-For security reasons, please do not share this code with anyone. TerraBeegle will never ask you to provide your verification code by phone, email, or any other channel.
+For security reasons, please do not share this code with anyone. TerraBeegle will never ask you for this code by phone, email, or any other channel.
 
-If you did not request this verification, you can safely ignore this email. No changes will be made to your account.
-
-If you have any questions or need assistance, please contact our support team.
+{ignoreText}
 
 Best regards,
 The TerraBeegle Team";
-        
+
         await emailService.SendAsync(email, subject, text);
     }
 }

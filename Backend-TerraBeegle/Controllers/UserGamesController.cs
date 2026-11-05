@@ -9,23 +9,37 @@ using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
 using Npgsql;
 using Mapster;
+using Backend_TerraBeegle.RateLimiting;
+using Backend_TerraBeegle.Enums;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Backend_TerraBeegle.Controllers;
 
 [Authorize]
 [ApiController]
+[EnableRateLimiting(RateLimitPolicies.UserGames)]
 [Route("api/users/{userId:long}")]
 public class UserGamesController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     // favorites
+    [DisableRateLimiting]
     [HttpGet("favorites")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
+        var viewerId = Utils.GetCurrentUserId(User);
+        if (viewerId is null)
+        {
+            return Unauthorized();
+        }
+
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
         {
             return NotFound("User not found.");
         }
+        
+        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
+            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's favorites.");
 
         var totalCount = await db.Users
             .Where(u => u.Id == userId)
@@ -62,7 +76,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.CreateGameAsync(rawgGameId);
+            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
@@ -90,7 +104,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Conflict("Game is already in favorites.");
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the favorites anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
         }
 
         return NoContent();
@@ -113,28 +129,32 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         if(game is null)
             return NotFound("Game is not in favorites.");
 
+        // Only the row from the join table is removed (not the game), so no foreign key can be violated
         user.Favorites.Remove(game);
-        try
-        {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
-        {
-            return Conflict("Cannot remove game from favorites due to foreign key constraint.");
-        }
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
 
     // wishlist
+    [DisableRateLimiting]
     [HttpGet("wishlist")]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {
+        var viewerId = Utils.GetCurrentUserId(User);
+        if (viewerId is null)
+        {
+            return Unauthorized();
+        }
+
         var userExists = await db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
         {
             return NotFound("User not found.");
         }
+        
+        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
+            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's wishlist.");
 
         var totalCount = await db.Users
             .Where(u => u.Id == userId)
@@ -170,7 +190,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.CreateGameAsync(rawgGameId);
+            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
@@ -198,7 +218,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Conflict("Game is already in wishlist.");
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the wishlist anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
         }
 
         return NoContent();
@@ -221,17 +243,21 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         if(game is null)
             return NotFound("Game is not in wishlist.");
 
+        // Only the row from the join table is removed (not the game), so no foreign key can be violated
         user.WishlistItems.Remove(game);
-
-        try
-        {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
-        {
-            return Conflict("Cannot remove game from wishlist due to foreign key constraint.");
-        }
+        await db.SaveChangesAsync();
 
         return NoContent();
+    }
+    
+    private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
+    {
+        if(viewerId == ownerId)
+            return true;
+        
+        var user1Id = Math.Min(viewerId, ownerId);
+        var user2Id = Math.Max(viewerId, ownerId);
+        
+        return await db.Friendships.AnyAsync(f => f.User1Id == user1Id && f.User2Id == user2Id && f.Status == FriendshipStatus.Accepted);
     }
 }

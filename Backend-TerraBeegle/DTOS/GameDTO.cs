@@ -2,18 +2,22 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class GameResponseDTO
+public class GameMinDTO
 {
     public int RawgGameId { get; set; }
     public string Name { get; set; } = null!;
-    public string NameOriginal { get; set; } = null!;
     public string Slug { get; set; } = null!;
-    public string Description { get; set; } = null!;
     public string? BackgroundImage { get; set; }
+    public double? Rating { get; set; }
     public DateOnly? ReleaseDate { get; set; }
     public bool Tba { get; set; }
+}
+
+public class GameResponseDTO : GameMinDTO
+{
+    public string NameOriginal { get; set; } = null!;
+    public string Description { get; set; } = null!;
     public string Website { get; set; } = null!;
-    public double? Rating { get; set; }
     public int? Metacritic { get; set; }
     public string? Developer { get; set; }
     public string? Publisher { get; set; }
@@ -21,17 +25,13 @@ public class GameResponseDTO
     public List<PlatformDTO> Platforms { get; set; } = [];
 }
 
-public class GameCardDTO
+
+public class GameCardDTO : GameMinDTO
 {
-    public int RawgGameId { get; set; }
-    public string Name { get; set; } = null!;
-    public string? BackgroundImage { get; set; }
-    public double? Rating { get; set; }
-    public DateOnly? ReleaseDate { get; set; }
-    public bool Tba { get; set; }
     public List<GenreDTO> Genres { get; set; } = [];
     public List<PlatformDTO> Platforms { get; set; } = [];
     //public List<ParentPlatformDTO> ParentPlatforms { get; set; } = [];
+    public List<ReviewResponseDTO> Reviews { get; set; } = [];
 }
 
 public class GameSearchDTO
@@ -72,7 +72,5 @@ public class GameSearchDTO
 public class GameSearchResponseDTO
 {
     public int Count { get; set; }
-    public string? Next { get; set; }
-    public string? Previous { get; set; }
     public IEnumerable<GameCardDTO> Results { get; set; } = [];
 }

@@ -14,7 +14,7 @@ namespace Backend_TerraBeegle.Controllers;
 public class GameController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<GameSearchResponseDTO>> Search([FromQuery] GameSearchDTO search)
+    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
 
@@ -109,16 +109,24 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
         var result = await rawgService.SearchGamesAsync(query.TrimStart('&'));
 
-        if (result is not null)
+        if (result is null)
         {
-            int page = search.Page ?? 1;
-            int pageSize = search.PageSize ?? 20;
-
-            result.Previous = page > 1 ? PageUrl(page - 1) : null;
-            result.Next = page * pageSize < result.Count ? PageUrl(page + 1) : null;
+            return StatusCode(503,"External API is unavailable.");
         }
 
-        return Ok(result);
+        int page = search.Page ?? 1;
+        int pageSize = search.PageSize ?? 20;
+
+        return Ok(new PagedResponseDTO<GameCardDTO>
+        {
+            Items = [.. result.Results],
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = result.Count,
+            TotalPages = (int)Math.Ceiling((double)result.Count / pageSize),
+            PreviousPageUrl = page > 1 ? PageUrl(page - 1) : null,
+            NextPageUrl = page * pageSize < result.Count ? PageUrl(page + 1) : null,
+        });
     }
 
     // Same URL as the current request (same filters, with our parameter names), only with another page
@@ -134,10 +142,11 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
 
 	// retrieving all games from the database and projecting them to GameResponseDTO
     [HttpGet("all")]
-    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
+    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
     {
         var games = await db.Games
-            .OrderBy(g => g.Slug) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
+            .Where(g => !g.IsPlaceholder || IncludePlaceholders) // Only return games that are not placeholders, unless 'IncludePlaceholders' is true
+            .OrderBy(g => g.Name) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
             .ProjectToType<GameResponseDTO>()
@@ -147,7 +156,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
             games,
             await db.Games.CountAsync(),
             pagination,
-            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
     }
 
@@ -155,21 +164,15 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
     [HttpGet("{rawgGameId:int}")]
     public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
     {
-        var game = await db.Games
-            .Where(g => g.RawgGameId == rawgGameId)
-            .ProjectToType<GameResponseDTO>()
-            .FirstOrDefaultAsync();
-
-        if (game is null)
+        // The service looks for the game in the database first, then at RAWG (one lookup, see point 52)
+        GameResponseDTO? game;
+        try
         {
-            try
-            {
-                game = await rawgService.GetGameAsync(rawgGameId);
-            }
-            catch (HttpRequestException)
-            {
-                return StatusCode(503,"External API is unavailable.");
-            }
+            game = await rawgService.GetGameAsync(rawgGameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
         }
 
         if (game is null)

@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Genre> Genres => Set<Genre>();
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<ParentPlatform> ParentPlatforms => Set<ParentPlatform>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,6 +39,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.Property(u => u.PasswordHash)
                 .IsRequired()
+                .HasMaxLength(255);
+            
+            e.Property(u => u.PendingEmail)
                 .HasMaxLength(255);
 
             e.Property(u => u.Theme)
@@ -91,7 +95,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasDefaultValueSql("NOW()");
 
             e.HasIndex(f => new { f.User1Id, f.User2Id }).IsUnique();
-
             e.HasIndex(f => f.User2Id);
 
             e.HasOne(f => f.User1)
@@ -145,12 +148,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
             e.HasIndex(g => g.RawgGameId).IsUnique();
+            e.HasIndex(g => g.Slug).IsUnique();
+            e.HasIndex(g => g.Name);
             
             e.OwnsMany(g => g.DLCs, o => o.ToTable("game_dlcs"));
             e.OwnsMany(g => g.ParentGames, o => o.ToTable("game_parent_games"));
             e.OwnsMany(g => g.Series, o => o.ToTable("game_series"));
-
-            e.HasIndex(g => g.Slug).IsUnique();
 
             e.HasMany(g => g.Genres)
                 .WithMany(g => g.Games)
@@ -223,10 +226,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasIndex(pp => pp.RawgPlatformId).IsUnique();
 
+            e.HasMany(pp => pp.Games)
+                .WithMany(g => g.ParentPlatforms)
+                .UsingEntity(j => j.ToTable("game_parent_platforms"));
+
             e.HasMany(pp => pp.Platforms)
                 .WithOne(p => p.ParentPlatform)
                 .HasForeignKey(p => p.ParentPlatformId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // REVIEWS
+        modelBuilder.Entity<Review>(e =>
+        {
+            e.Property(r => r.Id).ValueGeneratedOnAdd();
+            e.Property(r => r.Rating).IsRequired();
+
+            e.Property(r => r.Content).HasColumnType("text");
+
+            e.Property(r => r.UserId).IsRequired();
+            e.Property(r => r.GameId).IsRequired();
+
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("NOW()");
+
+            e.HasIndex(r => new { r.GameId, r.UserId }).IsUnique();
+            e.HasIndex(r => r.UserId);
+
+            e.HasOne(r => r.User)
+                .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(r => r.Game)
+                .WithMany(g => g.Reviews)
+                .HasForeignKey(r => r.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

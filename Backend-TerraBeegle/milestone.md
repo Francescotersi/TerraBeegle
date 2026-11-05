@@ -19,7 +19,7 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   - [x] la pornire, verificare că `RAWG_API_KEY` există (ca la `Jwt:Key`) — fără cheie nimic nu merge
   - [x] `GameController` devine subțire: doar apelează serviciul și întoarce rezultatul
 
-- [ ] **32. 🔴 Favorite (obligatoriu, IV.1.6) + wishlist (bonus, VII.4)**
+- [x] **32. 🔴 Favorite (obligatoriu, IV.1.6) + wishlist (bonus, VII.4)**
   Subiectul cere ca userul să poată adăuga / scoate jocuri din favorite și să le vadă într-o secțiune separată.
   Wishlist-ul e bonus, dar e aproape același cod. Modelele și tabelele (`favorite_games`, `wishlist_games`) există deja.
   - Problema inițială: `UserPublicResponseDTO` are `Favorites` / `Whishlist`. `Whishlist` e mereu `null`
@@ -33,11 +33,18 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
         - `DELETE /api/users/{userId}/favorites/{rawgGameId}` — scoate
         - aceleași trei pentru `/wishlist`
   - [x] `POST` / `DELETE` doar pentru userul din token (`IsCurrentUser`)
-  - [ ] `GET` favorite / wishlist doar pentru proprietar și prietenii lui (prietenie `Accepted`), altfel 403
+  - [x] `GET` favorite / wishlist doar pentru proprietar și prietenii lui (prietenie `Accepted`), altfel 403
         - perechea din `Friendships` e salvată ordonată (`User1Id` = id-ul mai mic), deci verificarea cu
           `Math.Min` / `Math.Max`, ca în `FriendshipController`
         - id-ul userului din token ca număr → extension method `User.GetUserId()` pe `ClaimsPrincipal`,
           folosit în locul celor 3 copii de `IsCurrentUser` (User, Friendship, UserGames)
+        → făcut pe 04.11: `CanSeeUserGamesAsync(viewerId, ownerId)` (private în `UserGamesController`) — el însuși →
+        `true`, altfel `AnyAsync` pe perechea Min / Max cu `Status == Accepted` (`Pending` / `Rejected` nu dau acces).
+        `GetFavorites` / `GetWishlist`: fără id în token → 401, user inexistent → 404, fără acces → 403.
+        Id-ul din token vine din `Utils.GetCurrentUserId` (adăugat de coleg), nu din extension method-ul
+        `User.GetUserId()` — rămâne la punctul 54
+  - [ ] testat cu 3 useri (A și B prieteni `Accepted`, C nu): A → A 200, B → A 200, C → A 403,
+        C cu cerere `Pending` la A → 403, A → user inexistent 404
   - [x] joc adăugat de două ori → de decis: 409 sau 204 fără eroare (mai simplu pentru frontend) → decis: 204
         (`DELETE` pentru un joc care nu e în listă → 404)
   - [x] adăugare cu `Include(u => u.Favorites.Where(g => g.Id == game.Id))` + `user.Favorites.Add(game)`;
@@ -61,7 +68,7 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
         → decis: filtru după `metacritic`
   - [ ] `GameCardDTO` cu ce cere subiectul pentru carduri: `rawgGameId`, `title`, `backgroundImage`, `releaseDate`,
         `rating`, platformele principale (`parent_platforms` de la RAWG)
-  - [ ] răspuns `PagedResponseDTO<GameCardDTO>` (refolosit de la `GET /api/users`), `TotalCount` = `count` de la RAWG
+  - [x] răspuns `PagedResponseDTO<GameCardDTO>` (refolosit de la `GET /api/users`), `TotalCount` = `count` de la RAWG
         (vezi 40 și 48)
   - [ ] fără `search` și filtre → o selecție pentru Home (ex: `ordering=-rating`)
   - [ ] `GET /api/games` de acum (jocurile din baza de date) dispare — favoritele au endpoint-ul lor (32)
@@ -170,12 +177,25 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   - [x] parola nouă validată la fel ca la register (`[Required]`, `[MinLength(8)]`)
   - [x] parola nouă se hash-uiește cu `IPasswordHasher<User>`
 
-- [ ] **14. Schimbarea email-ului**
+- [x] **14. Schimbarea email-ului**
   `UpdateEmailDTO` există, dar nu e folosit de niciun endpoint.
-  - [ ] endpoint `[Authorize]` (ex: `PATCH /api/users/{id}/email`) + verificare că id-ul din token = id-ul din URL
-  - [ ] DTO-ul cere și parola curentă (cine fură token-ul nu poate prelua contul)
-  - [ ] email-ul validat (`[Required]`, `[EmailAddress]`, `[MaxLength(255)]`) și normalizat (`Trim().ToLowerInvariant()`)
-  - [ ] email deja folosit → 409 (verificare + `catch` pe `UniqueViolation`, ca la register)
+  **Decizie (04.11.2026):** noul email se salvează doar după ce e confirmat codul trimis pe el (același mecanism
+  ca la punctul 34).
+  - [x] endpoint `[Authorize]` (ex: `PATCH /api/users/{id}/email`) + verificare că id-ul din token = id-ul din URL
+  - [x] DTO-ul cere și parola curentă (cine fură token-ul nu poate prelua contul)
+  - [x] email-ul validat (`[Required]`, `[EmailAddress]`, `[MaxLength(255)]`) și normalizat (`Trim().ToLowerInvariant()`)
+  - [x] email deja folosit → 409 (verificare + `catch` pe `UniqueViolation`, ca la register)
+  - [x] `User.IsChangingMail` înlocuit cu `PendingEmail` (`string?`, 255) + migrația `AddPendingEmail`
+  - [x] `PATCH /api/users/{id}/email` (`{ email, password }`): 403 / 404 → parolă greșită 400 → același email 400
+        → email luat 409 → `PendingEmail` + `SetNewCode` + `SaveChangesAsync` → cod trimis pe **noul** email
+        (trimitere eșuată → 500 cu mesaj generic, eroarea doar în log) → 200
+  - [x] `POST /api/users/{id}/email/confirm` (`ConfirmEmailDTO { code }`): fără `PendingEmail` → 400 →
+        `VerifyCode` (expirat / prea multe încercări / greșit → 400, încercarea se salvează) → `Email = PendingEmail`,
+        `PendingEmail = null` → `catch` pe `UniqueViolation` → 409 (adresa luată între cerere și confirmare)
+  - [x] o singură operație cu cod activă: `ChangeEmail` pune `ForgotPasswordRequested = false`,
+        `ForgotPasswordRequest` pune `PendingEmail = null` (altfel codul de resetare ar confirma schimbarea email-ului)
+  - [ ] text separat pentru emailul de schimbare (acum pleacă „Thank you for creating an account”, vezi 56)
+  - [ ] rate limiting pe `PATCH /email` (trimite emailuri reale) — policy propriu, ex: `"change-email"`, per user
 
 ## După merge-ul cu `fracerba` — grave
 
@@ -188,6 +208,7 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   („column does not exist”).
   - [x] `dotnet ef migrations add UpdateGameAndFriendship` (redenumirea e `RenameColumn`, nu drop + add)
   - [x] `catch`-ul de la pornire prinde doar `NpgsqlException` și loghează excepția reală; orice altă eroare oprește aplicația
+        (dar prinde și erorile SQL din migrații, vezi 57)
 
 - [x] **16. `Forbid("mesaj")` dă 500 în `FriendshipController`**
   Parametrul lui `Forbid(string)` e numele unei **scheme de autentificare**, nu un mesaj. ASP.NET caută schema
@@ -228,12 +249,15 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   **Înlocuit de decizia de la punctul 7:** s-a făcut invers — toate `Problem(...)` din controllere au devenit
   string-uri, ca tot codul nostru să folosească același format.
 
-- [ ] **23. `Search` fără paginare și case-sensitive**
+- [x] **23. `Search` fără paginare și case-sensitive**
   Întoarce toți userii găsiți și „vlad” nu-l găsește pe „Vlad”. Soluție: `PaginationDTO` ca la `GetAll` +
   `EF.Functions.ILike(u.Username, $"%{query}%")` (cu `%` / `_` din query escapate).
   - [x] paginare (`PaginationDTO` + `Utils.CreatePagedResponse`)
-  - [ ] case-insensitive (`ILike`) — tot `Contains`
-  - [ ] numărul total nu corespunde cu lista (vezi 51)
+  - [x] case-insensitive → rezolvat altfel decât cu `ILike` (05.11): `u.Username.ToLower().StartsWith(term)` cu
+        `term` în lower case. EF escapează singur `%` / `_` la `StartsWith` (verificat cu `ToQueryString()`:
+        `"a_b"` → `LIKE 'a\_b%'`), deci nu e nevoie de escapare manuală. Rămâne căutare după prefix
+        (`StartsWith`, ales de coleg), nu `Contains`
+  - [x] numărul total nu corespunde cu lista (vezi 51)
 
 ## După merge — minore
 
@@ -291,9 +315,12 @@ salvați jocuri.
   dar în containerul `terrabeegle-frontend` `localhost` e chiar containerul frontend-ului → orice apel `/api/...`
   dă eroare de conexiune. Nu se vede încă pentru că frontend-ul nu face niciun apel HTTP.
   În rețeaua Docker backend-ul e la `http://backend:8080` (numele serviciului + portul intern, nu 5144).
-  - [ ] `proxy.conf.json` → `proxy.conf.js` cu `target: process.env.API_URL || "http://localhost:5144"`
-  - [ ] `package.json` (`start`, `dev`) și `angular.json` (`proxyConfig`) arată spre `proxy.conf.js`
-  - [ ] în `docker-compose.yml`, la serviciul `frontend`: `environment: API_URL: http://backend:8080`
+  - [x] `proxy.conf.json` → `proxy.conf.js` cu `target: process.env.API_URL || "http://localhost:5144"`
+        → făcut cu variabila `BACKEND_URL` în loc de `API_URL`
+  - [x] `package.json` (`start`, `dev`) arată spre `proxy.conf.js`
+  - [ ] `angular.json` (`proxyConfig`, linia 77) arată încă spre `proxy.conf.json`, care nu mai există →
+        `ng serve` fără `--proxy-config` (ex: din IDE) nu pornește proxy-ul
+  - [x] în `docker-compose.yml`, la serviciul `frontend`: `environment: BACKEND_URL: http://backend:8080`
   - [ ] de vorbit cu colegul care a făcut imaginea Docker a frontend-ului
 
 ## Verificare email
@@ -380,8 +407,8 @@ salvați jocuri.
   - [x] log cu câți useri au fost șterși
 
   **De decis mai târziu**
-  - [ ] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
-        codul trimis pe el e confirmat
+  - [x] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
+        codul trimis pe el e confirmat → decis și făcut pe 04.11.2026
 
 ## După merge-ul din 02.11.2026 — grave
 
@@ -438,6 +465,64 @@ salvați jocuri.
   (`QueryHelpers.AddQueryString`) → ex: `/api/games?name=witcher&pageSize=5&page=2`. `Previous` dacă `page > 1`,
   `Next` dacă `page * pageSize < Count`.
 
+## Găsite pe 04.11.2026 — grave
+
+- [x] **57. Migrație duplicată + `catch`-ul de la pornire ascunde migrațiile eșuate**
+  După merge, `ChangedTitleToName` (francesco) și `RenameTitleToNameAndAddIndexes` (Vlad) făceau exact același lucru.
+  Pe o bază goală (`docker compose down -v`) a doua eșua („column Title does not exist”), iar `AddReviews` /
+  `AddPendingEmail` nu se mai aplicau → register dădea 500 („column ForgotPasswordRequested does not exist”).
+  - [x] `RenameTitleToNameAndAddIndexes` ștearsă (ambele fișiere); `has-pending-model-changes` → fără schimbări
+  - [x] de anunțat colegul să o șteargă și pe `fracerba`, altfel revine la următorul merge
+        → verificat pe 05.11 după `git fetch`: nu mai există pe `fracerba`, `main` și `Vlad`
+  - [x] `catch (Npgsql.NpgsqlException)` din `Program.cs` prinde și `PostgresException` (o moștenește) → o migrație
+        stricată dă doar warning-ul „Impossibile connettersi a PostgreSQL” și aplicația pornește cu baza incompletă.
+        Contrazice punctul 15. Soluție: `catch (NpgsqlException ex) when (ex is not PostgresException)`
+        → făcut pe 05.11 (filtru `when`: conexiune picată → warning, eroare SQL dintr-o migrație → aplicația se oprește)
+  - [x] testat pe o bază goală: toate migrațiile aplicate până la `AddPendingEmail`
+
+- [x] **58. Policy-urile de rate limiting `forgot-password-request` / `forgot-password` nu există**
+  `AuthController` are `[EnableRateLimiting("forgot-password-request")]` și `[EnableRateLimiting("forgot-password")]`,
+  dar în `AddRateLimiter` din `Program.cs` sunt doar `login`, `register`, `resend-email` → middleware-ul aruncă
+  `InvalidOperationException` înainte de metodă → ambele endpoint-uri dau mereu 500.
+  - [x] `forgot-password-request`: 3 pe 10 minute per IP (trimite emailuri, ca `resend-email`)
+  - [x] `forgot-password`: 5 pe minut per IP (verifică un cod, ca `login`)
+
+## Rate limiting pe toate endpoint-urile care scriu (04.11.2026)
+
+- [x] **59. Rate limiting fără cod duplicat + pe endpoint-urile cu `[Authorize]`**
+  Înainte: 5 blocuri `AddPolicy` aproape identice în `Program.cs` și numele policy-urilor scrise de mână în două
+  locuri (de aici bug-ul de la 58).
+  **Pasul 1 — fără duplicare**
+  - [x] `RateLimiting/RateLimitPolicies.cs`: numele ca `const string` → un nume greșit e eroare de compilare, nu 500
+  - [x] `RateLimiting/RateLimitOptionExtensions.cs`: `ByIp` (`"ip:..."`), `ByUser` (`"user:" + sub`, altfel `ByIp`)
+        și `AddFixedWindowPolicy(nume, limită, fereastră, partiție)` → fiecare policy e o linie în `Program.cs`
+  - [x] `AuthController` folosește constantele
+  - [x] testat: al 6-lea login într-un minut → 429
+  **Pasul 2 — configurarea într-un fișier separat** (amânat, doar mută cod)
+  - [ ] `builder.Services.AddAppRateLimiting()` (extension pe `IServiceCollection`), `Program.cs` rămâne cu o linie
+  **Pasul 3 — ordinea middleware-urilor**
+  - [x] `UseRateLimiter()` după `UseAuthentication()` / `UseAuthorization()` → `ByUser` vede token-ul, iar un
+        request fără token primește 401 fără să consume din limită
+  **Pasul 4 — policy-uri noi, per user (`ByUser`)**
+  - [x] `ChangeEmail` 3 / 10 min, `ConfirmEmail` 5 / min, `ChangePassword` 5 / min, `UserWrite` 30 / min,
+        `UserGames` 30 / min
+  - [x] `UserController`: `ModifyUser`, `DeleteUser` → `UserWrite`; `ChangePassword`, `ChangeEmail`,
+        `ConfirmNewEmail` → policy-ul lor
+  - [x] `UserGamesController`: `UserGames` pe clasă, `[DisableRateLimiting]` pe `GetFavorites` / `GetWishlist`
+  - [x] `FriendshipController` și `ReviewGameController`: `UserWrite` pe `POST` / `PATCH` / `DELETE`
+  - [x] `GET`-urile rămân fără policy (ieftine, cerute des de frontend)
+  - [x] `[Authorize]` pus înapoi pe `ChangeEmail` / `ConfirmNewEmail` (se pierduse când `[Authorize]` a fost
+        mutat de pe clasa `UserController` pe metode)
+  **De testat** (RAWG nu merge pe 04.11; testele de mai jos nu au nevoie de RAWG)
+  - [ ] 31 × `DELETE /api/users/{id}/favorites/999999` → 30 × 404, apoi 429
+  - [ ] imediat după, același request cu token-ul altui user → 404, nu 429 (`ByUser` funcționează)
+  - [ ] fără token → 401, nu 429
+  - [ ] 6 × `PATCH /api/users/password` cu parola veche greșită → 5 × 400, apoi 429
+  **Opțional**
+  - [ ] `GlobalLimiter` generos (ex: 100 / min per user sau IP), ca un endpoint nou fără atribut să fie protejat
+  - [ ] mesajul din `OnRejected` („Try again in a minute”) din `retryAfter`, nu fix (vezi 56)
+  - [ ] endpoint-urile de email fără `{id}` în rută, ca `ModifyUser` / `ChangePassword` (id-ul din token)
+
 ## După merge-ul din 02.11.2026 — `GET /api/games` (punctul 36)
 
 - [x] **45. `Search` nu primește parametrii din query**
@@ -462,6 +547,8 @@ salvați jocuri.
   - [ ] nou după fix: `SearchGamesAsync` întoarce `null` la 404 de la RAWG (ex: pagină după ultima), iar
         `Ok(null)` devine **204 No Content** fără body → frontend-ul primește un răspuns gol în loc de o listă goală.
         Soluție: la 404 aceeași listă goală ca la `response is null` (`Count = 0`, `Results = []`)
+        → stare 04.11: nu mai e 204, dar `Search` întoarce acum **503** „External API is unavailable” la `null`,
+        deci o pagină după ultima tot apare ca „RAWG picat”; iar alte `HttpRequestException` tot ajung la 500
 
 - [x] **48. Tipul de răspuns nu corespunde**
   Semnătura spune `PagedResponseDTO<GameResponseDTO>`, dar se întoarce `RawgSearchDTO` (alte câmpuri: `Count`,
@@ -469,6 +556,8 @@ salvați jocuri.
   `PagedResponseDTO<GameCardDTO>`, ca la favorite.
   → rezolvat altfel: semnătura e acum `ActionResult<GameSearchResponseDTO>`, adică exact ce se întoarce
   (`Count` / `Next` / `Previous` / `Results`). Nu e `PagedResponseDTO` ca la celelalte liste, dar e consecvent.
+  → actualizat (04.11): `GameController.Search` întoarce acum `PagedResponseDTO<GameCardDTO>`, ca celelalte liste;
+  `GameSearchResponseDTO` a rămas doar între `RawgService` și controller.
 
 - [ ] **49. Construirea query-ului e în controller**
   ~90 de linii de `if`-uri în `GameController.Search`. Punctul 35 a mutat tot ce ține de RAWG în `RawgService`;
@@ -483,26 +572,38 @@ salvați jocuri.
   găsește câmpul și `Title` e mereu `null`. De ales un singur nume (`Name` peste tot, ca la RAWG și la
   `GameResponseDTO`), sau o regulă Mapster `Map(dest => dest.Title, src => src.Name)`.
   → decis inițial `Title` peste tot, dar după merge-ul cu `fracerba` a rămas **`Name` peste tot** (`Game`,
-  `GameCardDTO`, `GameResponseDTO`); coloana a fost redenumită în migrația `RenameTitleToNameAndAddIndexes`
+  `GameCardDTO`, `GameResponseDTO`); coloana a fost redenumită în migrația `ChangedTitleToName`
   (`RenameColumn`, fără pierdere de date). Frontend-ul citește `name`.
+  (`RenameTitleToNameAndAddIndexes` era un duplicat al ei, șters pe 04.11 — vezi 57.)
 
 - [ ] **51. `Search` pe useri: numărul total nu corespunde cu lista**
   `totalCount` numără toți userii găsiți, dar lista are în plus `&& u.EmailVerified` → `TotalPages` greșit și pagini
   goale.
-  - [ ] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
+  → rezolvat (05.11): în `Search` și `GetAll` filtrul e scris o singură dată (`var query = db.Users.Where(...)`),
+  apoi `query.CountAsync()` și `query.OrderBy(...)...ToListAsync()` → count-ul și lista nu mai pot diferi.
+  `GetAll` avea același bug (`CountAsync()` pe toți userii); în plus link-urile de pagină păstrează acum `includeUnverified`
+  - [x] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
   - [ ] `GetAll` și `GetById` arată și userii neverificați, `Search` nu → de decis o regulă comună
-  - [ ] tot case-sensitive (punctul 23 rămâne deschis)
+        (stare 05.11: `GetAll` îi ascunde, dar `?includeUnverified=true` — adăugat de francesco — îi arată și îl poate
+        trimite oricine; `Search` și `GetByUsername` îi ascund mereu → singura excepție e parametrul din `GetAll`)
+  - [x] tot case-sensitive (punctul 23 rămâne deschis) → rezolvat la 23
 
-- [ ] **52. Același joc căutat de două ori în baza de date**
+- [x] **52. Același joc căutat de două ori în baza de date**
   `GameController.GetById` caută jocul în DB, apoi `rawgService.GetGameAsync` îl caută din nou. Ramura din serviciu
   (`game.Adapt<Game, GameResponseDTO>()`) nu face `Include` → ar întoarce `Genres` / `Platforms` goale (bug-ul de
   la punctul 30). Acum nu se ajunge acolo, dar e cod mort care poate fi folosit greșit. Soluție: o singură căutare,
   în serviciu, cu `ProjectToType`.
+  → rezolvat (05.11): căutarea în DB e doar în `RawgService.GetGameAsync`, cu `ProjectToType<GameResponseDTO>()`
+  (genurile / platformele în același SELECT) și același filtru `!IsPlaceholder` ca înainte în controller.
+  Bug ascuns reparat odată cu asta: un joc placeholder era sărit de controller, dar găsit apoi de serviciu (fără
+  filtru) și întors cu `Adapt`, deci fără genuri / platforme. `GetById` doar apelează serviciul: 503 / 404 / 200
 
-- [ ] **53. Joc deja adăugat la favorite / wishlist: 204 sau 409?**
+- [x] **53. Joc deja adăugat la favorite / wishlist: 204 sau 409?**
   La 32 s-a decis 204, dar `catch`-ul nou pe `UniqueViolation` întoarce 409 → același caz, două răspunsuri
   (204 de obicei, 409 la două request-uri simultane). De ales unul. `catch`-ul pe `ForeignKeyViolation` la
   ștergere nu poate apărea (se șterge doar un rând din tabela de legătură) — de scos.
+  → rezolvat (05.11): rămâne **204** (decizia de la 32). `catch`-ul pe `UniqueViolation` întoarce acum
+  `NoContent()` la favorite și la wishlist; `catch`-urile pe `ForeignKeyViolation` de la ștergere au fost scoase
 
 ## După merge-ul din 02.11.2026 — minore
 
@@ -512,15 +613,27 @@ salvați jocuri.
   după 02.11, deci nu mai are cod copiat.)
 
 - [ ] **55. Cod nefolosit**
-  - [ ] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
+  - [x] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
+        → înlocuit cu `PendingEmail` la punctul 14
   - [ ] `RawgGameDTO.ParentPlatforms` se deserializează, dar nu ajunge în `GameCardDTO` (`ParentPlatformDTO` e comentat).
         Subiectul cere „main platforms” pe card → exact `parent_platforms`
   - [ ] `RawgObjectDTO`, `GameStore` — nefolosite
   - [ ] `GET /api/games/all` — la 36 s-a decis că dispare; acum întoarce `GameResponseDTO` complet (cu descriere)
 
-- [ ] **56. Mesaje / documentație care nu mai corespund**
-  - [ ] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
+- [x] **56. Mesaje / documentație care nu mai corespund**
+  - [x] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
+        → `OnRejected` calculează mesajul din `retryAfter`: „Try again in N seconds” (sub un minut) sau
+        „Try again in N minutes”; fără `retryAfter` → „Try again later.”
   - [x] la 34, pasul 5: ruta e `resend-verification`, în cod e `resend-email`, iar limita e per IP, nu per user
         (actualizat în milestone pe 02.11)
-  - [ ] textul emailului: „Thank you for creating an account” se trimite și la resend; „contact our support team” fără adresă
-  - [ ] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect
+  - [x] textul emailului: „Thank you for creating an account” se trimite și la resend, la forgot-password și la
+        schimbarea email-ului (14); „contact our support team” fără adresă
+        → enum `EmailCodePurpose` (`Register`, `ResendVerification`, `ForgotPassword`, `ChangeEmail`), primit de
+        `SendCodeAsync(email, code, purpose)`. Diferă subiectul, primul paragraf și rândul „dacă nu ai cerut asta”;
+        codul, valabilitatea și avertismentul de securitate sunt comune (scrise o singură dată). „Contact our support
+        team” scos. Login-ul nu trimite email (verifică doar codul primit la register / resend)
+  - [x] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect
+        → redenumit în `IRawgService`, `RawgService`, `UserGamesController` și `ReviewController`
+  - [x] comentariile din cod traduse în engleză (05.11): `Program.cs` (italiană), `UserController.cs`, `User.cs` (română)
+  - [ ] mesajele de log din `Program.cs` sunt încă în italiană („Database PostgreSQL verificato e pronto.”,
+        „Impossibile connettersi a PostgreSQL...”)

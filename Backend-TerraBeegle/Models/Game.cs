@@ -7,6 +7,7 @@ public class Game
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string Description { get; set; } = null!;
+    public bool IsPlaceholder { get; set; } = false; // If true, this game is a placeholder for a game that is not yet in the database. It will be replaced by the real game when it is added to the database.
     public string? BackgroundImage { get; set; }
     public DateOnly? ReleaseDate { get; set; }
     public bool Tba { get; set; }
@@ -30,8 +31,17 @@ public class Game
     public ICollection<RawgObject> DLCs { get; set; } = [];
     public ICollection<RawgObject> ParentGames { get; set; } = [];
     public ICollection<RawgObject> Series { get; set; } = [];
+
     public ICollection<Genre> Genres { get; set; } = [];
+    // public ICollection<Tags> Stores { get; set; } = [];
+    // public ICollection<Store> Stores { get; set; } = [];
+    // public ICollection<Developer> Developers { get; set; } = [];
+    // public ICollection<Publisher> Publishers { get; set; } = [];
+
     public ICollection<Platform> Platforms { get; set; } = [];
+    public ICollection<ParentPlatform> ParentPlatforms { get; set; } = [];
+
+    public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<User> FavoritedByUsers { get; set; } = [];
     public ICollection<User> WishlistedByUsers { get; set; } = [];
 }

@@ -9,4 +9,5 @@ public class ParentPlatform
     public string Name { get; set; } = null!;
     public string? Image { get; set; }
     public ICollection<Platform> Platforms { get; set; } = [];
+    public ICollection<Game> Games { get; set; } = [];
 }
