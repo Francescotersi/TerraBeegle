@@ -8,7 +8,7 @@ import { HeaderComponent } from './views/header/header.component';
 	standalone: true,
 	selector: 'app-root',
 	template: `
-		<!-- <app-background /> -->
+		<app-background />
 
 		<app-header />
 
