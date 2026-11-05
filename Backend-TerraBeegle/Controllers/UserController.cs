@@ -4,8 +4,8 @@ using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;                 // pentru FindFirstValue
-using Microsoft.IdentityModel.JsonWebTokens;  // pentru JwtRegisteredClaimNames
+using System.Security.Claims;                 // for FindFirstValue
+using Microsoft.IdentityModel.JsonWebTokens;  // for JwtRegisteredClaimNames
 using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Enums;
@@ -24,11 +24,14 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool includeUnverified = false)
     {
-        var totalCount = await db.Users.CountAsync();
+        // One filter for both the count and the page, so TotalCount always matches the list.
+        // Only users with confirmed emails, unless 'includeUnverified' is true
+        var query = db.Users.Where(u => u.EmailVerified || includeUnverified);
+
+        var totalCount = await query.CountAsync();
 
         // Retrieving only the users from the requested page and projecting them to UserPublicResponseDTO
-        var users = await db.Users
-            .Where(u => u.EmailVerified || includeUnverified) // Only return users with confirmed emails, unless 'includeUnverified' is true
+        var users = await query
             .OrderBy(u => u.Id)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
@@ -39,7 +42,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             users,
             totalCount,
             pagination,
-            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, includeUnverified })
         ));
     }
 
@@ -52,16 +55,18 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return BadRequest("Username cannot be empty.");
         }
 
-        var trimmedUsername = username.Trim();
-        var totalCount = await db.Users.CountAsync(u => u.Username.StartsWith(trimmedUsername));
+        // Case-insensitive: both sides in lower case ("vlad" finds "Vlad").
+        // EF escapes '%' and '_' itself for StartsWith, so "a_b" does not match "axb"
+        var term = username.Trim().ToLowerInvariant();
 
-        if (totalCount == 0)
-        {
-            return NotFound("No users found with the specified username.");
-        }
+        // One filter for both the count and the page, so TotalCount always matches the list.
+        // Only users with confirmed emails
+        var query = db.Users.Where(u => u.Username.ToLower().StartsWith(term) && u.EmailVerified);
 
-        var users = await db.Users
-            .Where(u => u.Username.StartsWith(trimmedUsername) && u.EmailVerified) // Only return users with confirmed emails
+        // No 404 when nothing is found: an empty list (200) is a normal result for a search
+        var totalCount = await query.CountAsync();
+
+        var users = await query
             .OrderBy(u => u.Username)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
@@ -79,7 +84,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpGet("{username}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetByUsername(string username)
     {
-        // Searching for the user by ID
+        // Searching for the user by username
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username && u.EmailVerified); // Only return users with confirmed emails
         if (user is null)
         {
@@ -240,7 +245,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		await db.SaveChangesAsync();
 		
 		try{
-			await emailVerificationService.SendCodeAsync(user.PendingEmail, code);
+			await emailVerificationService.SendCodeAsync(user.PendingEmail, code, EmailCodePurpose.ChangeEmail);
 		}
 		catch(Exception ex){
 			logger.LogError(ex, "Error sending email change code to {Email}", user.PendingEmail);

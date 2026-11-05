@@ -76,7 +76,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.CreateGameAsync(rawgGameId);
+            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
@@ -104,7 +104,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Conflict("Game is already in favorites.");
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the favorites anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
         }
 
         return NoContent();
@@ -127,15 +129,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         if(game is null)
             return NotFound("Game is not in favorites.");
 
+        // Only the row from the join table is removed (not the game), so no foreign key can be violated
         user.Favorites.Remove(game);
-        try
-        {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
-        {
-            return Conflict("Cannot remove game from favorites due to foreign key constraint.");
-        }
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
@@ -194,7 +190,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.CreateGameAsync(rawgGameId);
+            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
         }
         catch (HttpRequestException)
         {
@@ -222,7 +218,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            return Conflict("Game is already in wishlist.");
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the wishlist anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
         }
 
         return NoContent();
@@ -245,16 +243,9 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         if(game is null)
             return NotFound("Game is not in wishlist.");
 
+        // Only the row from the join table is removed (not the game), so no foreign key can be violated
         user.WishlistItems.Remove(game);
-
-        try
-        {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
-        {
-            return Conflict("Cannot remove game from wishlist due to foreign key constraint.");
-        }
+        await db.SaveChangesAsync();
 
         return NoContent();
     }

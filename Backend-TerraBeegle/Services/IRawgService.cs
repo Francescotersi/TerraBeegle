@@ -7,5 +7,5 @@ public interface IRawgService
 {
     Task<GameSearchResponseDTO?> SearchGamesAsync(string query);
     Task<GameResponseDTO?> GetGameAsync(int rawgGameId);
-    Task<Game?> CreateGameAsync(int rawgGameId);
+    Task<Game?> GetOrCreateGameAsync(int rawgGameId);
 }

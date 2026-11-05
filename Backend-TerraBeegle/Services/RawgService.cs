@@ -70,12 +70,19 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return response;
     }
 
+    // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at RAWG
     public async Task<GameResponseDTO?> GetGameAsync(int rawgGameId)
     {
-        var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
+        // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
+        // without Include would return them empty). Placeholders are skipped, so they come from RAWG
+        var game = await db.Games
+            .Where(g => g.RawgGameId == rawgGameId && !g.IsPlaceholder)
+            .ProjectToType<GameResponseDTO>()
+            .FirstOrDefaultAsync();
+
         if (game is not null)
         {
-            return game.Adapt<Game, GameResponseDTO>();
+            return game;
         }
 
         var response = await FetchGameAsync(rawgGameId);
@@ -86,7 +93,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return ToGameResponseDTO(response);
     }
 
-    public async Task<Game?> CreateGameAsync(int rawgGameId)
+    public async Task<Game?> GetOrCreateGameAsync(int rawgGameId)
     {
         var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
         if (game is not null)
@@ -100,7 +107,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             return null;
         }
         
-        // loads the genres and the platforms thet already exist in the DB using their ID
+        // loads the genres and the platforms that already exist in the DB using their ID
         var genreIds = response.Genres.Select(g => (GameGenre)g.Id).ToList();
         var existingGenres = await db.Genres.Where(g => genreIds.Contains(g.RawgGenreId)).ToListAsync();
 

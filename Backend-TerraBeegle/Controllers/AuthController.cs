@@ -61,7 +61,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         try
         {
-            await emailVerificationService.SendCodeAsync(user.Email, code);
+            await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.Register);
         }
         catch(Exception ex)
         {
@@ -131,7 +131,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		try
 		{
-			await emailVerificationService.SendCodeAsync(user.Email, code);
+			await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.ResendVerification);
 		}
 		catch(Exception ex)
 		{
@@ -161,11 +161,11 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		try
 		{
-			await emailVerificationService.SendCodeAsync(user.Email, code);
+			await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.ForgotPassword);
 		}
 		catch(Exception ex)
 		{
-			logger.LogError(ex, "Error resending verification code to {Email}", user.Email);
+			logger.LogError(ex, "Error sending password reset code to {Email}", user.Email);
 		}
 
 		return Ok(message);

@@ -15,7 +15,7 @@ using Backend_TerraBeegle.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configurazione CORS per consentire al frontend Angular (localhost:4200) di chiamare l'API
+// 1. CORS: allows the Angular frontend (localhost:4200) to call the API
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngularDev", policy =>
@@ -27,12 +27,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 2. Configurazione Database PostgreSQL con Entity Framework Core
+// 2. PostgreSQL database with Entity Framework Core
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// 3. Configurazione JWT Authentication
+// 3. JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
 
 // the startup checks are skipped when the app is started by "dotnet ef" (migrations): there the settings from .env
@@ -47,7 +47,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // im
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false; // disable renaming of claims
-        options.TokenValidationParameters = new TokenValidationParameters // list of validation paramters
+        options.TokenValidationParameters = new TokenValidationParameters // list of validation parameters
         {
             ValidateIssuer = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
@@ -81,23 +81,31 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Aggiungi rate limiting
+// Rate limiting (helpers and policy names in the RateLimiting folder)
 builder.Services.AddRateLimiter(options =>
 {
-    // 429 = "Too Many Requests", codice per rate limiting
+    // 429 = "Too Many Requests", the status code for rate limiting
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, cancellationToken) =>
     {
+        // The policies have different windows (1 or 10 minutes), so the message uses the real waiting time
+        string detail = "Too many requests. Try again later.";
+
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
-            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+            var seconds = (int)Math.Ceiling(retryAfter.TotalSeconds);
+            context.HttpContext.Response.Headers.RetryAfter = seconds.ToString();
+
+            detail = seconds < 60
+                ? $"Too many requests. Try again in {seconds} seconds."
+                : $"Too many requests. Try again in {(int)Math.Ceiling(seconds / 60.0)} minutes.";
         }
-        
+
         await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status429TooManyRequests,
             Title = "Too many requests",
-            Detail = "Too many requests. Try again in a minute."
+            Detail = detail
         }, cancellationToken);
     };
     
@@ -111,7 +119,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowPolicy(RateLimitPolicies.ChangePassword, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
     options.AddFixedWindowPolicy(RateLimitPolicies.UserWrite, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
     options.AddFixedWindowPolicy(RateLimitPolicies.UserGames, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
-    // qui si potrebbe aggiungere un altro policy
+    // new policies go here (name in RateLimitPolicies, ByIp for public endpoints, ByUser for [Authorize])
 });
 
 // Enums (Theme, UserStatus) are sent as text ("Dark") instead of numbers (1)
@@ -127,7 +135,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddHostedService<UnverifiedUserCleanupService>();
 
-// Aggiunge IHttpClientFactory per le chiamate HTTP esterne
+// IHttpClientFactory for the HTTP calls to RAWG
 builder.Services.AddHttpClient("RawgAPI", client =>
 {
     client.BaseAddress = new Uri("https://api.rawg.io/api/");
@@ -156,7 +164,7 @@ foreach (var setting in smtpSettings)
 
 var app = builder.Build();
 
-// Inizializza automaticamente il DB in sviluppo se PostgreSQL è attivo
+// Applies the pending migrations at startup
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -168,7 +176,7 @@ using (var scope = app.Services.CreateScope())
     }
     // Only "Postgres is not reachable" is tolerated; any other error (e.g. PendingModelChangesException
     // when a model was changed without a migration) stops the app so it is noticed immediately
-    catch (Npgsql.NpgsqlException ex)
+    catch (Npgsql.NpgsqlException ex) when (ex is not Npgsql.PostgresException)
     {
         app.Logger.LogWarning(ex, "Impossibile connettersi a PostgreSQL all'avvio. Verifica che il server sia attivo.");
     }
@@ -194,7 +202,7 @@ app.MapControllers();
 
 // --- Endpoints API ---
 
-// Health check per verificare lo stato di .NET 10 e PostgreSQL
+// Health check: shows that the API is running
 app.MapGet("/api/health", () => Results.Ok(new
 {
     status = "Healthy",

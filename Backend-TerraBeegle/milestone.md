@@ -249,12 +249,15 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   **Înlocuit de decizia de la punctul 7:** s-a făcut invers — toate `Problem(...)` din controllere au devenit
   string-uri, ca tot codul nostru să folosească același format.
 
-- [ ] **23. `Search` fără paginare și case-sensitive**
+- [x] **23. `Search` fără paginare și case-sensitive**
   Întoarce toți userii găsiți și „vlad” nu-l găsește pe „Vlad”. Soluție: `PaginationDTO` ca la `GetAll` +
   `EF.Functions.ILike(u.Username, $"%{query}%")` (cu `%` / `_` din query escapate).
   - [x] paginare (`PaginationDTO` + `Utils.CreatePagedResponse`)
-  - [ ] case-insensitive (`ILike`) — tot `Contains`
-  - [ ] numărul total nu corespunde cu lista (vezi 51)
+  - [x] case-insensitive → rezolvat altfel decât cu `ILike` (05.11): `u.Username.ToLower().StartsWith(term)` cu
+        `term` în lower case. EF escapează singur `%` / `_` la `StartsWith` (verificat cu `ToQueryString()`:
+        `"a_b"` → `LIKE 'a\_b%'`), deci nu e nevoie de escapare manuală. Rămâne căutare după prefix
+        (`StartsWith`, ales de coleg), nu `Contains`
+  - [x] numărul total nu corespunde cu lista (vezi 51)
 
 ## După merge — minore
 
@@ -464,16 +467,18 @@ salvați jocuri.
 
 ## Găsite pe 04.11.2026 — grave
 
-- [ ] **57. Migrație duplicată + `catch`-ul de la pornire ascunde migrațiile eșuate**
+- [x] **57. Migrație duplicată + `catch`-ul de la pornire ascunde migrațiile eșuate**
   După merge, `ChangedTitleToName` (francesco) și `RenameTitleToNameAndAddIndexes` (Vlad) făceau exact același lucru.
   Pe o bază goală (`docker compose down -v`) a doua eșua („column Title does not exist”), iar `AddReviews` /
   `AddPendingEmail` nu se mai aplicau → register dădea 500 („column ForgotPasswordRequested does not exist”).
   - [x] `RenameTitleToNameAndAddIndexes` ștearsă (ambele fișiere); `has-pending-model-changes` → fără schimbări
-  - [ ] de anunțat colegul să o șteargă și pe `fracerba`, altfel revine la următorul merge
-  - [ ] `catch (Npgsql.NpgsqlException)` din `Program.cs` prinde și `PostgresException` (o moștenește) → o migrație
+  - [x] de anunțat colegul să o șteargă și pe `fracerba`, altfel revine la următorul merge
+        → verificat pe 05.11 după `git fetch`: nu mai există pe `fracerba`, `main` și `Vlad`
+  - [x] `catch (Npgsql.NpgsqlException)` din `Program.cs` prinde și `PostgresException` (o moștenește) → o migrație
         stricată dă doar warning-ul „Impossibile connettersi a PostgreSQL” și aplicația pornește cu baza incompletă.
         Contrazice punctul 15. Soluție: `catch (NpgsqlException ex) when (ex is not PostgresException)`
-  - [ ] testat pe o bază goală: toate migrațiile aplicate până la `AddPendingEmail`
+        → făcut pe 05.11 (filtru `when`: conexiune picată → warning, eroare SQL dintr-o migrație → aplicația se oprește)
+  - [x] testat pe o bază goală: toate migrațiile aplicate până la `AddPendingEmail`
 
 - [x] **58. Policy-urile de rate limiting `forgot-password-request` / `forgot-password` nu există**
   `AuthController` are `[EnableRateLimiting("forgot-password-request")]` și `[EnableRateLimiting("forgot-password")]`,
@@ -574,20 +579,31 @@ salvați jocuri.
 - [ ] **51. `Search` pe useri: numărul total nu corespunde cu lista**
   `totalCount` numără toți userii găsiți, dar lista are în plus `&& u.EmailVerified` → `TotalPages` greșit și pagini
   goale.
-  - [ ] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
+  → rezolvat (05.11): în `Search` și `GetAll` filtrul e scris o singură dată (`var query = db.Users.Where(...)`),
+  apoi `query.CountAsync()` și `query.OrderBy(...)...ToListAsync()` → count-ul și lista nu mai pot diferi.
+  `GetAll` avea același bug (`CountAsync()` pe toți userii); în plus link-urile de pagină păstrează acum `includeUnverified`
+  - [x] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
   - [ ] `GetAll` și `GetById` arată și userii neverificați, `Search` nu → de decis o regulă comună
-  - [ ] tot case-sensitive (punctul 23 rămâne deschis)
+        (stare 05.11: `GetAll` îi ascunde, dar `?includeUnverified=true` — adăugat de francesco — îi arată și îl poate
+        trimite oricine; `Search` și `GetByUsername` îi ascund mereu → singura excepție e parametrul din `GetAll`)
+  - [x] tot case-sensitive (punctul 23 rămâne deschis) → rezolvat la 23
 
-- [ ] **52. Același joc căutat de două ori în baza de date**
+- [x] **52. Același joc căutat de două ori în baza de date**
   `GameController.GetById` caută jocul în DB, apoi `rawgService.GetGameAsync` îl caută din nou. Ramura din serviciu
   (`game.Adapt<Game, GameResponseDTO>()`) nu face `Include` → ar întoarce `Genres` / `Platforms` goale (bug-ul de
   la punctul 30). Acum nu se ajunge acolo, dar e cod mort care poate fi folosit greșit. Soluție: o singură căutare,
   în serviciu, cu `ProjectToType`.
+  → rezolvat (05.11): căutarea în DB e doar în `RawgService.GetGameAsync`, cu `ProjectToType<GameResponseDTO>()`
+  (genurile / platformele în același SELECT) și același filtru `!IsPlaceholder` ca înainte în controller.
+  Bug ascuns reparat odată cu asta: un joc placeholder era sărit de controller, dar găsit apoi de serviciu (fără
+  filtru) și întors cu `Adapt`, deci fără genuri / platforme. `GetById` doar apelează serviciul: 503 / 404 / 200
 
-- [ ] **53. Joc deja adăugat la favorite / wishlist: 204 sau 409?**
+- [x] **53. Joc deja adăugat la favorite / wishlist: 204 sau 409?**
   La 32 s-a decis 204, dar `catch`-ul nou pe `UniqueViolation` întoarce 409 → același caz, două răspunsuri
   (204 de obicei, 409 la două request-uri simultane). De ales unul. `catch`-ul pe `ForeignKeyViolation` la
   ștergere nu poate apărea (se șterge doar un rând din tabela de legătură) — de scos.
+  → rezolvat (05.11): rămâne **204** (decizia de la 32). `catch`-ul pe `UniqueViolation` întoarce acum
+  `NoContent()` la favorite și la wishlist; `catch`-urile pe `ForeignKeyViolation` de la ștergere au fost scoase
 
 ## După merge-ul din 02.11.2026 — minore
 
@@ -604,10 +620,20 @@ salvați jocuri.
   - [ ] `RawgObjectDTO`, `GameStore` — nefolosite
   - [ ] `GET /api/games/all` — la 36 s-a decis că dispare; acum întoarce `GameResponseDTO` complet (cu descriere)
 
-- [ ] **56. Mesaje / documentație care nu mai corespund**
-  - [ ] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
+- [x] **56. Mesaje / documentație care nu mai corespund**
+  - [x] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
+        → `OnRejected` calculează mesajul din `retryAfter`: „Try again in N seconds” (sub un minut) sau
+        „Try again in N minutes”; fără `retryAfter` → „Try again later.”
   - [x] la 34, pasul 5: ruta e `resend-verification`, în cod e `resend-email`, iar limita e per IP, nu per user
         (actualizat în milestone pe 02.11)
-  - [ ] textul emailului: „Thank you for creating an account” se trimite și la resend, la forgot-password și la
+  - [x] textul emailului: „Thank you for creating an account” se trimite și la resend, la forgot-password și la
         schimbarea email-ului (14); „contact our support team” fără adresă
-  - [ ] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect
+        → enum `EmailCodePurpose` (`Register`, `ResendVerification`, `ForgotPassword`, `ChangeEmail`), primit de
+        `SendCodeAsync(email, code, purpose)`. Diferă subiectul, primul paragraf și rândul „dacă nu ai cerut asta”;
+        codul, valabilitatea și avertismentul de securitate sunt comune (scrise o singură dată). „Contact our support
+        team” scos. Login-ul nu trimite email (verifică doar codul primit la register / resend)
+  - [x] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect
+        → redenumit în `IRawgService`, `RawgService`, `UserGamesController` și `ReviewController`
+  - [x] comentariile din cod traduse în engleză (05.11): `Program.cs` (italiană), `UserController.cs`, `User.cs` (română)
+  - [ ] mesajele de log din `Program.cs` sunt încă în italiană („Database PostgreSQL verificato e pronto.”,
+        „Impossibile connettersi a PostgreSQL...”)

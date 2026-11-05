@@ -112,7 +112,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         Game? game;
         try
         {
-            game = await rawgService.CreateGameAsync(gameId);
+            game = await rawgService.GetOrCreateGameAsync(gameId);
         }
         catch (HttpRequestException)
         {

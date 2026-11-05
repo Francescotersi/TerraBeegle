@@ -8,7 +8,7 @@ public class User
     public string Name { get; set; } = null!;
     public string FamilyName { get; set; } = null!;
     public string Email { get; set; } = null!;
-    public string? ImageProfile { get; set; }          // URL imagine
+    public string? ImageProfile { get; set; }          // image URL
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"

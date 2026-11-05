@@ -164,21 +164,15 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
     [HttpGet("{rawgGameId:int}")]
     public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
     {
-        var game = await db.Games
-            .Where(g => g.RawgGameId == rawgGameId && !g.IsPlaceholder) // Only return games that are not placeholders
-            .ProjectToType<GameResponseDTO>()
-            .FirstOrDefaultAsync();
-
-        if (game is null)
+        // The service looks for the game in the database first, then at RAWG (one lookup, see point 52)
+        GameResponseDTO? game;
+        try
         {
-            try
-            {
-                game = await rawgService.GetGameAsync(rawgGameId);
-            }
-            catch (HttpRequestException)
-            {
-                return StatusCode(503,"External API is unavailable.");
-            }
+            game = await rawgService.GetGameAsync(rawgGameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
         }
 
         if (game is null)
