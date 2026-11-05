@@ -444,13 +444,13 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasOne("Backend_TerraBeegle.Models.User", "User1")
                         .WithMany("FriendRequestsAsUser1")
                         .HasForeignKey("User1Id")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Backend_TerraBeegle.Models.User", "User2")
                         .WithMany("FriendRequestsAsUser2")
                         .HasForeignKey("User2Id")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User1");

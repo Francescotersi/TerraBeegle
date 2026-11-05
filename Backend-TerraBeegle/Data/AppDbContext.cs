@@ -69,12 +69,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(u => u.FriendRequestsAsUser1)
                 .WithOne(f => f.User1)
                 .HasForeignKey(f => f.User1Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             e.HasMany(u => u.FriendRequestsAsUser2)
                 .WithOne(f => f.User2)
                 .HasForeignKey(f => f.User2Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(u => u.Reviews)
+                .WithOne(r => r.User)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // FRIENDSHIPS
@@ -100,12 +105,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(f => f.User1)
                 .WithMany(u => u.FriendRequestsAsUser1)
                 .HasForeignKey(f => f.User1Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(f => f.User2)
                 .WithMany(u => u.FriendRequestsAsUser2)
                 .HasForeignKey(f => f.User2Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
 
@@ -170,6 +175,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(g => g.WishlistedByUsers)
                 .WithMany(u => u.WishlistItems)
                 .UsingEntity(j => j.ToTable("wishlist_games"));
+
+            e.HasMany(g => g.Reviews)
+                .WithOne(r => r.Game)
+                .HasForeignKey(r => r.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // GENRES

@@ -95,8 +95,8 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     }
 
     [Authorize]
-    [HttpGet("me")]
-    public async Task<ActionResult<UserResponseDTO>> GetMe()
+    [HttpGet("{username}/profile")]
+    public async Task<ActionResult<UserResponseDTO>> GetProfile(string username)
     {
         var userId = Utils.GetCurrentUserId(User);
         if (userId is null)
@@ -104,7 +104,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Unauthorized("User ID not found in token.");
         } 
             
-        var user = await db.Users.FindAsync(userId.Value);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value && u.Username == username);
         
         if (user is null)
             return NotFound();
@@ -113,7 +113,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     }
 
     [Authorize]
-	[EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser([FromBody] UpdateUserDTO dto)
     {
@@ -189,7 +189,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     }
 
     [Authorize]
-	[EnableRateLimiting(RateLimitPolicies.ChangePassword)]
+    [EnableRateLimiting(RateLimitPolicies.ChangePassword)]
     [HttpPatch("password")]
     public async Task<ActionResult> ChangePassword(UpdatePasswordDTO dto)
     {
@@ -213,30 +213,33 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         
         return Ok("Password changed successfully.");
     }
-	
-	[Authorize]
-	[EnableRateLimiting(RateLimitPolicies.ChangeEmail)]
-	[HttpPatch("{id:long}/email")]
-	public async Task<ActionResult> ChangeEmail(long id, UpdateEmailDTO dto)
-	{
-		if(!Utils.IsCurrentUser(User, id))
-            return Forbid();
-
-		var user = await db.Users.FindAsync(id);
-        if(user is null)
+    
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.ChangeEmail)]
+    [HttpPatch("email")]
+    public async Task<ActionResult> ChangeEmail(UpdateEmailDTO dto)
+    {
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+        
+        var user = await db.Users.FindAsync(userId.Value);
+        if (user is null)
             return NotFound();
 
-		if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return BadRequest("Password is incorrect.");
 
-		dto.Email = dto.Email.Trim().ToLowerInvariant();
+        dto.Email = dto.Email.Trim().ToLowerInvariant();
 
-		if(dto.Email == user.Email)
-			return BadRequest("New email is the same as the old one.");
-		
-		bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
-		if(EmailExists)
-			return Conflict("Email already exists.");
+        if(dto.Email == user.Email)
+            return BadRequest("New email is the same as the old one.");
+        
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
+        if(EmailExists)
+            return Conflict("Email already exists.");
 
 		user.PendingEmail = dto.Email;
 		user.ForgotPasswordRequested = false;
@@ -252,58 +255,61 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 			return StatusCode(500, "Could not send the code. Try again.");
 		}
 
-		return Ok("Verification code sent to the new email.");
-	}
-
-	[Authorize]
-	[EnableRateLimiting(RateLimitPolicies.ConfirmEmail)]
-	[HttpPost("{id:long}/email/confirm")]
-	public async Task<ActionResult> ConfirmNewEmail(long id, ConfirmEmailDTO dto)
-	{
-		if (!Utils.IsCurrentUser(User, id))
-        return Forbid();
-
-    	var user = await db.Users.FindAsync(id);
-    	if (user is null)
-        	return NotFound();
-
-    	if (user.PendingEmail is null)
-        	return BadRequest("No email change in progress.");
-
-    	var result = emailVerificationService.VerifyCode(user, dto.Code);
-
-    	if (result != CodeVerificationResult.Valid)
-    	{
-        	await db.SaveChangesAsync();
-
-        	return result switch
-        	{
-            	CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
-            	CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
-            	CodeVerificationResult.Invalid => BadRequest("Invalid code."),
-            	_ => throw new InvalidOperationException("Unexpected code verification result.")
-        	};
-    	}
-
-    	user.Email = user.PendingEmail;
-    	user.PendingEmail = null;
-    	user.UpdatedAt = DateTime.UtcNow;
-
-    	try
-    	{
-        	await db.SaveChangesAsync();
-    	}
-    	catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-    	{
-        	return Conflict("Email already exists.");
-    	}
-
-    	return Ok("Email changed successfully.");
-	}
-	
+        return Ok("Verification code sent to the new email.");
+    }
 
     [Authorize]
-	[EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    [EnableRateLimiting(RateLimitPolicies.ConfirmEmail)]
+    [HttpPost("email/confirm")]
+    public async Task<ActionResult> ConfirmNewEmail(ConfirmEmailDTO dto)
+    {
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var user = await db.Users.FindAsync(userId.Value);
+        if (user is null)
+            return NotFound();
+
+        if (user.PendingEmail is null)
+            return BadRequest("No email change in progress.");
+
+        var result = emailVerificationService.VerifyCode(user, dto.Code);
+
+        if (result != CodeVerificationResult.Valid)
+        {
+            await db.SaveChangesAsync();
+
+            return result switch
+            {
+                CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+                CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+                CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+                _ => throw new InvalidOperationException("Unexpected code verification result.")
+            };
+        }
+
+        user.Email = user.PendingEmail;
+        user.PendingEmail = null;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Conflict("Email already exists.");
+        }
+
+        return Ok("Email changed successfully.");
+    }
+    
+
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete]
     public async Task<ActionResult> DeleteUser() {
         var userId = Utils.GetCurrentUserId(User);
@@ -311,23 +317,13 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         {
             return Unauthorized("User ID not found in token.");
         }
-
-        if (!Utils.IsCurrentUser(User, userId.Value))
-            return Forbid();
         
         var user = await db.Users.FindAsync(userId.Value);
         if (user is null)
             return NotFound();
         
-        // Friendships and users are deleted at the same time using a transaction or they are not deleted at all
-        await using var transaction = await db.Database.BeginTransactionAsync();
-        
-        await db.Friendships.Where(f => f.User1Id == userId.Value || f.User2Id == userId.Value).ExecuteDeleteAsync();
-
         db.Users.Remove(user);
         await db.SaveChangesAsync();
-        
-        await transaction.CommitAsync();
 
         return NoContent();
     }
