@@ -4,7 +4,7 @@ import { AuthService } from '../../services/auth.service';
 import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileStatisticsComponent } from './profile-statistics.component';
-import { ProfileFriendlistComponent } from './profile-friendlist.component';
+// import { ProfileFriendlistComponent } from './profile-friendlist.component';
 import { ProfileSettingsComponent } from './profile-settings.component';
 
 // da fare tasto modify profile 
@@ -25,7 +25,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
     logoutPopupComponent,
     ProfileDetailsComponent,
     ProfileStatisticsComponent,
-    ProfileFriendlistComponent,
+    // ProfileFriendlistComponent,
     ProfileSettingsComponent,
   ],
   template: `
@@ -108,7 +108,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                       <app-profile-statistics />
                     }
                     @case ('friendlist') {
-                      <app-profile-friendlist />
+                      <!-- <app-profile-friendlist /> -->
                     }
                     @case ('settings') {
                       <app-profile-settings />
