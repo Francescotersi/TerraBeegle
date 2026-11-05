@@ -1,37 +1,74 @@
 import { Component, inject } from '@angular/core';
 import { ThemeService } from '../services/theme.service';
 
+/**
+ * Minimalist Theme Switch:
+ * - Design ultra-pulito ed essenziale ispirato ai migliori minimal toggle di Uiverse.io.
+ * - Light Mode: Pista soft neutra frosted, dischetto bianco puro e icona Sole minimale in ardesia scura (zero giallo, zero rosa).
+ * - Dark Mode: Pista blu notte profondo (#071F49), dischetto scuro (#081226) e icona Luna minimale in Cyan (#2ED9E7).
+ * - Transizione fluida e morbida con rotazione e crossfade delle icone vettoriali.
+ */
 @Component({
   selector: 'app-theme-switch',
   standalone: true,
   template: `
     <label
-      class="switch-name"
-      [class.checked]="themeService.currentTheme() === 'light'"
-      [class.unchecked]="themeService.currentTheme() === 'dark'"
+      class="theme-switch"
+      [class.theme-switch--dark]="themeService.currentTheme() === 'dark'"
+      [class.theme-switch--light]="themeService.currentTheme() === 'light'"
       (click)="$event.preventDefault(); themeService.toggleTheme()"
       role="button"
       tabindex="0"
       (keydown.enter)="$event.preventDefault(); themeService.toggleTheme()"
       (keydown.space)="$event.preventDefault(); themeService.toggleTheme()"
       [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
-      [attr.title]="themeService.currentTheme() === 'dark' ? 'Passa alla modalità Chiara' : 'Passa alla modalità Scura'"
+      [attr.title]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
     >
       <input
         type="checkbox"
-        class="checkbox"
-        [checked]="themeService.currentTheme() === 'light'"
+        class="theme-switch__checkbox"
+        [checked]="themeService.currentTheme() === 'dark'"
         tabindex="-1"
         aria-hidden="true"
         style="pointer-events: none;"
       />
-      <div class="back"></div>
-      <svg class="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
-        <path d="M223.5 32C100 32 0 132.3 0 256S100 480 223.5 480c60.6 0 115.5-24.2 155.8-63.4c5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6c-96.9 0-175.5-78.8-175.5-176c0-65.8 36-123.1 89.3-153.3c6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z"></path>
-      </svg>
-      <svg class="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-        <path d="M361.5 1.2c5 2.1 8.6 6.6 9.6 11.9L391 121l107.9 19.8c5.3 1 9.8 4.6 11.9 9.6s1.5 10.7-1.6 15.2L446.9 256l62.3 90.3c3.1 4.5 3.7 10.2 1.6 15.2s-6.6 8.6-11.9 9.6L391 391 371.1 498.9c-1 5.3-4.6 9.8-9.6 11.9s-10.7 1.5-15.2-1.6L256 446.9l-90.3 62.3c-4.5 3.1-10.2 3.7-15.2 1.6s-8.6-6.6-9.6-11.9L121 391 13.1 371.1c-5.3-1-9.8-4.6-11.9-9.6s-1.5-10.7 1.6-15.2L65.1 256 2.8 165.7c-3.1-4.5-3.7-10.2-1.6-15.2s6.6-8.6 11.9-9.6L121 121 140.9 13.1c1-5.3 4.6-9.8 9.6-11.9s10.7-1.5 15.2 1.6L256 65.1 346.3 2.8c4.5-3.1 10.2-3.7 15.2-1.6zM160 256a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zm224 0a128 128 0 1 0 -256 0 128 128 0 1 0 256 0z"></path>
-      </svg>
+      <div class="theme-switch__thumb">
+        <!-- Icona Sole Minimale (Light Mode) in ardesia scura, zero giallo -->
+        <svg
+          class="theme-switch__icon theme-switch__icon--sun"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+
+        <!-- Icona Luna Minimale (Dark Mode) nel Cyan della Dark Mode (#2ED9E7) -->
+        <svg
+          class="theme-switch__icon theme-switch__icon--moon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+      </div>
     </label>
   `,
   styles: `
@@ -42,113 +79,101 @@ import { ThemeService } from '../services/theme.service';
       user-select: none;
     }
 
-    .switch-name {
+    .theme-switch {
+      position: relative;
       display: inline-flex;
       align-items: center;
-      position: relative;
-      width: 62px;
-      height: 32px;
-      border-radius: 32px;
+      width: 52px;
+      height: 28px;
+      padding: 2px;
+      border-radius: 9999px;
       cursor: pointer;
-      margin: 0;
       outline: none;
-      background: linear-gradient(135deg, #071F49 0%, #0c1c38 100%);
-      border: 1.5px solid rgba(46, 217, 231, 0.35);
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
-      transition: background 0.35s ease, border-color 0.35s ease, transform 0.15s ease;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
+
+      /* Light mode: neutro, morbido e pulito */
+      background: rgba(0, 0, 0, 0.07);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.15s ease;
     }
 
-    .switch-name:active {
+    .theme-switch:active {
       transform: scale(0.96);
     }
 
-    .switch-name:focus-visible {
+    .theme-switch:focus-visible {
       outline: 2px solid var(--tb-accent);
-      box-shadow: none;
     }
 
-    /* Stile Light Mode (cielo diurno tenue, senza rosa aggressivo) */
-    .switch-name.checked,
-    .switch-name:has(.checkbox:checked) {
-      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-      border-color: rgba(125, 211, 252, 0.7);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+    /* Dark mode track: coordinata con #071F49 e bordo Cyan soft */
+    .theme-switch--dark {
+      background: #071F49;
+      border-color: rgba(46, 217, 231, 0.3);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
     }
 
-    /* Dischetto / Slider Knob che scorre in modo fluido */
-    .switch-name .back {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 25px;
-      height: 25px;
+    .theme-switch__checkbox {
+      display: none;
+    }
+
+    /* Dischetto / Thumb scorrevole */
+    .theme-switch__thumb {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(46, 217, 231, 0.35);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-                  background-color 0.35s ease,
-                  border-color 0.35s ease,
-                  box-shadow 0.35s ease;
-      pointer-events: none;
-    }
-
-    .switch-name.checked .back,
-    .switch-name:has(.checkbox:checked) .back {
-      transform: translateX(30px);
       background: #ffffff;
-      border-color: rgba(0, 0, 0, 0.06);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+      transform: translateX(0);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  background-color 0.3s ease,
+                  border-color 0.3s ease,
+                  box-shadow 0.3s ease;
     }
 
-    .switch-name .checkbox {
+    .theme-switch--dark .theme-switch__thumb {
+      transform: translateX(24px);
+      background: #081226;
+      border-color: rgba(46, 217, 231, 0.35);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Icone vettoriali con micro-rotazione e crossfade */
+    .theme-switch__icon {
       position: absolute;
-      opacity: 0;
-      width: 0;
-      height: 0;
-      pointer-events: none;
+      width: 14px;
+      height: 14px;
+      transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Icone animate sincronizzate con lo scorrimento del dischetto */
-    .switch-name .moon,
-    .switch-name .sun {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 25px;
-      height: 25px;
-      padding: 4.5px;
-      pointer-events: none;
-      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-                  opacity 0.25s ease,
-                  fill 0.3s ease;
-    }
-
-    /* Luna: attiva in Dark Mode a sinistra */
-    .switch-name .moon {
-      fill: #2ED9E7;
+    /* Sole: ardesia sobrio (#334155), nessun giallo */
+    .theme-switch__icon--sun {
+      color: #334155;
       opacity: 1;
-      transform: translateX(0) scale(1) rotate(0deg);
+      transform: rotate(0deg) scale(1);
     }
 
-    .switch-name.checked .moon,
-    .switch-name:has(.checkbox:checked) .moon {
+    .theme-switch--dark .theme-switch__icon--sun {
       opacity: 0;
-      transform: translateX(30px) scale(0.6) rotate(35deg);
+      transform: rotate(90deg) scale(0.4);
     }
 
-    /* Sole: attivo in Light Mode a destra con oro caldo ambrato */
-    .switch-name .sun {
-      fill: #f59e0b;
+    /* Luna: Cyan della dark mode (#2ED9E7) */
+    .theme-switch__icon--moon {
+      color: #2ED9E7;
       opacity: 0;
-      transform: translateX(0) scale(0.6) rotate(-35deg);
+      transform: rotate(-90deg) scale(0.4);
     }
 
-    .switch-name.checked .sun,
-    .switch-name:has(.checkbox:checked) .sun {
+    .theme-switch--dark .theme-switch__icon--moon {
       opacity: 1;
-      transform: translateX(30px) scale(1) rotate(0deg);
+      transform: rotate(0deg) scale(1);
     }
   `
 })
