@@ -120,7 +120,8 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         if (!senderExists)
             return NotFound("Sender user not found.");
 
-        if (receiver is null)
+        // An unverified account is hidden from the other users (it cannot log in to answer), so it is "not found"
+        if (receiver is null || !receiver.EmailVerified)
             return NotFound("Receiver user not found.");
 
         var User1Id = Math.Min(dto.SenderId, dto.ReceiverId);

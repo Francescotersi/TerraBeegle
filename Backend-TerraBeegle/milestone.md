@@ -592,16 +592,19 @@ salvați jocuri.
   (`RenameColumn`, fără pierdere de date). Frontend-ul citește `name`.
   (`RenameTitleToNameAndAddIndexes` era un duplicat al ei, șters pe 04.11 — vezi 57.)
 
-- [ ] **51. `Search` pe useri: numărul total nu corespunde cu lista**
+- [x] **51. `Search` pe useri: numărul total nu corespunde cu lista**
   `totalCount` numără toți userii găsiți, dar lista are în plus `&& u.EmailVerified` → `TotalPages` greșit și pagini
   goale.
   → rezolvat (05.11): în `Search` și `GetAll` filtrul e scris o singură dată (`var query = db.Users.Where(...)`),
   apoi `query.CountAsync()` și `query.OrderBy(...)...ToListAsync()` → count-ul și lista nu mai pot diferi.
   `GetAll` avea același bug (`CountAsync()` pe toți userii); în plus link-urile de pagină păstrează acum `includeUnverified`
   - [x] 0 rezultate → 404; pentru o căutare, „nimic găsit” e 200 cu listă goală (frontend-ul afișează mesajul)
-  - [ ] `GetAll` și `GetById` arată și userii neverificați, `Search` nu → de decis o regulă comună
+  - [x] `GetAll` și `GetById` arată și userii neverificați, `Search` nu → de decis o regulă comună
         (stare 05.11: `GetAll` îi ascunde, dar `?includeUnverified=true` — adăugat de francesco — îi arată și îl poate
         trimite oricine; `Search` și `GetByUsername` îi ascund mereu → singura excepție e parametrul din `GetAll`)
+        → **decis (05.11): un cont neverificat e ascuns peste tot** (nu se poate loga și e șters după 2 zile).
+        `includeUnverified` scos din `GetAll` (nefolosit de frontend); `CreateFriendship` → 404 „Receiver user not
+        found.” pentru un destinatar neverificat, ca pentru unul inexistent. De anunțat francesco că parametrul a dispărut
   - [x] tot case-sensitive (punctul 23 rămâne deschis) → rezolvat la 23
 
 - [x] **52. Același joc căutat de două ori în baza de date**

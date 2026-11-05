@@ -22,11 +22,12 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 {
     [Authorize]
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool includeUnverified = false)
+    public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
     {
         // One filter for both the count and the page, so TotalCount always matches the list.
-        // Only users with confirmed emails, unless 'includeUnverified' is true
-        var query = db.Users.Where(u => u.EmailVerified || includeUnverified);
+        // Only users with confirmed emails, like Search and GetByUsername: an unverified account cannot log in
+        // and is deleted after 2 days, so it is hidden from the other users everywhere
+        var query = db.Users.Where(u => u.EmailVerified);
 
         var totalCount = await query.CountAsync();
 
@@ -42,7 +43,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             users,
             totalCount,
             pagination,
-            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, includeUnverified })
+            page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize })
         ));
     }
 
