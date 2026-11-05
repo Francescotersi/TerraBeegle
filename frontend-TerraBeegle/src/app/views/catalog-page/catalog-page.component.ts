@@ -1,19 +1,18 @@
 import { Component, signal, OnInit, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
+import { SpinnerComponent } from '../../ui/spinner/spinner.component';
 import { MOCK_GAMES } from '../../mocks/games.mock';
 import { GameService } from '../../services/game.service';
 
 @Component({
-  imports: [GridComponent],
+  imports: [GridComponent, SpinnerComponent],
   standalone: true,
   selector: 'app-catalog-page',
   template: `
     @if (isLoading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading games...</span>
-        </div>
+      <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
+        <app-spinner size="lg" />
       </div>
     } @else if (errorMessage()) {
       <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">

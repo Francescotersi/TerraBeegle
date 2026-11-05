@@ -1,5 +1,9 @@
-import { Component, signal, computed, input } from '@angular/core';
+import { Component, signal, computed, input, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Router } from '@angular/router';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
+import { AuthService } from '../../services/auth.service';
 
 export interface GridComponentProps {
   rawgGameId: number;
@@ -88,17 +92,41 @@ export interface GridComponentProps {
                       <div class="p-3 text-body details-inner">
                         <div class="d-flex align-items-center gap-2 mb-2 action-buttons">
 
-                          <button class="btn-action-circle" type="button" title="Add to Wishlist">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                              <line x1="12" y1="5" x2="12" y2="19"></line>
-                              <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
+                          <button
+                            class="btn-action-circle"
+                            [class.is-active]="wishlistedIds().has(game.rawgGameId)"
+                            type="button"
+                            [title]="wishlistedIds().has(game.rawgGameId) ? 'Remove from Wishlist' : 'Add to Wishlist'"
+                            (click)="onToggleWishlist($event, game.rawgGameId)"
+                          >
+                            @if (wishlistedIds().has(game.rawgGameId)) {
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            } @else {
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                              </svg>
+                            }
                           </button>
 
-                          <button class="btn-action-circle" type="button" title="Add to Favorites">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                            </svg>
+                          <button
+                            class="btn-action-circle"
+                            [class.is-active]="favoritedIds().has(game.rawgGameId)"
+                            type="button"
+                            [title]="favoritedIds().has(game.rawgGameId) ? 'Remove from Favorites' : 'Add to Favorites'"
+                            (click)="onToggleFavorite($event, game.rawgGameId)"
+                          >
+                            @if (favoritedIds().has(game.rawgGameId)) {
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                              </svg>
+                            } @else {
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                              </svg>
+                            }
                           </button>
 
                           <button class="btn-action-circle btn-more ms-auto" type="button" title="Game details">
@@ -295,6 +323,13 @@ export interface GridComponentProps {
       box-shadow: 0 0 10px var(--tb-accent-glow);
     }
 
+    .btn-action-circle.is-active {
+      background: var(--tb-accent);
+      border-color: var(--tb-accent-hover);
+      color: #ffffff;
+      box-shadow: 0 0 10px var(--tb-accent-glow);
+    }
+
     .btn-action-circle.btn-more {
       background: var(--tb-glass-bg);
       border-color: var(--tb-glass-border);
@@ -381,13 +416,13 @@ export interface GridComponentProps {
     }
   `,
 })
-export class GridComponent {
+export class GridComponent implements OnInit {
   readonly title = input<string>("Beegle's Games Catalog");
   readonly games = input<GridComponentProps[]>([]);
   readonly emptyMessage = input<string>('No games found.');
 
   protected readonly hoveredGameId = signal<number | null>(null);
-
+  // ---- Show More functuonality ----
   private readonly step = 20;
   protected readonly visibleCount = signal(20);
 
@@ -403,6 +438,7 @@ export class GridComponent {
     this.visibleCount.update((count) => count + this.step);
   }
 
+  // -----------------------
   protected onMouseEnter(gameId: number): void {
     this.hoveredGameId.set(gameId);
   }
@@ -414,5 +450,91 @@ export class GridComponent {
   protected getReleaseYear(releasedDate: string): string {
     if (!releasedDate) return '';
     return releasedDate.split('-')[0] || releasedDate;
+  }
+
+  // ---- Wishlist / Favorites functionality ----
+  private readonly wishlistService = inject(WishlistFavoritesService);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly platformId = inject(PLATFORM_ID);
+  
+  protected readonly wishlistedIds = signal<Set<number>>(new Set());
+  protected readonly favoritedIds = signal<Set<number>>(new Set());
+
+  ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId) && this.authService.isLoggedIn()) {
+      this.wishlistService.getWishlist(1, 100).subscribe({
+        next: (res) => {
+          if (res?.results) {
+            this.wishlistedIds.set(new Set(res.results.map((g) => g.rawgGameId)));
+          }
+        },
+        error: () => {},
+      });
+      this.wishlistService.getFavorites(1, 100).subscribe({
+        next: (res) => {
+          if (res?.results) {
+            this.favoritedIds.set(new Set(res.results.map((g) => g.rawgGameId)));
+          }
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  protected onToggleWishlist(event: MouseEvent, gameId: number): void {
+    event.stopPropagation(); // stops from entering game details page
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    const isAlreadyAdded = this.wishlistedIds().has(gameId);
+    if (isAlreadyAdded) {
+      this.wishlistService.removeWishlist(gameId).subscribe({
+        next: () => this.updateWishlistLocal(gameId, false),
+        error: () => this.updateWishlistLocal(gameId, false), // Fallback offline
+      });
+    } else {
+      this.wishlistService.addWishlist(gameId).subscribe({
+        next: () => this.updateWishlistLocal(gameId, true),
+        error: () => this.updateWishlistLocal(gameId, true), // Fallback offline
+      });
+    }
+  }
+
+  private updateWishlistLocal(gameId: number, add: boolean): void {
+    this.wishlistedIds.update((ids) => {
+      const updated = new Set(ids);
+      add ? updated.add(gameId) : updated.delete(gameId);
+      return updated;
+    });
+  }
+
+  protected onToggleFavorite(event: MouseEvent, gameId: number): void {
+    event.stopPropagation();
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    const isAlreadyAdded = this.favoritedIds().has(gameId);
+    if (isAlreadyAdded) {
+      this.wishlistService.removeFavorite(gameId).subscribe({
+        next: () => this.updateFavoriteLocal(gameId, false),
+        error: () => this.updateFavoriteLocal(gameId, false), // Fallback offline
+      });
+    } else {
+      this.wishlistService.addFavorite(gameId).subscribe({
+        next: () => this.updateFavoriteLocal(gameId, true),
+        error: () => this.updateFavoriteLocal(gameId, true), // Fallback offline
+      });
+    }
+  }
+
+  private updateFavoriteLocal(gameId: number, add: boolean): void {
+    this.favoritedIds.update((ids) => {
+      const updated = new Set(ids);
+      add ? updated.add(gameId) : updated.delete(gameId);
+      return updated;
+    });
   }
 }

@@ -381,3 +381,64 @@ export const MOCK_GAMES: GridComponentProps[] = [
     publisher: 'Square Enix',
   }),
 ];
+
+export const MOCK_WISHLIST_GAMES: GridComponentProps[] = [
+  createMockGame({
+    rawgGameId: 2,
+    name: 'Cyberpunk 2077',
+    released: '2020-12-10',
+    rating: 4.3,
+    metacritic: 86,
+    genres: ['Action', 'RPG'],
+    tags: ['cyberpunk', 'sci-fi'],
+  }),
+  createMockGame({
+    rawgGameId: 6,
+    name: "Baldur's Gate 3",
+    released: '2023-08-03',
+    rating: 4.9,
+    metacritic: 96,
+    genres: ['RPG', 'Strategy'],
+    tags: ['turn-based', 'choice matters'],
+  }),
+  createMockGame({
+    rawgGameId: 7,
+    name: 'Hades',
+    released: '2020-09-17',
+    rating: 4.8,
+    metacritic: 93,
+    genres: ['Action', 'Indie'],
+    tags: ['roguelike', 'mythology'],
+  }),
+];
+
+export const MOCK_FAVORITE_GAMES: GridComponentProps[] = [
+  createMockGame({
+    rawgGameId: 1,
+    name: 'The Witcher 3: Wild Hunt',
+    released: '2015-05-19',
+    rating: 4.8,
+    metacritic: 93,
+    genres: ['RPG', 'Adventure'],
+    tags: ['open world', 'fantasy'],
+  }),
+  createMockGame({
+    rawgGameId: 3,
+    name: 'Elden Ring',
+    released: '2022-02-25',
+    rating: 4.9,
+    metacritic: 96,
+    genres: ['RPG', 'Action'],
+    tags: ['souls-like', 'dark fantasy'],
+  }),
+  createMockGame({
+    rawgGameId: 4,
+    name: 'Hollow Knight',
+    released: '2017-02-24',
+    rating: 4.7,
+    metacritic: 90,
+    genres: ['Platformer', 'Adventure'],
+    tags: ['metroidvania', 'indie'],
+  }),
+];
+

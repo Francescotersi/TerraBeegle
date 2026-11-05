@@ -33,7 +33,7 @@ import { ThemeService } from '../services/theme.service';
         style="pointer-events: none;"
       />
       <div class="theme-switch__thumb">
-        <!-- Icona Sole Minimale (Light Mode) in ardesia scura, zero giallo -->
+        <!-- Icona Sole Minimale (Light Mode) in ardesia scura -->
         <svg
           class="theme-switch__icon theme-switch__icon--sun"
           viewBox="0 0 24 24"
@@ -44,7 +44,7 @@ import { ThemeService } from '../services/theme.service';
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <circle cx="12" cy="12" r="4"></circle>
+          <circle cx="12" cy="12" r="3.5" fill="currentColor"></circle>
           <path d="M12 2v2"></path>
           <path d="M12 20v2"></path>
           <path d="m4.93 4.93 1.41 1.41"></path>
@@ -55,18 +55,18 @@ import { ThemeService } from '../services/theme.service';
           <path d="m19.07 4.93-1.41 1.41"></path>
         </svg>
 
-        <!-- Icona Luna Minimale (Dark Mode) nel Cyan della Dark Mode (#2ED9E7) -->
+        <!-- Icona Luna Minimale (Dark Mode) - Sagoma elegante e rifinita in Cyan (#2ED9E7) -->
         <svg
           class="theme-switch__icon theme-switch__icon--moon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          viewBox="0 0 20 20"
+          fill="currentColor"
           aria-hidden="true"
         >
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M7.455 2.004a.75.75 0 0 1 .26.77 7 7 0 0 0 9.958 7.967.75.75 0 0 1 1.067.853A8.5 8.5 0 1 1 6.647 1.921a.75.75 0 0 1 .808.083Z"
+          ></path>
         </svg>
       </div>
     </label>
@@ -144,7 +144,7 @@ import { ThemeService } from '../services/theme.service';
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     }
 
-    /* Icone vettoriali con micro-rotazione e crossfade */
+    /* Icone vettoriali minimaliste con micro-rotazione e crossfade */
     .theme-switch__icon {
       position: absolute;
       width: 14px;
@@ -164,11 +164,11 @@ import { ThemeService } from '../services/theme.service';
       transform: rotate(90deg) scale(0.4);
     }
 
-    /* Luna: Cyan della dark mode (#2ED9E7) */
+    /* Luna: sagoma pura Cyan (#2ED9E7), curvature morbide ed eleganti */
     .theme-switch__icon--moon {
       color: #2ED9E7;
       opacity: 0;
-      transform: rotate(-90deg) scale(0.4);
+      transform: rotate(-30deg) scale(0.4);
     }
 
     .theme-switch--dark .theme-switch__icon--moon {

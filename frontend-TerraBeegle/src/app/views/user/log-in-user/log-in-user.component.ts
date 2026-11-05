@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
+import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 import { AuthService } from '../../../services/auth.service';
 
 interface LoginData {
@@ -10,7 +11,7 @@ interface LoginData {
 }
 
 @Component({
-  imports: [FormField, RouterLink, LiquidGlassComponent],
+  imports: [FormField, RouterLink, LiquidGlassComponent, SpinnerComponent],
   selector: 'app-log-in-user',
   template: `
     <div class="container py-5 d-flex justify-content-center align-items-center min-vh-75">
@@ -79,14 +80,14 @@ interface LoginData {
 
               <button
                 type="submit"
-                class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm"
+                class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm d-flex align-items-center justify-content-center gap-2"
                 [disabled]="loginForm().invalid() || isLoading()"
               >
                 @if (isLoading()) {
-                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Logging in...
+                  <app-spinner size="btn" />
+                  <span>Logging in...</span>
                 } @else {
-                  Login
+                  <span>Login</span>
                 }
               </button>
 

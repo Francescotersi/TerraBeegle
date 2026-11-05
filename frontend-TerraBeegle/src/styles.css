@@ -40,6 +40,13 @@
   --tb-ball-2: #a78bfa;
   --tb-ball-3: #fb7185;
   --tb-ball-4: #34d399;
+
+  /* Young Walrus 64 Spinner - Palette Light */
+  --tb-spinner-one: #fb7185;
+  --tb-spinner-two: #db2777;
+  --tb-spinner-three: rgba(251, 113, 133, 0.45);
+  --tb-spinner-four: rgba(219, 39, 119, 0.45);
+  --tb-spinner-five: rgba(251, 113, 133, 0.2);
 }
 
 /* VARIABILI PER IL TEMA DARK (Star Wars Palette coordinata con lo Switch) */
@@ -82,6 +89,13 @@
   --tb-ball-2: #F349A4; /* Sith Pink/Magenta (--dark-color-secondary) */
   --tb-ball-3: #FFE629; /* Star Wars Yellow (--dark-color-primary) */
   --tb-ball-4: #671086; /* Imperial Purple (--dark-color-secondary-variant-2) */
+
+  /* Young Walrus 64 Spinner - Palette Dark (Cyan & Jedi Blue) */
+  --tb-spinner-one: #2ED9E7;
+  --tb-spinner-two: #2C7BA1;
+  --tb-spinner-three: rgba(46, 217, 231, 0.45);
+  --tb-spinner-four: rgba(44, 123, 161, 0.45);
+  --tb-spinner-five: rgba(46, 217, 231, 0.2);
 }
 body {
   background-color: var(--tb-bg);

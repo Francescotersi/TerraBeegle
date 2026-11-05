@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { form, FormField, required, email, minLength } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
+import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 import { AuthService } from '../../../services/auth.service';
 
 interface UserModel {
@@ -14,7 +15,7 @@ interface UserModel {
 
 @Component({
   selector: 'app-register-user',
-  imports: [LiquidGlassComponent, FormField, RouterLink],
+  imports: [LiquidGlassComponent, FormField, RouterLink, SpinnerComponent],
  template: `
     <div class="container py-5 d-flex justify-content-center align-items-center min-vh-75">
       <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
@@ -115,14 +116,14 @@ interface UserModel {
               <!-- Register -->
               <button
                 type="submit"
-                class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm"
+                class="btn btn-primary w-100 py-2 fw-semibold glass-btn shadow-sm d-flex align-items-center justify-content-center gap-2"
                 [disabled]="registerForm().invalid() || isLoading()"
               >
                 @if (isLoading()) {
-                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Creating account...
+                  <app-spinner size="btn" />
+                  <span>Creating account...</span>
                 } @else {
-                  Register
+                  <span>Register</span>
                 }
               </button>
               <!-- Link a Login -->
