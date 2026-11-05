@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Backend_TerraBeegle.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261105162210_PasswordForgot")]
-    partial class PasswordForgot
+    [Migration("20261104131705_AddReviews")]
+    partial class AddReviews
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -260,11 +260,6 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<string>("Content")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
                     b.Property<long>("GameId")
                         .HasColumnType("bigint");
 
@@ -325,6 +320,9 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<string>("ImageProfile")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsChangingMail")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -332,10 +330,6 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("PendingEmail")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -447,13 +441,13 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasOne("Backend_TerraBeegle.Models.User", "User1")
                         .WithMany("FriendRequestsAsUser1")
                         .HasForeignKey("User1Id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Backend_TerraBeegle.Models.User", "User2")
                         .WithMany("FriendRequestsAsUser2")
                         .HasForeignKey("User2Id")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User1");

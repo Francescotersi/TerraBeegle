@@ -487,6 +487,22 @@ salvați jocuri.
   - [x] `forgot-password-request`: 3 pe 10 minute per IP (trimite emailuri, ca `resend-email`)
   - [x] `forgot-password`: 5 pe minut per IP (verifică un cod, ca `login`)
 
+- [ ] **60. Migrațiile șterse la merge-ul din 05.11 → register dă 500 pe o bază nouă**
+  `column "EmailVerificationAttempts" of relation "Users" does not exist`. Pe `fracerba` au fost șterse 9 migrații
+  (7 în merge-ul `bd2ea9a`, încă 11 fișiere în `ab43628` „Cascade for Reviews and Friendships”), iar migrația nouă
+  `PasswordForgot` avea `Up()` gol, deși snapshot-ul schimba `Friendships` din `Restrict` în `Cascade`. Pe o bază
+  goală se aplicau doar `InitialCreate` + 2 migrații vechi → tabelele fără coloanele de după 23.10.
+  În plus, `AddReviews.Designer.cs` lipsea încă din merge-ul din 04.11 → EF nu vedea `AddReviews` deloc.
+  - [x] cele 12 migrații restaurate din `e8ccd6e`, `AddReviews.Designer.cs` din `29f1093`
+  - [x] `PasswordForgot` (goală) ștearsă; migrație nouă `CascadeDeleteFriendshipsAndReviews` cu schimbarea reală
+        (doar FK-urile din `Friendships`; `Reviews` avea deja cascade din `AddReviews`)
+  - [x] verificat: `migrations list` → 13 migrații, `has-pending-model-changes` → fără schimbări,
+        `migrations script` de la zero conține `EmailVerificationAttempts`, `PendingEmail`, `Reviews` etc.
+  - [ ] testat pe o bază goală (`down -v` + `up --build`) → register 201
+  - [ ] de anunțat colegul: **nu se șterg migrații** care au fost deja împinse; la conflict în `Migrations/` se
+        păstrează ambele fișiere, iar o migrație cu `Up()` gol înseamnă că snapshot-ul nu se potrivește cu migrațiile
+  - [ ] fiecare coleg cu baza creată din migrațiile incomplete: `docker compose down -v`
+
 ## Rate limiting pe toate endpoint-urile care scriu (04.11.2026)
 
 - [x] **59. Rate limiting fără cod duplicat + pe endpoint-urile cu `[Authorize]`**
