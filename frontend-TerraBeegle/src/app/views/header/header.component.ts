@@ -20,6 +20,7 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
             <img
               src="./Logo.ico"
               alt="TerraBeegle"
+              class="site-logo"
               width="40"
               height="40"
             >
@@ -149,6 +150,11 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       width: 100%;
     }
 
+    .site-logo {
+      transition: filter 0.4s ease, transform 0.25s ease;
+      display: block;
+    }
+
     .navbar {
       background: transparent;
       width: 100%;
@@ -176,12 +182,11 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       font-weight: 600;
     }
 
-    /* Pulsanti in evidenza per Login e Sign Up */
+    /* Pulsanti in evidenza per Login e Sign Up senza effetti glow */
     .nav-btn-login {
       background: var(--tb-glass-bg);
       border: 1px solid var(--tb-accent);
       color: var(--tb-accent) !important;
-      box-shadow: 0 2px 8px var(--tb-glass-shadow);
       transition: all 0.2s ease;
     }
 
@@ -190,7 +195,6 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       color: #ffffff !important;
       border-color: var(--tb-accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px var(--tb-accent-glow);
     }
 
     .nav-btn-login.active {
@@ -203,19 +207,17 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       background: var(--tb-btn-gradient);
       border: 1px solid var(--tb-glass-border);
       color: #ffffff !important;
-      box-shadow: 0 2px 10px var(--tb-btn-gradient-shadow);
       transition: all 0.2s ease;
     }
 
     .nav-btn-signup:hover {
       background: var(--tb-btn-gradient-hover);
-      box-shadow: 0 4px 16px var(--tb-btn-gradient-shadow);
       transform: translateY(-1px);
       color: #ffffff !important;
     }
 
     .nav-btn-signup.active {
-      box-shadow: 0 0 0 3px var(--tb-accent-glow), 0 4px 16px var(--tb-btn-gradient-shadow);
+      box-shadow: none;
     }
 
     .header-search-form {
@@ -229,7 +231,7 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       padding: 0.375rem 0.85rem;
       color: var(--tb-text);
       width: 170px;
-      transition: background 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, border-color 0.2s ease;
+      transition: background 0.2s ease, width 0.2s ease, border-color 0.2s ease;
     }
 
     .search-input::placeholder {
@@ -240,7 +242,8 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
     .search-input:focus {
       background: var(--tb-input-bg-focus);
       border-color: var(--tb-accent);
-      box-shadow: 0 0 0 0.25rem var(--tb-accent-glow);
+      box-shadow: none;
+      outline: none;
       color: var(--tb-text);
       width: 200px;
     }
@@ -261,7 +264,6 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       background: var(--tb-btn-gradient);
       color: #ffffff;
       border-color: transparent;
-      box-shadow: 0 2px 10px var(--tb-btn-gradient-shadow);
       transform: translateY(-1px);
     }
 

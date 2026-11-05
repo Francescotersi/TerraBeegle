@@ -88,3 +88,13 @@ body {
   color: var(--tb-text);
   transition: background-color 0.4s ease, color 0.4s ease;
 }
+
+/* Logo in Dark/Light Mode: nessun effetto glow */
+.site-logo {
+  transition: transform 0.25s ease;
+  filter: none;
+}
+
+[data-bs-theme="dark"] .site-logo {
+  filter: none;
+}

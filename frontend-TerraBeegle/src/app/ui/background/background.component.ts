@@ -41,7 +41,7 @@ import { ThemeService } from '../../services/theme.service';
       height: 100%;
       overflow: hidden;
       pointer-events: none;
-      background: radial-gradient(circle at 12% 45%, rgba(254, 215, 226, 0.45) 0%, transparent 55%),
+      background: radial-gradient(circle at 12% 45%, rgba(254, 225, 210, 0.4) 0%, transparent 55%),
                   radial-gradient(circle at 88% 30%, rgba(254, 238, 210, 0.5) 0%, transparent 55%),
                   var(--tb-bg, #faf6fa);
       transition: background 0.4s ease;
@@ -60,15 +60,17 @@ import { ThemeService } from '../../services/theme.service';
       left: -5%;
       width: 110%;
       height: 110%;
-      filter: blur(28px);
-      opacity: 0.85;
+      filter: blur(20px);
+      opacity: 0.88;
       mix-blend-mode: multiply;
       transform: translateZ(0);
       will-change: transform;
+      transition: filter 0.4s ease;
     }
 
     :host-context([data-bs-theme="dark"]) .wave-canvas,
     [data-bs-theme="dark"] .wave-canvas {
+      filter: blur(28px);
       mix-blend-mode: screen;
       opacity: 0.9;
     }
@@ -219,11 +221,11 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
       grad.addColorStop(0.70, `rgba(103, 16, 134, ${0.55 * alphaMultiplier})`);
       grad.addColorStop(1.00, `rgba(255, 230, 41, ${0.70 * alphaMultiplier})`);
     } else {
-      grad.addColorStop(0.00, `rgba(255, 95, 158, ${0.75 * alphaMultiplier})`);
-      grad.addColorStop(0.25, `rgba(244, 114, 182, ${0.65 * alphaMultiplier})`);
-      grad.addColorStop(0.50, `rgba(251, 146, 60, ${0.55 * alphaMultiplier})`);
-      grad.addColorStop(0.75, `rgba(251, 191, 36, ${0.65 * alphaMultiplier})`);
-      grad.addColorStop(1.00, `rgba(245, 158, 11, ${0.70 * alphaMultiplier})`);
+      grad.addColorStop(0.00, `rgba(251, 120, 120, ${0.72 * alphaMultiplier})`);   // Corallo morbido delicato
+      grad.addColorStop(0.25, `rgba(253, 164, 130, ${0.65 * alphaMultiplier})`);   // Pesca dorato
+      grad.addColorStop(0.50, `rgba(251, 175, 90, ${0.58 * alphaMultiplier})`);    // Albicocca caldo
+      grad.addColorStop(0.75, `rgba(251, 191, 36, ${0.68 * alphaMultiplier})`);    // Oro ambrato
+      grad.addColorStop(1.00, `rgba(245, 158, 11, ${0.70 * alphaMultiplier})`);    // Ambra caldo
     }
     return grad;
   }
@@ -240,10 +242,10 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
       grad.addColorStop(0.75, `rgba(99, 102, 241, ${0.60 * alphaMultiplier})`);
       grad.addColorStop(1.00, `rgba(255, 230, 41, ${0.65 * alphaMultiplier})`);
     } else {
-      grad.addColorStop(0.00, `rgba(244, 63, 94, ${0.70 * alphaMultiplier})`);
-      grad.addColorStop(0.35, `rgba(217, 70, 239, ${0.50 * alphaMultiplier})`);
-      grad.addColorStop(0.70, `rgba(253, 186, 116, ${0.60 * alphaMultiplier})`);
-      grad.addColorStop(1.00, `rgba(252, 211, 77, ${0.65 * alphaMultiplier})`);
+      grad.addColorStop(0.00, `rgba(249, 130, 100, ${0.68 * alphaMultiplier})`);   // Pesca-corallo morbido
+      grad.addColorStop(0.35, `rgba(253, 186, 116, ${0.58 * alphaMultiplier})`);   // Albicocca tenue
+      grad.addColorStop(0.70, `rgba(254, 215, 140, ${0.62 * alphaMultiplier})`);   // Oro satinato/miele
+      grad.addColorStop(1.00, `rgba(251, 191, 36, ${0.65 * alphaMultiplier})`);    // Oro luminoso
     }
     return grad;
   }
@@ -258,7 +260,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
   ): { x: number; y: number } {
     const centerY = h * 0.50;
     const direction = isTop ? -1 : 1;
-    const ampBase = (h * 0.22) * this.amplitude;
+    const ampBase = (h * (this.isDark ? 0.22 : 0.26)) * this.amplitude;
 
     const f1 = 2.4;
     const f2 = 5.2;
@@ -324,7 +326,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
       ctx.lineTo(points[i].x, points[i].y);
     }
     ctx.strokeStyle = strokeGrad;
-    ctx.lineWidth = this.isMobile ? 1.5 : 2.5;
+    ctx.lineWidth = this.isMobile ? 1.5 : (this.isDark ? 2.5 : 3.5);
     ctx.lineCap = 'round';
     ctx.stroke();
   }
@@ -347,9 +349,9 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
       grad.addColorStop(0.5, 'rgba(243, 73, 164, 0.25)');
       grad.addColorStop(1.0, 'rgba(255, 230, 41, 0.35)');
     } else {
-      grad.addColorStop(0.0, 'rgba(255, 95, 158, 0.30)');
-      grad.addColorStop(0.5, 'rgba(244, 114, 182, 0.20)');
-      grad.addColorStop(1.0, 'rgba(251, 191, 36, 0.30)');
+      grad.addColorStop(0.0, 'rgba(251, 120, 120, 0.35)');
+      grad.addColorStop(0.5, 'rgba(251, 175, 90, 0.25)');
+      grad.addColorStop(1.0, 'rgba(251, 191, 36, 0.35)');
     }
 
     ctx.strokeStyle = grad;
@@ -365,12 +367,13 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
 
     const delta = Math.min(0.1, (currentTime - this.lastTime) / 1000 || 0.016);
     this.lastTime = currentTime;
-    this.time += delta * 0.55 * this.speed;
+    const speedFactor = this.isDark ? 0.60 : 0.95;
+    this.time += delta * speedFactor * this.speed;
 
     ctx.clearRect(0, 0, w, h);
 
     // 1. Aloni d'atmosfera sfumata (profondità aura)
-    const leftCol = this.isDark ? '46, 217, 231' : '255, 110, 165';
+    const leftCol = this.isDark ? '46, 217, 231' : '254, 165, 130';
     const leftGlow = ctx.createRadialGradient(w * 0.1, h * 0.45, 0, w * 0.1, h * 0.45, w * 0.35);
     leftGlow.addColorStop(0, `rgba(${leftCol}, ${0.45 * this.opacity})`);
     leftGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');

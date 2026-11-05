@@ -43,28 +43,20 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .switch-name {
-      /* Colori coordinati con TerraBeegle */
-      --dark-sky: #071F49;
-      --moon: #2ED9E7;
-      --moon-glow: rgba(46, 217, 231, 0.6);
-
-      --light-sky-start: #fb7185;
-      --light-sky-end: #f472b6;
-      --sun: #FFE629;
-      --sun-glow: rgba(255, 230, 41, 0.7);
-
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
       position: relative;
-      border-radius: 5em;
+      width: 62px;
+      height: 32px;
+      border-radius: 32px;
       cursor: pointer;
-      width: 68px;
-      height: 34px;
-      overflow: hidden;
       margin: 0;
-      border: 1.5px solid rgba(46, 217, 231, 0.35);
-      box-shadow: 0 0 10px rgba(46, 217, 231, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.4);
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.5s ease, box-shadow 0.5s ease;
       outline: none;
+      background: linear-gradient(135deg, #071F49 0%, #0c1c38 100%);
+      border: 1.5px solid rgba(46, 217, 231, 0.35);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+      transition: background 0.35s ease, border-color 0.35s ease, transform 0.15s ease;
+      user-select: none;
     }
 
     .switch-name:active {
@@ -72,50 +64,42 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .switch-name:focus-visible {
-      box-shadow: 0 0 0 3px var(--tb-accent-glow);
+      outline: 2px solid var(--tb-accent);
+      box-shadow: none;
     }
 
-    /* Stile Light Mode */
+    /* Stile Light Mode (cielo diurno tenue, senza rosa aggressivo) */
     .switch-name.checked,
     .switch-name:has(.checkbox:checked) {
-      border-color: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 3px 12px rgba(244, 114, 182, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      border-color: rgba(125, 211, 252, 0.7);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    /* Sfondo con transizione morbida tra i due gradienti */
+    /* Dischetto / Slider Knob che scorre in modo fluido */
     .switch-name .back {
       position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      overflow: hidden;
+      top: 2px;
+      left: 2px;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(46, 217, 231, 0.35);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+                  background-color 0.35s ease,
+                  border-color 0.35s ease,
+                  box-shadow 0.35s ease;
+      pointer-events: none;
     }
 
-    .switch-name .back::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, #071F49 0%, #0a1733 100%);
-      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 1;
-    }
-
-    .switch-name .back::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, var(--light-sky-start) 0%, var(--light-sky-end) 100%);
-      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      opacity: 0;
-    }
-
-    .switch-name.checked .back::before,
-    .switch-name .checkbox:checked ~ .back::before {
-      opacity: 0;
-    }
-
-    .switch-name.checked .back::after,
-    .switch-name .checkbox:checked ~ .back::after {
-      opacity: 1;
+    .switch-name.checked .back,
+    .switch-name:has(.checkbox:checked) .back {
+      transform: translateX(30px);
+      background: #ffffff;
+      border-color: rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
     }
 
     .switch-name .checkbox {
@@ -126,48 +110,45 @@ import { ThemeService } from '../services/theme.service';
       pointer-events: none;
     }
 
-    /* Luna: animazione fluida di rotazione e traslazione */
-    .switch-name .moon {
+    /* Icone animate sincronizzate con lo scorrimento del dischetto */
+    .switch-name .moon,
+    .switch-name .sun {
       position: absolute;
-      left: 0;
-      top: 0;
-      width: 50%;
-      height: 100%;
-      padding: 0.42em;
-      fill: var(--moon);
-      filter: drop-shadow(0 0 4px var(--moon-glow));
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease;
-      opacity: 1;
-      transform: translate(0) rotate(0deg);
+      top: 2px;
+      left: 2px;
+      width: 25px;
+      height: 25px;
+      padding: 4.5px;
       pointer-events: none;
+      transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+                  opacity 0.25s ease,
+                  fill 0.3s ease;
+    }
+
+    /* Luna: attiva in Dark Mode a sinistra */
+    .switch-name .moon {
+      fill: #2ED9E7;
+      opacity: 1;
+      transform: translateX(0) scale(1) rotate(0deg);
     }
 
     .switch-name.checked .moon,
-    .switch-name .checkbox:checked ~ .moon {
-      transform: translate(100%) rotate(180deg);
+    .switch-name:has(.checkbox:checked) .moon {
       opacity: 0;
+      transform: translateX(30px) scale(0.6) rotate(35deg);
     }
 
-    /* Sole: animazione fluida di rotazione e traslazione */
+    /* Sole: attivo in Light Mode a destra con oro caldo ambrato */
     .switch-name .sun {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 50%;
-      height: 100%;
-      padding: 0.42em;
-      fill: var(--sun);
-      filter: drop-shadow(0 0 5px var(--sun-glow));
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease;
+      fill: #f59e0b;
       opacity: 0;
-      transform: translate(0) rotate(0deg);
-      pointer-events: none;
+      transform: translateX(0) scale(0.6) rotate(-35deg);
     }
 
     .switch-name.checked .sun,
-    .switch-name .checkbox:checked ~ .sun {
-      transform: translate(100%) rotate(180deg);
+    .switch-name:has(.checkbox:checked) .sun {
       opacity: 1;
+      transform: translateX(30px) scale(1) rotate(0deg);
     }
   `
 })
