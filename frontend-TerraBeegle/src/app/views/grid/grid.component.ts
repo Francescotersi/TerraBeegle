@@ -111,23 +111,38 @@ export interface GridComponentProps {
                             }
                           </button>
 
-                          <button
-                            class="btn-action-circle"
+                          <div
+                            class="heart-container"
                             [class.is-active]="favoritedIds().has(game.rawgGameId)"
-                            type="button"
                             [title]="favoritedIds().has(game.rawgGameId) ? 'Remove from Favorites' : 'Add to Favorites'"
-                            (click)="onToggleFavorite($event, game.rawgGameId)"
                           >
-                            @if (favoritedIds().has(game.rawgGameId)) {
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            <input
+                              [id]="'fav-' + game.rawgGameId"
+                              class="checkbox"
+                              type="checkbox"
+                              [checked]="favoritedIds().has(game.rawgGameId)"
+                              (click)="onToggleFavorite($event, game.rawgGameId)"
+                              [attr.aria-label]="favoritedIds().has(game.rawgGameId) ? 'Remove from Favorites' : 'Add to Favorites'"
+                            />
+                            <div class="svg-container">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="svg-outline" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M17.5,1.917a6.4,6.4,0,0,0-5.5,3.3,6.4,6.4,0,0,0-5.5-3.3A6.8,6.8,0,0,0,0,8.967c0,4.547,4.786,9.513,8.8,12.88a4.974,4.974,0,0,0,6.4,0C19.214,18.48,24,13.514,24,8.967A6.8,6.8,0,0,0,17.5,1.917Zm-3.585,18.4a2.973,2.973,0,0,1-3.83,0C4.947,16.006,2,11.87,2,8.967a4.8,4.8,0,0,1,4.5-5.05A4.8,4.8,0,0,1,11,8.967a1,1,0,0,0,2,0,4.8,4.8,0,0,1,4.5-5.05A4.8,4.8,0,0,1,22,8.967C22,11.87,19.053,16.006,13.915,20.313Z">
+                                </path>
                               </svg>
-                            } @else {
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                              <svg xmlns="http://www.w3.org/2000/svg" class="svg-filled" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M17.5,1.917a6.4,6.4,0,0,0-5.5,3.3,6.4,6.4,0,0,0-5.5-3.3A6.8,6.8,0,0,0,0,8.967c0,4.547,4.786,9.513,8.8,12.88a4.974,4.974,0,0,0,6.4,0C19.214,18.48,24,13.514,24,8.967A6.8,6.8,0,0,0,17.5,1.917Z">
+                                </path>
                               </svg>
-                            }
-                          </button>
+                              <svg xmlns="http://www.w3.org/2000/svg" class="svg-celebrate" viewBox="0 0 100 100" aria-hidden="true">
+                                <polygon points="10,10 20,20"></polygon>
+                                <polygon points="10,50 20,50"></polygon>
+                                <polygon points="20,80 30,70"></polygon>
+                                <polygon points="90,10 80,20"></polygon>
+                                <polygon points="90,50 80,50"></polygon>
+                                <polygon points="80,80 70,70"></polygon>
+                              </svg>
+                            </div>
+                          </div>
 
                           <button class="btn-action-circle btn-more ms-auto" type="button" title="Game details">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -343,6 +358,139 @@ export interface GridComponentProps {
       transform: scale(1.08);
     }
 
+    /* Heart Checkbox - Lucky Ape 27 (Catraco) */
+    .heart-container {
+      --heart-color: var(--tb-accent);
+      position: relative;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--tb-accent);
+      background: var(--tb-glass-bg);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    .heart-container:hover {
+      background: var(--tb-accent-subtle);
+      border-color: var(--tb-accent-hover);
+      transform: scale(1.08);
+      box-shadow: 0 0 10px var(--tb-accent-glow);
+    }
+
+    .heart-container.is-active,
+    .heart-container:has(.checkbox:checked) {
+      background: var(--tb-accent-subtle);
+      border-color: var(--tb-accent-hover);
+      box-shadow: 0 0 10px var(--tb-accent-glow);
+    }
+
+    .heart-container .checkbox {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      margin: 0;
+      padding: 0;
+      z-index: 20;
+      cursor: pointer;
+    }
+
+    .heart-container:has(.checkbox:focus-visible) {
+      outline: 2px solid var(--tb-accent);
+      outline-offset: 2px;
+    }
+
+    .heart-container .svg-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      pointer-events: none;
+    }
+
+    .heart-container .svg-outline,
+    .heart-container .svg-filled {
+      fill: var(--heart-color);
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      pointer-events: none;
+      transition: fill 0.2s ease;
+    }
+
+    .heart-container .svg-filled {
+      animation: keyframes-svg-filled 0.75s ease;
+      display: none;
+    }
+
+    .heart-container .svg-celebrate {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      animation: keyframes-svg-celebrate 0.5s ease-out;
+      animation-fill-mode: forwards;
+      display: none;
+      stroke: var(--heart-color);
+      fill: var(--heart-color);
+      stroke-width: 2px;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .heart-container .checkbox:checked ~ .svg-container .svg-filled {
+      display: block;
+    }
+
+    .heart-container .checkbox:checked ~ .svg-container .svg-celebrate {
+      display: block;
+    }
+
+    @keyframes keyframes-svg-filled {
+      0% {
+        transform: scale(0);
+      }
+      30% {
+        transform: scale(1.25);
+      }
+      60% {
+        transform: scale(0.92);
+        filter: brightness(1.3);
+      }
+      100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    @keyframes keyframes-svg-celebrate {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      50% {
+        opacity: 1;
+        filter: brightness(1.4);
+      }
+      100% {
+        transform: scale(1.4);
+        opacity: 0;
+        display: none;
+      }
+    }
+
     .game-genres-line {
       font-size: 0.8rem;
       font-weight: 600;
@@ -513,6 +661,7 @@ export class GridComponent implements OnInit {
   protected onToggleFavorite(event: MouseEvent, gameId: number): void {
     event.stopPropagation();
     if (!this.authService.isLoggedIn()) {
+      event.preventDefault();
       this.router.navigate(['/login']);
       return;
     }

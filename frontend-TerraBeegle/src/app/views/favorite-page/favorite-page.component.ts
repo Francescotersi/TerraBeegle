@@ -2,38 +2,8 @@ import { Component, signal, OnInit, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
 import { SpinnerComponent } from '../../ui/spinner/spinner.component';
-import { createMockGame } from '../../mocks/games.mock';
+import { MOCK_FAVORITE_GAMES } from '../../mocks/games.mock';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
-
-const INITIAL_MOCK_FAVORITES: GridComponentProps[] = [
-  createMockGame({
-    rawgGameId: 1,
-    name: 'The Witcher 3: Wild Hunt',
-    released: '2015-05-19',
-    rating: 4.8,
-    metacritic: 93,
-    genres: ['RPG', 'Adventure'],
-    tags: ['open world', 'fantasy'],
-  }),
-  createMockGame({
-    rawgGameId: 3,
-    name: 'Elden Ring',
-    released: '2022-02-25',
-    rating: 4.9,
-    metacritic: 96,
-    genres: ['RPG', 'Action'],
-    tags: ['souls-like', 'dark fantasy'],
-  }),
-  createMockGame({
-    rawgGameId: 4,
-    name: 'Hollow Knight',
-    released: '2017-02-24',
-    rating: 4.7,
-    metacritic: 90,
-    genres: ['Platformer', 'Adventure'],
-    tags: ['metroidvania', 'indie'],
-  }),
-];
 
 @Component({
   selector: 'app-favorite-page',
@@ -49,6 +19,31 @@ const INITIAL_MOCK_FAVORITES: GridComponentProps[] = [
         {{ errorMessage() }}
       </div>
     } @else {
+      @if (isUsingMock()) {
+        <div
+          class="alert alert-warning py-2 px-3 mx-auto my-3 text-center d-flex align-items-center justify-content-center gap-2"
+          style="max-width: 620px; border-radius: 10px;"
+          role="status"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span class="small fw-medium">
+            API non disponibile: visualizzazione dei giochi preferiti di esempio.
+          </span>
+        </div>
+      }
       <app-grid-component
         title="Favorites"
         [games]="favoriteGames()"
@@ -68,9 +63,10 @@ export class FavoritePageComponent implements OnInit {
   private readonly wishlistFavoritesService = inject(WishlistFavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
 
-  readonly favoriteGames = signal<GridComponentProps[]>(INITIAL_MOCK_FAVORITES);
+  readonly favoriteGames = signal<GridComponentProps[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
+  readonly isUsingMock = signal<boolean>(false);
 
   ngOnInit(): void {
     this.loadFavorites();
@@ -78,28 +74,26 @@ export class FavoritePageComponent implements OnInit {
 
   loadFavorites(): void {
     if (!isPlatformBrowser(this.platformId)) {
-      this.favoriteGames.set(INITIAL_MOCK_FAVORITES);
+      this.favoriteGames.set(MOCK_FAVORITE_GAMES);
       this.isLoading.set(false);
       return;
     }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    this.isUsingMock.set(false);
 
     this.wishlistFavoritesService.getFavorites().subscribe({
       next: (response) => {
         const mappedGames =
           response?.results?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
-        if (mappedGames.length > 0) {
-          this.favoriteGames.set(mappedGames);
-        } else {
-          this.favoriteGames.set(INITIAL_MOCK_FAVORITES);
-        }
+        this.favoriteGames.set(mappedGames);
         this.isLoading.set(false);
       },
-      error: () => {
-        // Fallback ai mock
-        this.favoriteGames.set(INITIAL_MOCK_FAVORITES);
+      error: (err) => {
+        console.warn('Backend API unavailable. Loading mock favorites instead:', err);
+        this.favoriteGames.set(MOCK_FAVORITE_GAMES);
+        this.isUsingMock.set(true);
         this.isLoading.set(false);
       },
     });

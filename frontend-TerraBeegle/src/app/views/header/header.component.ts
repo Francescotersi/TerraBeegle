@@ -155,6 +155,10 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       display: block;
     }
 
+    :host-context([data-bs-theme="dark"]) .site-logo {
+      filter: hue-rotate(-40deg) brightness(1.2) drop-shadow(0 0 8px var(--tb-accent-glow));
+    }
+
     .navbar {
       background: transparent;
       width: 100%;
