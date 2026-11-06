@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { Home } from './views/home/home.component';
 import { LogInUser } from './views/user/log-in-user/log-in-user.component';
 import { RegisterUser } from './views/user/register-user/register-user.component';
+import { OtpComponent } from './views/user/otp/otp.component';
 import { authGuard } from './guards/auth.guard';
 import { ProfilePageComponent } from './views/profile-page/profile-page.component';
 import { FavoritePageComponent } from './views/favorite-page/favorite-page.component';
@@ -36,6 +37,10 @@ export const routes: Routes = [
     {
         path:'register',
         component: RegisterUser
+    },
+    {
+        path: 'otp',
+        component: OtpComponent,
     },
     {
         path: 'profile',

@@ -6,6 +6,8 @@ export interface User {
   familyName: string;
   username: string;
   email: string;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
   imageProfile?: string | null;
   theme?: Theme;
 }
@@ -28,9 +30,30 @@ export interface RegisterPayload {
 export interface LoginPayload {
   emailOrUsername: string;
   password: string;
+  code?: string; // Optional 2FA code
+}
+
+export interface TwoFactorLoginPayload {
+  challengeToken: string;
+  code: string;
+}
+
+export interface TwoFactorResendPayload {
+  challengeToken: string;
 }
 
 export interface AuthResponse {
-  token: string;
-  user: User;
+  token?: string | null;
+  user?: User | null;
+  requires2FA?: boolean;
+  challengeToken?: string | null;
+}
+
+export interface OtpContext {
+  type: 'email-verification' | '2fa';
+  challengeToken?: string;
+  emailOrUsername?: string;
+  email?: string;
+  password?: string;
+  message?: string;
 }

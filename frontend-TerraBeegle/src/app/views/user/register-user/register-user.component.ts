@@ -143,7 +143,6 @@ interface UserModel {
               >
                 @if (isLoading()) {
                   <app-spinner size="btn" />
-                  <span>Creating account...</span>
                 } @else {
                   <span>Register</span>
                 }
@@ -265,8 +264,22 @@ export class RegisterUser {
     this.authService.register(data).subscribe({
       next: (response) => {
         this.isLoading.set(false);
-        console.log('Registration was successfull', data);
-        this.router.navigate(['/login']);
+        this.authService.setOtpContext({
+          type: 'email-verification',
+          emailOrUsername: data.username || data.email,
+          email: data.email,
+          password: data.password,
+          message: 'Registration successful! An 8-character verification code has been sent to your email.',
+        });
+        this.router.navigate(['/otp'], {
+          state: {
+            type: 'email-verification',
+            emailOrUsername: data.username || data.email,
+            email: data.email,
+            password: data.password,
+            message: 'Registration successful! An 8-character verification code has been sent to your email.',
+          }
+        });
       },
       error: (error) => {
         this.isLoading.set(false);
