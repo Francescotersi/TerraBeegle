@@ -12,4 +12,7 @@ public static class RateLimitPolicies
     public const string ChangePassword = "change-password";
     public const string UserWrite = "user-write";
     public const string UserGames = "user-games";
+    public const string TwoFactor = "two-factor";
+    public const string LoginTwoFactor = "login-two-factor";
+    public const string LoginTwoFactorResend = "login-two-factor-resend";
 }

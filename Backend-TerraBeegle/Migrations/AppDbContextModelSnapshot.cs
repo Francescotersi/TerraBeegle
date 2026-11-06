@@ -190,6 +190,46 @@ namespace Backend_TerraBeegle.Migrations
                     b.ToTable("Genres");
                 });
 
+            modelBuilder.Entity("Backend_TerraBeegle.Models.LoginChallenge", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CodeAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CodeExpiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("TokenExpiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoginChallenges");
+                });
+
             modelBuilder.Entity("Backend_TerraBeegle.Models.ParentPlatform", b =>
                 {
                     b.Property<long>("Id")
@@ -342,6 +382,9 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
                         .HasDefaultValue("Light");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -557,6 +600,17 @@ namespace Backend_TerraBeegle.Migrations
                     b.Navigation("Series");
                 });
 
+            modelBuilder.Entity("Backend_TerraBeegle.Models.LoginChallenge", b =>
+                {
+                    b.HasOne("Backend_TerraBeegle.Models.User", "User")
+                        .WithMany("LoginChallenges")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Backend_TerraBeegle.Models.Platform", b =>
                 {
                     b.HasOne("Backend_TerraBeegle.Models.ParentPlatform", "ParentPlatform")
@@ -676,6 +730,8 @@ namespace Backend_TerraBeegle.Migrations
                     b.Navigation("FriendRequestsAsUser1");
 
                     b.Navigation("FriendRequestsAsUser2");
+
+                    b.Navigation("LoginChallenges");
 
                     b.Navigation("Reviews");
                 });

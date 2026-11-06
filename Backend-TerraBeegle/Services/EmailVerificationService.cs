@@ -1,27 +1,18 @@
 using Backend_TerraBeegle.Enums;
 using Backend_TerraBeegle.Models;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Backend_TerraBeegle.Services;
 
 public class EmailVerificationService(IEmailService emailService) : IEmailVerificationService
 {
-    private const string Characters = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-    private const int CodeLength = 8;
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
     private const int MaxAttempts = 5;
 
-    private static string HashCode(string code)
-    {
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(code.Trim().ToUpperInvariant())));
-    }
-
     public string SetNewCode(User user)
     {
-        string code = RandomNumberGenerator.GetString(Characters, CodeLength);
+        string code = SecureCode.Generate();
         
-        user.EmailVerificationCodeHash = HashCode(code);
+        user.EmailVerificationCodeHash = SecureCode.Hash(code);
         user.EmailVerificationCodeExpiration = DateTime.UtcNow + CodeLifetime;
         user.EmailVerificationAttempts = 0;
         
@@ -37,12 +28,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
         if (user.EmailVerificationAttempts >= MaxAttempts)
             return CodeVerificationResult.TooManyAttempts;
 
-        // Fixed time comparison, so the response time does not reveal how much of the code is correct
-        bool matches = CryptographicOperations.FixedTimeEquals(
-            Convert.FromHexString(user.EmailVerificationCodeHash),
-            Convert.FromHexString(HashCode(code)));
-
-        if (!matches)
+        if (!SecureCode.Matches(user.EmailVerificationCodeHash, code))
         {
             user.EmailVerificationAttempts++;
             return CodeVerificationResult.Invalid;
@@ -59,7 +45,9 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     public async Task SendCodeAsync(string email, string code, EmailCodePurpose purpose)
     {
         // Only the subject, the first paragraph and the "did not request" line change;
-        // the code, its lifetime and the security warning are the same in every email
+        // the code, its lifetime (except 2FA: 5 minutes) and the security warning are the same in every email
+        var lifetime = purpose == EmailCodePurpose.TwoFactorLogin ? TwoFactorService.CodeLifetime : CodeLifetime;
+        
         var (subject, intro, ignoreText) = purpose switch
         {
             EmailCodePurpose.Register => (
@@ -82,6 +70,11 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
                 "You asked to use this email address for your TerraBeegle account. Enter this code to confirm the change:",
                 "If you did not ask for this change, you can safely ignore this email. The email address of the account stays the same."),
 
+            EmailCodePurpose.TwoFactorLogin => (
+                "Your TerraBeegle login code",
+                "Someone is trying to log in to your TerraBeegle account. If it was you, enter this code to finish logging in:",
+                "If you are not trying to log in, someone knows your password. Do not share this code and change your password as soon as possible."),
+
             _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "Unknown email code purpose.")
         };
 
@@ -92,7 +85,7 @@ $@"Hello,
 
 {code}
 
-This code is valid for {CodeLifetime.TotalMinutes} minutes and can be used only once.
+This code is valid for {lifetime.TotalMinutes} minutes and can be used only once.
 
 For security reasons, please do not share this code with anyone. TerraBeegle will never ask you for this code by phone, email, or any other channel.
 

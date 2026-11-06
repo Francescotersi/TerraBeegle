@@ -18,7 +18,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher,
     ITokenService tokenService, IEmailVerificationService emailVerificationService, 
-    ILogger<AuthController> logger) : ControllerBase
+    ITwoFactorService twoFactorService, ILogger<AuthController> logger) : ControllerBase
 {
     [EnableRateLimiting(RateLimitPolicies.Register)]
     [HttpPost("register")]
@@ -108,8 +108,102 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             }
         }
 
-        string token = tokenService.CreateToken(user);
-        return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        if (!user.TwoFactorEnabled)
+        {
+	        string token = tokenService.CreateToken(user);
+	        return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        }
+        
+        var (challenge, challengeToken, code) = twoFactorService.CreateChallenge(user);
+        db.LoginChallenges.Add(challenge);
+        await db.SaveChangesAsync();
+        try
+        {
+	        await twoFactorService.SendCodeAsync(user.Email, code);
+        }
+        catch (Exception ex)
+        {
+	        logger.LogError(ex, "Failed to send 2FA challenge to {Email}", user.Email);
+        }
+        return Ok(new AuthResponseDTO { Requires2FA = true, ChallengeToken = challengeToken });
+    }
+
+    [EnableRateLimiting(RateLimitPolicies.LoginTwoFactor)]
+    [HttpPost("login/2fa")]
+    public async Task<ActionResult<AuthResponseDTO>> LoginTwoFactor(TwoFactorLoginDTO dto)
+    {
+        var tokenHash = twoFactorService.HashToken(dto.ChallengeToken);
+        var challenge = await db.LoginChallenges
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.TokenHash == tokenHash);
+
+        if (challenge is null)
+            return Unauthorized("Login expired. Please log in again.");
+
+        var result = twoFactorService.VerifyChallenge(challenge, dto.Code);
+
+        if (result == CodeVerificationResult.Invalid)
+        {
+            await db.SaveChangesAsync();
+            return BadRequest("Invalid code. Please try again.");
+        }
+
+        if (result != CodeVerificationResult.Valid)
+        {
+            db.LoginChallenges.Remove(challenge);
+            await db.SaveChangesAsync();
+
+            return Unauthorized(result == CodeVerificationResult.TooManyAttempts
+                ? "Too many attempts. Please log in again."
+                : "Login expired. Please log in again.");
+        }
+
+        db.LoginChallenges.Remove(challenge);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Unauthorized("Login expired. Please log in again.");
+        }
+
+        string token = tokenService.CreateToken(challenge.User);
+        return Ok(new AuthResponseDTO { Token = token, User = challenge.User.Adapt<UserResponseDTO>() });
+    }
+
+    [EnableRateLimiting(RateLimitPolicies.LoginTwoFactorResend)]
+    [HttpPost("login/2fa/resend")]
+    public async Task<IActionResult> ResendTwoFactorCode(TwoFactorResendDTO dto)
+    {
+        var tokenHash = twoFactorService.HashToken(dto.ChallengeToken);
+        var challenge = await db.LoginChallenges
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.TokenHash == tokenHash);
+
+        if (challenge is null)
+            return Unauthorized("Login expired. Please log in again.");
+
+        if (challenge.TokenExpiration < DateTime.UtcNow)
+        {
+            db.LoginChallenges.Remove(challenge);
+            await db.SaveChangesAsync();
+            return Unauthorized("Login expired. Please log in again.");
+        }
+
+        var code = twoFactorService.RenewCode(challenge);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            await twoFactorService.SendCodeAsync(challenge.User.Email, code);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resending 2FA code to {Email}", challenge.User.Email);
+        }
+
+        return Ok("A new code has been sent to your email.");
     }
 
 	[EnableRateLimiting(RateLimitPolicies.ResendEmail)]

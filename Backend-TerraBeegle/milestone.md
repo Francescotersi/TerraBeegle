@@ -194,8 +194,10 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
         `PendingEmail = null` → `catch` pe `UniqueViolation` → 409 (adresa luată între cerere și confirmare)
   - [x] o singură operație cu cod activă: `ChangeEmail` pune `ForgotPasswordRequested = false`,
         `ForgotPasswordRequest` pune `PendingEmail = null` (altfel codul de resetare ar confirma schimbarea email-ului)
-  - [ ] text separat pentru emailul de schimbare (acum pleacă „Thank you for creating an account”, vezi 56)
-  - [ ] rate limiting pe `PATCH /email` (trimite emailuri reale) — policy propriu, ex: `"change-email"`, per user
+  - [x] text separat pentru emailul de schimbare (acum pleacă „Thank you for creating an account”, vezi 56)
+        → `EmailCodePurpose.ChangeEmail` (punctul 56)
+  - [x] rate limiting pe `PATCH /email` (trimite emailuri reale) — policy propriu, ex: `"change-email"`, per user
+        → `RateLimitPolicies.ChangeEmail` (3 / 10 min, `ByUser`) + `ConfirmEmail` pe `/email/confirm` (punctul 59)
 
 ## După merge-ul cu `fracerba` — grave
 
@@ -310,7 +312,7 @@ salvați jocuri.
 
 ## Frontend ↔ backend
 
-- [ ] **33. În Docker frontend-ul nu poate ajunge la backend**
+- [x] **33. În Docker frontend-ul nu poate ajunge la backend**
   `frontend-TerraBeegle/proxy.conf.json` trimite `/api` către `http://localhost:5144`. Local (`npm start`) merge,
   dar în containerul `terrabeegle-frontend` `localhost` e chiar containerul frontend-ului → orice apel `/api/...`
   dă eroare de conexiune. Nu se vede încă pentru că frontend-ul nu face niciun apel HTTP.
@@ -318,10 +320,12 @@ salvați jocuri.
   - [x] `proxy.conf.json` → `proxy.conf.js` cu `target: process.env.API_URL || "http://localhost:5144"`
         → făcut cu variabila `BACKEND_URL` în loc de `API_URL`
   - [x] `package.json` (`start`, `dev`) arată spre `proxy.conf.js`
-  - [ ] `angular.json` (`proxyConfig`, linia 77) arată încă spre `proxy.conf.json`, care nu mai există →
+  - [x] `angular.json` (`proxyConfig`, linia 77) arată încă spre `proxy.conf.json`, care nu mai există →
         `ng serve` fără `--proxy-config` (ex: din IDE) nu pornește proxy-ul
+        → verificat 05.11: `angular.json` arată acum spre `proxy.conf.js`
   - [x] în `docker-compose.yml`, la serviciul `frontend`: `environment: BACKEND_URL: http://backend:8080`
-  - [ ] de vorbit cu colegul care a făcut imaginea Docker a frontend-ului
+  - [x] de vorbit cu colegul care a făcut imaginea Docker a frontend-ului
+        → nu mai e nevoie: toate schimbările de mai sus sunt în repo
 
 ## Verificare email
 
@@ -409,6 +413,105 @@ salvați jocuri.
   **De decis mai târziu**
   - [x] punctul 14 (schimbarea email-ului) refolosește același mecanism: noul email se salvează doar după ce
         codul trimis pe el e confirmat → decis și făcut pe 04.11.2026
+
+## Autentificare în doi pași (2FA)
+
+- [ ] **61. 2FA opțional, cu cod trimis pe email la fiecare login**
+  Userul își activează 2FA din setări. Cu 2FA activ, după parola corectă login-ul **nu** mai întoarce JWT-ul:
+  serverul trimite un cod pe email și dă frontend-ului un **challenge token** (string aleator, nu îl vede userul).
+  Frontend-ul trimite `challengeToken` + `code` la `POST /api/auth/login/2fa` → abia atunci primește JWT-ul.
+  **Decizii (06.11.2026):**
+  - 2FA e **opțional** (implicit dezactivat); fără 2FA login-ul rămâne exact ca acum
+  - codul 2FA **nu** refolosește câmpurile `EmailVerification*` din `User` → altfel s-ar suprascrie / s-ar putea
+    folosi la `forgot-password` sau la confirmarea emailului (vezi „o singură operație cu cod activă”, punctul 14)
+  - fiecare încercare de login are rândul ei într-un tabel nou, `LoginChallenges`
+  - verificarea emailului (34) rămâne separată; 2FA se poate activa doar cu email verificat
+
+  **Pasul 1 — modelul + migrația**
+  - [x] în `User`: `TwoFactorEnabled` (`bool`, implicit `false`) + `ICollection<LoginChallenge> LoginChallenges`
+  - [x] model nou `LoginChallenge`: `Id`, `UserId` (+ navigarea `User`), `TokenHash`, `CodeHash` (`string`, nu nullable:
+        rândul există doar cât challenge-ul e activ, apoi se șterge), `CodeExpiration`, `CodeAttempts`, `TokenExpiration`
+        → două expirări în loc de `Expiration` + `CreatedAt`: `TokenExpiration` = limita fixă a login-ului (ex: 15 min),
+        `CodeExpiration` = valabilitatea codului curent (ex: 5 min, resetată la resend, dar niciodată după `TokenExpiration`)
+  - [x] `DbSet<LoginChallenge>` în `AppDbContext`; index unic pe `TokenHash` (căutarea se face după el);
+        `OnDelete(DeleteBehavior.Cascade)` spre `User` → `DeleteUser` și ștergerea conturilor neverificate (34, pasul 6)
+        nu se blochează
+        → `TokenHash` / `CodeHash` cu `HasMaxLength(64)` (SHA256 în hex); relația scrisă pe ambele părți, ca la `Reviews`
+  - [x] `TwoFactorEnabled` în `UserResponseDTO` (setările din frontend afișează starea)
+  - [x] migrația (`AddTwoFactor`) + verificat cu `has-pending-model-changes` (06.11: fără schimbări rămase)
+  - [x] testat din Docker pe o bază goală (`docker compose down -v`): `AddTwoFactor` se aplică
+
+  **Pasul 2 — serviciul**
+  - [x] `ITwoFactorService` / `TwoFactorService` (separat de `EmailVerificationService`), cu:
+        `CreateChallenge(user)` → întoarce `(challenge, token, code)` și salvează doar hash-urile;
+        `HashToken(token)`; `VerifyChallenge(challenge, code)` → `CodeVerificationResult` (același enum);
+        `RenewCode(challenge)` (pentru pasul 6); `SendCodeAsync(email, code)`
+  - [x] token-ul: `RandomNumberGenerator.GetBytes(32)` → hex (64 caractere, nu se tastează); `HashToken` = doar
+        SHA256, **fără** `Trim` / `ToUpper`; codul: ca la 34 (8 caractere din același alfabet)
+  - [x] `SecureCode` (static): alfabetul, `Generate()`, `Hash(code)`, `Matches(hash, code)` cu `FixedTimeEquals`,
+        folosit de ambele servicii → `EmailVerificationService` nu mai are alfabetul / `HashCode` proprii
+  - [x] `TwoFactorService.CodeLifetime` = 5 min, `TokenLifetime` = 15 min, `MaxAttempts = 5`;
+        `VerifyChallenge` verifică **ambele** expirări; `RenewCode` nu trece niciodată de `TokenExpiration`
+  - [x] ca la `VerifyCode`: serviciul doar modifică entitățile, salvează controller-ul
+  - [x] `EmailCodePurpose.TwoFactorLogin` cu text propriu („Someone is trying to log in… someone knows your
+        password”); durata din email vine din `TwoFactorService.CodeLifetime` (5 min, restul 15)
+  - [x] `AddScoped<ITwoFactorService, TwoFactorService>()` în `Program.cs`
+
+  **Pasul 3 — activare / dezactivare** (în `UserController`, `[Authorize]`, id-ul din `Utils.GetCurrentUserId`)
+  - [x] `POST /api/users/2fa/enable` cu `{ password }` (`TwoFactorDTO`): doar dacă `EmailVerified`, altfel 400;
+        parolă greșită → 400 (ca la `ChangePassword`); deja activ → tot 200 (ca la 53, repetarea nu e eroare)
+  - [x] `POST /api/users/2fa/disable` cu `{ password }` → un JWT furat singur nu poate opri 2FA
+        (codul pe email la dezactivare rămâne opțional, pentru mai târziu)
+  - [x] la dezactivare se șterg challenge-urile active ale userului (`ExecuteDeleteAsync`)
+  - [x] rate limiting per user pe ambele: `RateLimitPolicies.TwoFactor` (5 / min, `ByUser`)
+  - [x] testat din Docker (06.11)
+
+  **Pasul 4 — `POST /api/auth/login` cu 2FA**
+  - [x] ordinea: user găsit → parolă corectă (altfel 401) → email verificat (34) → `TwoFactorEnabled`?
+  - [x] fără 2FA → JWT, ca acum
+  - [x] cu 2FA → `CreateChallenge`, `LoginChallenges.Add`, `SaveChangesAsync`, apoi `SendCodeAsync` în `try/catch`
+        (eroarea de trimitere doar în log, ca la 34) → 200 `{ requires2FA: true, challengeToken }`, **fără** token JWT
+  - [x] `AuthResponseDTO` cu ambele forme: `Token` / `User` nullable + `Requires2FA` + `ChallengeToken`
+        → `Login` rămâne `ActionResult<AuthResponseDTO>`; `login/2fa` (pasul 5) întoarce același DTO, cu token
+  - [x] faptul că userul are 2FA se vede doar **după** parola corectă
+  - [x] testat din Docker (06.11)
+
+  **Pasul 5 — `POST /api/auth/login/2fa`**
+  - [x] public, body `{ challengeToken, code }` (`TwoFactorLoginDTO`, token cu `[StringLength(64, MinimumLength = 64)]`)
+  - [x] challenge găsit după hash-ul token-ului (`Include(c => c.User)`); inexistent → 401 „Login expired”
+  - [x] `VerifyChallenge`, apoi: cod greșit → `SaveChangesAsync` (se numără `CodeAttempts`) → **400**;
+        expirat / prea multe încercări → challenge-ul se șterge → **401** (frontend-ul se întoarce la parolă)
+        → regula pentru frontend: 400 = rămâi pe ecranul cu codul, 401 = login de la zero
+  - [x] cod corect → challenge-ul se **șterge și se salvează înainte** de JWT (o singură folosire);
+        `catch (DbUpdateConcurrencyException)` → 401: două request-uri simultane cu același cod → doar unul primește token
+  - [x] rate limiting `LoginTwoFactor` (`login-two-factor`): 5 / minut per IP
+
+  **Pasul 6 — retrimiterea codului**
+  - [x] `POST /api/auth/login/2fa/resend` cu `{ challengeToken }` (`TwoFactorResendDTO`) → `RenewCode`: cod nou,
+        `CodeAttempts = 0`, `CodeExpiration` nouă, dar maxim `TokenExpiration` (care nu se schimbă)
+  - [x] challenge inexistent sau `TokenExpiration` trecut → 401 (challenge-ul expirat se șterge)
+  - [x] salvare, apoi email în `try/catch` (ca la `resend-email`)
+  - [x] rate limiting `LoginTwoFactorResend` (`login-two-factor-resend`): 3 / 10 min per IP
+  - de știut: resend-ul resetează încercările → cine are `challengeToken` (și deci a știut parola) are maxim
+        5 încercări × câte resend-uri permite rate limit-ul, în cele 15 minute → tot imposibil de ghicit (31⁸ coduri)
+
+  **Pasul 7 — curățenie**
+  - [x] `ExpiredLoginChallengeCleanupService` (`BackgroundService` separat, o dată pe oră): șterge challenge-urile cu
+        `TokenExpiration < UtcNow` (cele abandonate; cele folosite / eșuate se șterg deja în `AuthController`)
+  - [ ] un user nu poate strânge sute de challenge-uri: limitat deja de rate limit-ul de login (5 / min per IP) și
+        de parolă; o limită per user (ex: maxim N active) rămâne opțională
+
+  **Testare (din Docker)**
+  - [ ] user fără 2FA → login dă JWT direct
+  - [ ] `enable` cu email neverificat → 400; cu parolă greșită → 400; corect → `TwoFactorEnabled = true`
+  - [ ] login cu 2FA → fără JWT, cu `challengeToken`; email primit
+  - [ ] `login/2fa` cu cod greșit → 400 și `CodeAttempts` crește; × 5, apoi orice cod → 401 și rândul dispare
+  - [ ] `login/2fa` cu cod corect → JWT + `user`, rândul dispare; același `challengeToken` a doua oară → 401
+  - [ ] cod mai vechi de 5 minute → 401; `challengeToken` inventat (64 caractere) → 401
+  - [ ] `login/2fa/resend` → email nou; codul vechi nu mai merge, cel nou da
+  - [ ] rate limit: 6 × `login/2fa` într-un minut → 429; 4 × `resend` în 10 min → 429
+  - [ ] codul 2FA **nu** merge la `forgot-password` / `email/confirm` și invers
+  - [ ] `disable` → login-ul dă din nou JWT direct
 
 ## După merge-ul din 02.11.2026 — grave
 
@@ -536,8 +639,10 @@ salvați jocuri.
   - [ ] 6 × `PATCH /api/users/password` cu parola veche greșită → 5 × 400, apoi 429
   **Opțional**
   - [ ] `GlobalLimiter` generos (ex: 100 / min per user sau IP), ca un endpoint nou fără atribut să fie protejat
-  - [ ] mesajul din `OnRejected` („Try again in a minute”) din `retryAfter`, nu fix (vezi 56)
-  - [ ] endpoint-urile de email fără `{id}` în rută, ca `ModifyUser` / `ChangePassword` (id-ul din token)
+  - [x] mesajul din `OnRejected` („Try again in a minute”) din `retryAfter`, nu fix (vezi 56)
+  - [x] endpoint-urile de email fără `{id}` în rută, ca `ModifyUser` / `ChangePassword` (id-ul din token)
+        → verificat 05.11: `PATCH /api/users/email` și `POST /api/users/email/confirm`, id-ul din
+        `Utils.GetCurrentUserId`, cu `[Authorize]` pe ambele
 
 ## După merge-ul din 02.11.2026 — `GET /api/games` (punctul 36)
 
@@ -630,6 +735,9 @@ salvați jocuri.
   Un serviciu nu ar trebui să depindă de controllere. `Utils.IsCurrentUser(User, id)` → extension method pe
   `ClaimsPrincipal` (ex: `User.GetUserId()`, cum scrie la 32). (`AuthController` nu mai citește token-ul deloc
   după 02.11, deci nu mai are cod copiat.)
+  → stare 05.11: `RawgService` are încă `using Backend_TerraBeegle.Controllers;`, dar nu mai folosește `Utils`
+  (import inutil, se poate șterge). `Utils` e tot în `Controllers`; acum are și `GetCurrentUserId`, folosit în
+  `UserController`, `FriendshipController`, `UserGamesController`
 
 - [ ] **55. Cod nefolosit**
   - [x] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
