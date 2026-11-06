@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<ParentPlatform> ParentPlatforms => Set<ParentPlatform>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<LoginChallenge> LoginChallenges => Set<LoginChallenge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasMany(u => u.Reviews)
                 .WithOne(r => r.User)
                 .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(u => u.LoginChallenges)
+                .WithOne(c => c.User)
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -270,6 +276,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(r => r.Game)
                 .WithMany(g => g.Reviews)
                 .HasForeignKey(r => r.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // LOGIN CHALLENGES (2FA)
+        modelBuilder.Entity<LoginChallenge>(e =>
+        {
+            e.Property(c => c.Id).ValueGeneratedOnAdd();
+
+            // SHA256 as hex = 64 characters
+            e.Property(c => c.TokenHash)
+                .IsRequired()
+                .HasMaxLength(64);
+
+            e.Property(c => c.CodeHash)
+                .IsRequired()
+                .HasMaxLength(64);
+
+            // The challenge is looked up by the hash of the token sent to the frontend
+            e.HasIndex(c => c.TokenHash).IsUnique();
+
+            e.HasOne(c => c.User)
+                .WithMany(u => u.LoginChallenges)
+                .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

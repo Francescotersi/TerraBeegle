@@ -23,10 +23,13 @@ public class User
     public string? PendingEmail { get; set; }
     public bool ForgotPasswordRequested { get; set; } = false;
     
+    public bool TwoFactorEnabled { get; set; } = false;
+    
     public ICollection<Friendship> FriendRequestsAsUser1 { get; set; } = [];
     public ICollection<Friendship> FriendRequestsAsUser2 { get; set; } = [];
 
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<Game> Favorites { get; set; } = [];
     public ICollection<Game> WishlistItems { get; set; } = [];
+    public ICollection<LoginChallenge> LoginChallenges { get; set; } = [];
 }

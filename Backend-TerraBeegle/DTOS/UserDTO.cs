@@ -18,6 +18,7 @@ public class UserResponseDTO
     public string FamilyName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool EmailVerified { get; set; }
+    public bool TwoFactorEnabled { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
     public Theme Theme { get; set; }
@@ -70,4 +71,10 @@ public class UpdatePasswordDTO
     [Required]
     [Compare(nameof(NewPassword), ErrorMessage = "The new password and confirmation password do not match.")]
     public string ConfirmNewPassword { get; set; } = string.Empty;
+}
+
+public class TwoFactorDTO
+{
+    [Required]
+    public string Password { get; set; } = string.Empty;
 }
