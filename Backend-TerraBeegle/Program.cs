@@ -120,6 +120,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowPolicy(RateLimitPolicies.ChangePassword, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
     options.AddFixedWindowPolicy(RateLimitPolicies.UserWrite, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
     options.AddFixedWindowPolicy(RateLimitPolicies.UserGames, 30, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.TwoFactor, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByUser);
+    options.AddFixedWindowPolicy(RateLimitPolicies.LoginTwoFactor, 5, TimeSpan.FromMinutes(1), RateLimitOptionExtensions.ByIp);
+    options.AddFixedWindowPolicy(RateLimitPolicies.LoginTwoFactorResend, 3, TimeSpan.FromMinutes(10), RateLimitOptionExtensions.ByIp);
     // new policies go here (name in RateLimitPolicies, ByIp for public endpoints, ByUser for [Authorize])
 });
 
@@ -135,7 +138,9 @@ builder.Services.AddScoped<IRawgService, RawgService>();
 builder.Services.AddScoped<IIGDBService, IGDBService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddHostedService<UnverifiedUserCleanupService>();
+builder.Services.AddHostedService<ExpiredLoginChallengeCleanupService>();
 
 // IHttpClientFactory for the HTTP calls to RAWG
 builder.Services.AddHttpClient("RawgAPI", client =>

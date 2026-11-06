@@ -307,7 +307,60 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         return Ok("Email changed successfully.");
     }
+
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
+    [HttpPost("2fa/enable")]
+    public async Task<ActionResult> EnableTwoFactor(TwoFactorDTO twoFactorDTO)
+    {
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var user = await db.Users.FindAsync(userId.Value);
+        if (user is null)
+            return NotFound();
+        
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, twoFactorDTO.Password) == PasswordVerificationResult.Failed)
+            return BadRequest("Password is incorrect.");
+        
+        if(!user.EmailVerified)
+            return BadRequest("Verify your email before enabling two-factor authentication.");
+
+        user.TwoFactorEnabled = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Ok("Two-factor authentication enabled successfully.");
+    }
     
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
+    [HttpPost("2fa/disable")]
+    public async Task<ActionResult> DisableTwoFactor(TwoFactorDTO twoFactorDTO)
+    {
+        var userId = Utils.GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var user = await db.Users.FindAsync(userId.Value);
+        if (user is null)
+            return NotFound();
+        
+        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, twoFactorDTO.Password) == PasswordVerificationResult.Failed)
+            return BadRequest("Password is incorrect.");
+
+        user.TwoFactorEnabled = false;
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.LoginChallenges.Where(c => c.UserId == user.Id).ExecuteDeleteAsync();
+        await db.SaveChangesAsync();
+
+        return Ok("Two-factor authentication disabled successfully.");
+    }
 
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]

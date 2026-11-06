@@ -45,6 +45,23 @@ public class LoginDTO
     public string? Code { get; set; }
 }
 
+public class TwoFactorLoginDTO
+{
+    [Required]
+    [StringLength(64, MinimumLength = 64)]
+    public string ChallengeToken { get; set; } = string.Empty;
+    [Required]
+    [StringLength(8, MinimumLength = 8)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public class TwoFactorResendDTO
+{
+    [Required]
+    [StringLength(64, MinimumLength = 64)]
+    public string ChallengeToken { get; set; } = string.Empty;
+}
+
 public class SendEmailDTO
 {
     [Required]
@@ -75,6 +92,8 @@ public class ForgotPasswordDTO
 
 public class AuthResponseDTO
 {
-    public string Token { get; set; } = string.Empty;
-    public UserResponseDTO User { get; set; } = null!;
+    public string? Token { get; set; }
+    public UserResponseDTO? User { get; set; }
+    public bool Requires2FA { get; set; }
+    public string? ChallengeToken { get; set; }
 }

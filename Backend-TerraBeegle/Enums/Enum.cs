@@ -167,5 +167,6 @@ public enum EmailCodePurpose
     Register,
     ResendVerification,
     ForgotPassword,
-    ChangeEmail
+    ChangeEmail,
+    TwoFactorLogin
 }
