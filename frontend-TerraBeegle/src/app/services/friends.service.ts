@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, switchMap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AlertService } from './alert.service';
 import { FriendshipResponseDTO, FriendshipUpdateDTO, PagedResponse } from '../models/friendship.model';
+import { UserPublicResponseDTO } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root',
@@ -35,6 +36,19 @@ export class FriendsService {
     return this.http.get<PagedResponse<FriendshipResponseDTO>>(`${this.baseUrl}/sent`, { params });
   }
 
+  searchUsers(username: string, pageSize: number = 5): Observable<PagedResponse<UserPublicResponseDTO>> {
+    const cleanTerm = username.trim().replace(/^@/, '');
+    const params = new HttpParams()
+      .set('username', cleanTerm)
+      .set('pageSize', pageSize.toString());
+    return this.http.get<PagedResponse<UserPublicResponseDTO>>('/api/users/search', { params });
+  }
+
+  getUserByUsername(username: string): Observable<UserPublicResponseDTO> {
+    const cleanUsername = username.trim().replace(/^@/, '');
+    return this.http.get<UserPublicResponseDTO>(`/api/users/${encodeURIComponent(cleanUsername)}`);
+  }
+
   sendRequest(receiverId: number): Observable<FriendshipResponseDTO> {
     const senderId = this.authService.currentUser()?.id;
     if (!senderId) {
@@ -49,6 +63,12 @@ export class FriendsService {
 
     const payload = { senderId, receiverId };
     return this.http.post<FriendshipResponseDTO>(this.baseUrl, payload);
+  }
+
+  sendRequestByUsername(username: string): Observable<FriendshipResponseDTO> {
+    return this.getUserByUsername(username).pipe(
+      switchMap((user) => this.sendRequest(user.id))
+    );
   }
 
   acceptRequest(friendship: FriendshipResponseDTO): Observable<FriendshipResponseDTO> {

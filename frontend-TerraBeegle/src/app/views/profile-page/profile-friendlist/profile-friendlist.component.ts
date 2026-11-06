@@ -1,0 +1,254 @@
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FriendsService } from '../../../services/friends.service';
+import { FriendshipResponseDTO } from '../../../models/friendship.model';
+import { AlertService } from '../../../services/alert.service';
+import { ProfileFriendSearchComponent } from './profile-friend-search.component';
+import { ProfileFriendCardComponent } from './profile-friend-card.component';
+
+type SubTab = 'friends' | 'received' | 'sent';
+
+@Component({
+  selector: 'app-profile-friendlist',
+  standalone: true,
+  imports: [CommonModule, ProfileFriendSearchComponent, ProfileFriendCardComponent],
+  template: `
+    <div class="friends-container d-flex flex-column gap-3">
+
+      <!-- Add Friend Box con Search Bar a sinistra e Testo a destra -->
+      <app-profile-friend-search (requestSent)="loadAll()" />
+
+      <!-- Navigation Tabs -->
+      <div class="d-flex gap-2 border-bottom border-secondary border-opacity-25 pb-2">
+        <button
+          type="button"
+          class="sub-tab-btn"
+          [class.active]="activeTab() === 'friends'"
+          (click)="switchTab('friends')"
+        >
+          Friends
+          <span class="tab-count-badge ms-1">{{ friends().length }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="sub-tab-btn"
+          [class.active]="activeTab() === 'received'"
+          (click)="switchTab('received')"
+        >
+          Received
+          @if (received().length > 0) {
+            <span class="badge bg-danger ms-1">{{ received().length }}</span>
+          } @else {
+            <span class="tab-count-badge ms-1">0</span>
+          }
+        </button>
+
+        <button
+          type="button"
+          class="sub-tab-btn"
+          [class.active]="activeTab() === 'sent'"
+          (click)="switchTab('sent')"
+        >
+          Sent
+          <span class="tab-count-badge ms-1">{{ sent().length }}</span>
+        </button>
+      </div>
+
+      <!-- Tab Contents -->
+      @if (isLoading()) {
+        <div class="text-center py-4 text-body-secondary small">
+          Loading friends...
+        </div>
+      } @else {
+
+        <!-- 1. FRIENDS LIST -->
+        @if (activeTab() === 'friends') {
+          @if (friends().length === 0) {
+            <div class="empty-state p-4 text-center rounded-3 text-body-secondary small">
+              You haven't added any friends yet. Search above to add your first friend!
+            </div>
+          } @else {
+            <div class="d-flex flex-column gap-2">
+              @for (f of friends(); track f.id) {
+                <app-profile-friend-card
+                  [friend]="f"
+                  type="friend"
+                  (remove)="onDelete($event.id, $event.message)"
+                />
+              }
+            </div>
+          }
+        }
+
+        <!-- 2. RECEIVED REQUESTS -->
+        @if (activeTab() === 'received') {
+          @if (received().length === 0) {
+            <div class="empty-state p-4 text-center rounded-3 text-body-secondary small">
+              No pending friend requests received.
+            </div>
+          } @else {
+            <div class="d-flex flex-column gap-2">
+              @for (f of received(); track f.id) {
+                <app-profile-friend-card
+                  [friend]="f"
+                  type="received"
+                  (accept)="onAccept($event)"
+                  (reject)="onReject($event)"
+                />
+              }
+            </div>
+          }
+        }
+
+        <!-- 3. SENT REQUESTS -->
+        @if (activeTab() === 'sent') {
+          @if (sent().length === 0) {
+            <div class="empty-state p-4 text-center rounded-3 text-body-secondary small">
+              No pending requests sent.
+            </div>
+          } @else {
+            <div class="d-flex flex-column gap-2">
+              @for (f of sent(); track f.id) {
+                <app-profile-friend-card
+                  [friend]="f"
+                  type="sent"
+                  (remove)="onDelete($event.id, $event.message)"
+                />
+              }
+            </div>
+          }
+        }
+
+      }
+    </div>
+  `,
+  styles: `
+    :host {
+      display: block;
+      width: 100%;
+    }
+
+    .empty-state {
+      background: var(--tb-glass-bg);
+      border: 1px solid var(--tb-glass-border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .sub-tab-btn {
+      background: none;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--bs-secondary-color);
+      padding: 0.4rem 0.85rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .sub-tab-btn.active {
+      color: var(--tb-accent);
+      background: var(--tb-accent-subtle);
+    }
+
+    .tab-count-badge {
+      font-size: 0.72rem;
+      opacity: 0.8;
+      background: rgba(125, 125, 125, 0.15);
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+    }
+
+    .sub-tab-btn.active .tab-count-badge {
+      background: var(--tb-accent);
+      color: #fff;
+    }
+  `,
+})
+export class ProfileFriendlistComponent implements OnInit {
+  private readonly friendsService = inject(FriendsService);
+  private readonly alertService = inject(AlertService);
+
+  readonly activeTab = signal<SubTab>('friends');
+  readonly friends = signal<FriendshipResponseDTO[]>([]);
+  readonly received = signal<FriendshipResponseDTO[]>([]);
+  readonly sent = signal<FriendshipResponseDTO[]>([]);
+  readonly isLoading = signal(false);
+
+  ngOnInit(): void {
+    this.loadAll();
+  }
+
+  loadAll(): void {
+    this.isLoading.set(true);
+    let loadedCount = 0;
+    const checkDone = () => {
+      loadedCount++;
+      if (loadedCount >= 3) {
+        this.isLoading.set(false);
+      }
+    };
+
+    this.friendsService.getFriends().subscribe({
+      next: (res) => {
+        this.friends.set(res.items);
+        checkDone();
+      },
+      error: () => checkDone(),
+    });
+
+    this.friendsService.getReceivedRequests().subscribe({
+      next: (res) => {
+        this.received.set(res.items);
+        checkDone();
+      },
+      error: () => checkDone(),
+    });
+
+    this.friendsService.getSentRequests().subscribe({
+      next: (res) => {
+        this.sent.set(res.items);
+        checkDone();
+      },
+      error: () => checkDone(),
+    });
+  }
+
+  switchTab(tab: SubTab): void {
+    this.activeTab.set(tab);
+  }
+
+  onAccept(f: FriendshipResponseDTO): void {
+    this.friendsService.acceptRequest(f).subscribe({
+      next: () => {
+        this.alertService.showAlert(`Friend request from @${f.user.username} accepted!`);
+        this.loadAll();
+      },
+      error: () => this.alertService.showAlert('Error accepting friend request'),
+    });
+  }
+
+  onReject(f: FriendshipResponseDTO): void {
+    this.friendsService.rejectRequest(f).subscribe({
+      next: () => {
+        this.alertService.showAlert('Friend request declined.');
+        this.loadAll();
+      },
+      error: () => this.alertService.showAlert('Error declining friend request'),
+    });
+  }
+
+  onDelete(id: number, successMessage: string): void {
+    this.friendsService.deleteFriendship(id).subscribe({
+      next: () => {
+        this.alertService.showAlert(successMessage);
+        this.loadAll();
+      },
+      error: () => this.alertService.showAlert('Error removing friendship'),
+    });
+  }
+}

@@ -204,14 +204,12 @@ export class OtpComponent implements OnInit {
   protected readonly otpCode = signal('');
   protected readonly is2FA = signal(false);
 
-  // Dati di contesto per i due flussi
   protected readonly challengeToken = signal<string | null>(null);
   protected readonly emailOrUsername = signal<string>('');
   protected readonly email = signal<string>('');
   protected readonly password = signal<string>('');
 
   ngOnInit(): void {
-    // 1. Legge dal segnale in AuthService o dallo stato della navigazione
     const ctx: OtpContext | null = this.authService.pendingOtpContext() || (history.state as OtpContext) || null;
 
     if (ctx && (ctx.type === '2fa' || ctx.type === 'email-verification')) {
@@ -222,7 +220,6 @@ export class OtpComponent implements OnInit {
       if (ctx.password) this.password.set(ctx.password);
       if (ctx.message) this.infoMessage.set(ctx.message);
     } else {
-      // Se nessun contesto trovato, reindirizza al login
       this.router.navigate(['/login']);
     }
   }
@@ -237,7 +234,6 @@ export class OtpComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    // FLUSSO A: 2FA Login
     if (this.is2FA()) {
       const token = this.challengeToken();
       if (!token) {
@@ -260,7 +256,6 @@ export class OtpComponent implements OnInit {
       return;
     }
 
-    // FLUSSO B: Email Verification (Login con Code)
     const identifier = this.emailOrUsername();
     const pwd = this.password();
 
@@ -293,7 +288,6 @@ export class OtpComponent implements OnInit {
     this.isResending.set(true);
     this.errorMessage.set(null);
 
-    // Reinvio 2FA
     if (this.is2FA()) {
       const token = this.challengeToken();
       if (!token) {
@@ -315,7 +309,6 @@ export class OtpComponent implements OnInit {
       return;
     }
 
-    // Reinvio Email Verification
     const emailToUse = this.email() || (this.emailOrUsername().includes('@') ? this.emailOrUsername() : '');
     if (!emailToUse) {
       this.isResending.set(false);

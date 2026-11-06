@@ -4,7 +4,7 @@ import { AuthService } from '../../services/auth.service';
 import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileStatisticsComponent } from './profile-statistics.component';
-import { ProfileFriendlistComponent } from './profile-friendlist.component';
+import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendlist.component';
 import { ProfileSettingsComponent } from './profile-settings.component';
 
 // da fare tasto modify profile 
