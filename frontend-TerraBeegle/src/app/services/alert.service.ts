@@ -1,11 +1,7 @@
 import { Injectable, signal } from '@angular/core';
+import { AlertNotification, AlertType } from '../models/alert.model';
 
-export interface AlertNotification {
-  id: number;
-  message: string;
-  type?: 'danger' | 'warning' | 'info' | 'success';
-  durationMs?: number;
-}
+export type { AlertNotification, AlertType };
 
 @Injectable({
   providedIn: 'root',
@@ -16,10 +12,6 @@ export class AlertService {
 
   readonly currentAlert = signal<AlertNotification | null>(null);
 
-  /**
-   * Displays a compact Bootstrap danger alert in the top-right corner.
-   * Auto-dismisses after durationMs (default: 3000ms = 3 seconds).
-   */
   showAlert(message: string, durationMs: number = 3000): void {
     if (this.timer) {
       clearTimeout(this.timer);

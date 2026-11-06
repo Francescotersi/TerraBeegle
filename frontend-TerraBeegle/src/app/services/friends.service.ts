@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AlertService } from './alert.service';
-import { FriendshipResponseDTO, FriendshipUpdateDTO, PagedResponse } from '../models/frindship.model';
+import { FriendshipResponseDTO, FriendshipUpdateDTO, PagedResponse } from '../models/friendship.model';
 
 @Injectable({
   providedIn: 'root',

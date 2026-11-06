@@ -1,55 +1,20 @@
-import { Inject, Injectable, inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 import { GridComponentProps } from '../views/grid/grid.component';
+import {
+  GameSearchParams,
+  GameCardDTO,
+  GameSearchResponse,
+  GameDetailsDTO,
+} from '../models/game.model';
 
-export interface GameSearchParams {
-  page?: number;
-  pageSize?: number;
-  name?: string;
-  sortBy?: 'name' | 'released' | 'added' | 'created' | 'updated' | 'rating' | 'metacritic';
-  ascending?: boolean;
-  genres?: string;
-  platforms?: string;
-  releaseDate?: string;
-  metacritic?: string;
-}
-
-export interface GameCardDTO {
-  rawgGameId: number;
-  name: string;
-  backgroundImage: string | null;
-  rating: number | null;
-  releaseDate: string | null;
-  tba: boolean;
-  genres: { rawgGenreId: number; name: string; slug: string }[];
-  platforms: { rawgPlatformId: number; name: string; slug: string }[];
-}
-
-export interface GameSearchResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: GameCardDTO[];
-}
-
-export interface GameDetailsDTO {
-  rawgGameId: number;
-  name: string;
-  nameOriginal: string;
-  slug: string;
-  description: string;
-  backgroundImage: string | null;
-  releaseDate: string | null;
-  tba: boolean;
-  website: string;
-  rating: number | null;
-  metacritic: number | null;
-  developer: string | null;
-  publisher: string | null;
-  genres: { rawgGenreId: number; name: string; slug: string }[];
-  platforms: { rawgPlatformId: number; name: string; slug: string }[];
-}
+export type {
+  GameSearchParams,
+  GameCardDTO,
+  GameSearchResponse,
+  GameDetailsDTO,
+};
 
 @Injectable({
   providedIn: 'root',

@@ -2,35 +2,9 @@ import { Injectable , inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
+import { User, RegisterPayload, LoginPayload, AuthResponse } from '../models/user.model';
 
-export interface RegisterPayload {
-  name: string;
-  familyName: string;
-  username: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-export interface LoginPayload {
-  emailOrUsername: string;
-  password: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  familyName: string;
-  username: string;
-  email: string;
-  imageProfile?: string | null;
-  theme?: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
+export type { User, RegisterPayload, LoginPayload, AuthResponse };
 
 const TOKEN_KEY = 'tb_token';
 const USER_KEY = 'tb_user';

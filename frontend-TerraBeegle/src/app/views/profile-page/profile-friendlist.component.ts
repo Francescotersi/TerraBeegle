@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FriendsService } from '../../services/friends.service';
-import { FriendshipResponseDTO } from '../../models/frindship.model';
+import { FriendshipResponseDTO } from '../../models/friendship.model';
 import { AlertService } from '../../services/alert.service';
 
 type SubTab = 'friends' | 'received' | 'sent';

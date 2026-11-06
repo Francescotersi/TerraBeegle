@@ -1,10 +1,6 @@
-export type FriendshipStatus = 'Pending' | 'Accepted' | 'Rejected';
+import { UserPublicResponseDTO } from './user.model';
 
-export interface UserPublicResponseDTO {
-  id: number;
-  username: string;
-  imageProfile?: string | null;
-}
+export type FriendshipStatus = 'Pending' | 'Accepted' | 'Rejected';
 
 export interface FriendshipResponseDTO {
   id: number;
@@ -36,3 +32,5 @@ export interface FriendshipUpdateDTO {
   receiverId: number;
   status: FriendshipStatus;
 }
+
+export type { UserPublicResponseDTO };

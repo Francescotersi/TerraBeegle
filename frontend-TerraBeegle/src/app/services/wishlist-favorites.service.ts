@@ -3,11 +3,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AlertService } from './alert.service';
-import { GameCardDTO, GameSearchResponse } from './game.service';
+import { GameCardDTO, GameSearchResponse, GameCollectionType } from '../models/game.model';
 import { GridComponentProps } from '../views/grid/grid.component';
 import { MOCK_GAME_COVERS } from '../mocks/games.mock';
 
-export type GameCollectionType = 'wishlist' | 'favorites';
+export type { GameCollectionType };
 
 @Injectable({
   providedIn: 'root',
