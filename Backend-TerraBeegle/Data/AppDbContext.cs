@@ -119,7 +119,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(g => g.Id).ValueGeneratedOnAdd();
 
-            e.Property(g => g.RawgGameId)
+            e.Property(g => g.ApiGameId)
                 .IsRequired();
 
             e.Property(g => g.Name)
@@ -152,7 +152,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.CreatedAt).HasDefaultValueSql("NOW()");
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
-            e.HasIndex(g => g.RawgGameId).IsUnique();
+            e.HasIndex(g => g.ApiGameId).IsUnique();
             e.HasIndex(g => g.Slug).IsUnique();
             e.HasIndex(g => g.Name);
             
@@ -187,14 +187,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(g => g.Id).ValueGeneratedOnAdd();
 
-            e.Property(g => g.RawgGenreId)
+            e.Property(g => g.ApiGenreId)
                 .IsRequired();
 
             e.Property(g => g.Name)
                 .IsRequired()
                 .HasMaxLength(100);
 
-            e.HasIndex(g => g.RawgGenreId).IsUnique();
+            e.HasIndex(g => g.ApiGenreId).IsUnique();
 
             e.HasIndex(g => g.Name).IsUnique();
 
@@ -208,14 +208,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(p => p.Id).ValueGeneratedOnAdd();
 
-            e.Property(p => p.RawgPlatformId)
+            e.Property(p => p.ApiPlatformId)
                 .IsRequired();
 
             e.Property(p => p.Name)
                 .IsRequired()
                 .HasMaxLength(100);
 
-            e.HasIndex(p => p.RawgPlatformId).IsUnique();
+            e.HasIndex(p => p.ApiPlatformId).IsUnique();
 
             e.HasMany(p => p.Games)
                 .WithMany(g => g.Platforms)
@@ -227,14 +227,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(pp => pp.Id).ValueGeneratedOnAdd();
 
-            e.Property(pp => pp.RawgPlatformId)
+            e.Property(pp => pp.ApiPlatformId)
                 .IsRequired();
 
             e.Property(pp => pp.Name)
                 .IsRequired()
                 .HasMaxLength(100);
 
-            e.HasIndex(pp => pp.RawgPlatformId).IsUnique();
+            e.HasIndex(pp => pp.ApiPlatformId).IsUnique();
 
             e.HasMany(pp => pp.Games)
                 .WithMany(g => g.ParentPlatforms)

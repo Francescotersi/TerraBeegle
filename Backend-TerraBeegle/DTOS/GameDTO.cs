@@ -4,7 +4,7 @@ namespace Backend_TerraBeegle.DTOS;
 
 public class GameMinDTO
 {
-    public int RawgGameId { get; set; }
+    public int ApiGameId { get; set; }
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string? BackgroundImage { get; set; }

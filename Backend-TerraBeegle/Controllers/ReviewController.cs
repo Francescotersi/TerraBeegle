@@ -52,7 +52,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 
 [ApiController]
 [Route("api/games/{gameId:int}/reviews")]
-public class ReviewGameController(AppDbContext db, IRawgService rawgService) : ControllerBase
+public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(int gameId, [FromQuery] PaginationDTO pagination)
@@ -112,7 +112,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         Game? game;
         try
         {
-            game = await rawgService.GetOrCreateGameAsync(gameId);
+            game = await ApiService.GetOrCreateGameAsync(gameId);
         }
         catch (HttpRequestException)
         {
@@ -129,7 +129,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         {
             Rating = reviewCreateDTO.Rating,
             Content = reviewCreateDTO.Content,
-            GameId = game.RawgGameId,
+            GameId = game.ApiGameId,
             UserId = currentUserId.Value,
             CreatedAt = DateTime.UtcNow
         };
@@ -168,7 +168,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         }
 
         var user = await db.Users.FindAsync(currentUserId.Value);
-        if (user is null)
+        if (user is null || !user.EmailVerified)
         {
             return NotFound("User not found.");
         }

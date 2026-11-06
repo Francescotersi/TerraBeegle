@@ -107,7 +107,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value && u.Username == username);
         
-        if (user is null)
+        if (user is null || !user.EmailVerified) // Only return users with confirmed emails
             return NotFound();
         
         return user.Adapt<UserResponseDTO>();

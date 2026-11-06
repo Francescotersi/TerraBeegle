@@ -18,12 +18,12 @@ namespace Backend_TerraBeegle.Controllers;
 [Authorize]
 [ApiController]
 [EnableRateLimiting(RateLimitPolicies.UserGames)]
-[Route("api/users/{userId:long}")]
-public class UserGamesController(AppDbContext db, IRawgService rawgService) : ControllerBase
+[Route("api/users/{userId:long}/favorites")]
+public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     // favorites
     [DisableRateLimiting]
-    [HttpGet("favorites")]
+    [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
         var viewerId = Utils.GetCurrentUserId(User);
@@ -67,8 +67,8 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         ));
     }
 
-    [HttpPost("favorites/{rawgGameId:int}")]
-    public async Task<IActionResult> AddGameToFavorites(long userId, int rawgGameId)
+    [HttpPost("{ApiGameId:int}")]
+    public async Task<IActionResult> AddGameToFavorites(long userId, int ApiGameId)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
@@ -76,7 +76,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
+            game = await ApiService.GetOrCreateGameAsync(ApiGameId);
         }
         catch (HttpRequestException)
         {
@@ -112,14 +112,14 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
 
-    [HttpDelete("favorites/{rawgGameId:int}")]
-    public async Task<IActionResult> DeleteGameFromFavorites(long userId, int rawgGameId)
+    [HttpDelete("{ApiGameId:int}")]
+    public async Task<IActionResult> DeleteGameFromFavorites(long userId, int ApiGameId)
     {
         if(!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
-            .Include(u => u.Favorites.Where(g => g.RawgGameId == rawgGameId))
+            .Include(u => u.Favorites.Where(g => g.ApiGameId == ApiGameId))
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if(user is null)
@@ -136,9 +136,27 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
 
+    private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
+    {
+        if (viewerId == ownerId)
+            return true;
+        
+        var user1Id = Math.Min(viewerId, ownerId);
+        var user2Id = Math.Max(viewerId, ownerId);
+        
+        return await db.Friendships.AnyAsync(f => f.User1Id == user1Id && f.User2Id == user2Id && f.Status == FriendshipStatus.Accepted);
+    }
+}
+
+[Authorize]
+[ApiController]
+[EnableRateLimiting(RateLimitPolicies.UserGames)]
+[Route("api/users/{userId:long}/wishlist")]
+public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : ControllerBase
+{
     // wishlist
     [DisableRateLimiting]
-    [HttpGet("wishlist")]
+    [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {
         var viewerId = Utils.GetCurrentUserId(User);
@@ -181,8 +199,8 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         ));
     }
 
-    [HttpPost("wishlist/{rawgGameId:int}")]
-    public async Task<IActionResult> AddGameToWishlist(long userId, int rawgGameId)
+    [HttpPost("{ApiGameId:int}")]
+    public async Task<IActionResult> AddGameToWishlist(long userId, int ApiGameId)
     {
         if (!Utils.IsCurrentUser(User, userId))
             return Forbid();
@@ -190,7 +208,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         Game? game;
         try
         {
-            game = await rawgService.GetOrCreateGameAsync(rawgGameId);
+            game = await ApiService.GetOrCreateGameAsync(ApiGameId);
         }
         catch (HttpRequestException)
         {
@@ -226,14 +244,14 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
 
-    [HttpDelete("wishlist/{rawgGameId:int}")]
-    public async Task<IActionResult> DeleteGameFromWishlist(long userId, int rawgGameId)
+    [HttpDelete("{ApiGameId:int}")]
+    public async Task<IActionResult> DeleteGameFromWishlist(long userId, int ApiGameId)
     {
         if(!Utils.IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
-            .Include(u => u.WishlistItems.Where(g => g.RawgGameId == rawgGameId))
+            .Include(u => u.WishlistItems.Where(g => g.ApiGameId == ApiGameId))
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if(user is null)
@@ -252,7 +270,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     
     private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
     {
-        if(viewerId == ownerId)
+        if (viewerId == ownerId)
             return true;
         
         var user1Id = Math.Min(viewerId, ownerId);

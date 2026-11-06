@@ -3,7 +3,7 @@ namespace Backend_TerraBeegle.Models;
 public class Game
 {
     public long Id { get; set; }
-    public int RawgGameId { get; set; }                // RAWG Id
+    public int ApiGameId { get; set; }                // API Id
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string Description { get; set; } = null!;
@@ -28,9 +28,9 @@ public class Game
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<RawgObject> DLCs { get; set; } = [];
-    public ICollection<RawgObject> ParentGames { get; set; } = [];
-    public ICollection<RawgObject> Series { get; set; } = [];
+    public ICollection<ApiObject> DLCs { get; set; } = [];
+    public ICollection<ApiObject> ParentGames { get; set; } = [];
+    public ICollection<ApiObject> Series { get; set; } = [];
 
     public ICollection<Genre> Genres { get; set; } = [];
     // public ICollection<Tags> Stores { get; set; } = [];

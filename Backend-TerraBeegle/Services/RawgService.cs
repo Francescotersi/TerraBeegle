@@ -11,11 +11,11 @@ using Backend_TerraBeegle.Controllers;
 
 namespace Backend_TerraBeegle.Services;
 
-// All the communication with the RAWG API: key, URLs, JSON options and mapping to our DTOs
-public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFactory httpClientFactory) : IRawgService
+// All the communication with the Api API: key, URLs, JSON options and mapping to our DTOs
+public class ApiService(AppDbContext db, IConfiguration config, IHttpClientFactory httpClientFactory) : IRawgService
 {
-    // RAWG sends the fields in snake_case (background_image, name_original, ...)
-    private static readonly JsonSerializerOptions RawgJsonOptions = new()
+    // Api sends the fields in snake_case (background_image, name_original, ...)
+    private static readonly JsonSerializerOptions ApiJsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
@@ -30,7 +30,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             if (!string.IsNullOrWhiteSpace(query))
                 query = "?" + query;
 
-            response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games{query}"), RawgJsonOptions);
+            response = await client.GetFromJsonAsync<RawgSearchDTO>(WithKey($"games{query}"), ApiJsonOptions);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -45,22 +45,20 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             };
         }
 
-        // Next / Previous from RAWG are not copied: they contain the API key and use RAWG's parameter names.
-        // The controller builds them with our own parameters
         return new GameSearchResponseDTO {
             Results = [.. response.Results.Select(ToGameCardDTO)],
             Count = response.Count
         };
     }
 
-    private async Task<RawgGameIdDTO?> FetchGameAsync(int rawgGameId)
+    private async Task<RawgGameIdDTO?> FetchGameAsync(int ApiGameId)
     {
         var client = httpClientFactory.CreateClient("RawgAPI");
 
         RawgGameIdDTO? response;
         try
         {
-            response = await client.GetFromJsonAsync<RawgGameIdDTO>(WithKey($"games/{rawgGameId}"), RawgJsonOptions);
+            response = await client.GetFromJsonAsync<RawgGameIdDTO>(WithKey($"games/{ApiGameId}"), ApiJsonOptions);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -70,13 +68,13 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return response;
     }
 
-    // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at RAWG
-    public async Task<GameResponseDTO?> GetGameAsync(int rawgGameId)
+    // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at Api
+    public async Task<GameResponseDTO?> GetGameAsync(int ApiGameId)
     {
         // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
-        // without Include would return them empty). Placeholders are skipped, so they come from RAWG
+        // without Include would return them empty). Placeholders are skipped, so they come from Api
         var game = await db.Games
-            .Where(g => g.RawgGameId == rawgGameId && !g.IsPlaceholder)
+            .Where(g => g.ApiGameId == ApiGameId && !g.IsPlaceholder)
             .ProjectToType<GameResponseDTO>()
             .FirstOrDefaultAsync();
 
@@ -85,7 +83,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             return game;
         }
 
-        var response = await FetchGameAsync(rawgGameId);
+        var response = await FetchGameAsync(ApiGameId);
 
         if (response is null)
             return null;
@@ -93,15 +91,15 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return ToGameResponseDTO(response);
     }
 
-    public async Task<Game?> GetOrCreateGameAsync(int rawgGameId)
+    public async Task<Game?> GetOrCreateGameAsync(int ApiGameId)
     {
-        var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
+        var game = await db.Games.FirstOrDefaultAsync(g => g.ApiGameId == ApiGameId);
         if (game is not null)
         {
             return game;
         }
         
-        var response = await FetchGameAsync(rawgGameId);
+        var response = await FetchGameAsync(ApiGameId);
         if (response is null)
         {
             return null;
@@ -109,14 +107,14 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         
         // loads the genres and the platforms that already exist in the DB using their ID
         var genreIds = response.Genres.Select(g => (GameGenre)g.Id).ToList();
-        var existingGenres = await db.Genres.Where(g => genreIds.Contains(g.RawgGenreId)).ToListAsync();
+        var existingGenres = await db.Genres.Where(g => genreIds.Contains(g.ApiGenreId)).ToListAsync();
 
         var platformIds = response.Platforms.Select(p => (GamePlatform)p.Platform.Id).ToList();
-        var existingPlatforms = await db.Platforms.Where(p => platformIds.Contains(p.RawgPlatformId)).ToListAsync();
+        var existingPlatforms = await db.Platforms.Where(p => platformIds.Contains(p.ApiPlatformId)).ToListAsync();
         
         game = new Game
         {
-            RawgGameId = response.Id,
+            ApiGameId = response.Id,
             Name = response.Name,
             Slug = response.Slug,
             NameOriginal = response.NameOriginal,
@@ -128,19 +126,19 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             Rating = (decimal)response.Rating,
             Metacritic = response.Metacritic,
             Platforms = [
-                .. response.Platforms.Select(p => existingPlatforms.FirstOrDefault(ep => ep.RawgPlatformId == (GamePlatform)p.Platform.Id) 
+                .. response.Platforms.Select(p => existingPlatforms.FirstOrDefault(ep => ep.ApiPlatformId == (GamePlatform)p.Platform.Id) 
                 ?? new Platform
                 {
                     Name = p.Platform.Name,
-                    RawgPlatformId = (GamePlatform)p.Platform.Id
+                    ApiPlatformId = (GamePlatform)p.Platform.Id
                 })
             ],
             Genres = [
-                .. response.Genres.Select(g => existingGenres.FirstOrDefault(eg => eg.RawgGenreId == (GameGenre)g.Id) 
+                .. response.Genres.Select(g => existingGenres.FirstOrDefault(eg => eg.ApiGenreId == (GameGenre)g.Id) 
                 ?? new Genre
                 {
                     Name = g.Name,
-                    RawgGenreId = (GameGenre)g.Id
+                    ApiGenreId = (GameGenre)g.Id
                 })
             ]
         };
@@ -153,12 +151,12 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
     private string WithKey(string path)
     {
         var separator = path.Contains('?') ? '&' : '?';
-        return $"{path}{separator}key={config["EnvironmentVariables:RAWG_API_KEY"]}";
+        return $"{path}{separator}key={config["EnvironmentVariables:Api_API_KEY"]}";
     }
 
     private static readonly Func<RawgGameDTO, GameCardDTO> ToGameCardDTO = r => new GameCardDTO
     {
-        RawgGameId = r.Id,
+        ApiGameId = r.Id,
         Name = r.Name,
         BackgroundImage = r.BackgroundImage,
         Rating = r.Rating,
@@ -168,7 +166,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             .. r.Platforms.Select(p => new PlatformDTO
             {
                 Name = p.Platform.Name,
-                RawgPlatformId = p.Platform.Id,
+                ApiPlatformId = p.Platform.Id,
                 Slug = p.Platform.Slug,
                 ReleasedAt = p.ReleasedAt
             })
@@ -177,15 +175,14 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             .. r.Genres.Select(g => new GenreDTO
             {
                 Name = g.Name,
-                RawgGenreId = g.Id,
+                ApiGenreId = g.Id,
                 Slug = g.Slug
             })
         ]
     };
-
     private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {
-        RawgGameId = r.Id,
+        ApiGameId = r.Id,
         Name = r.Name,
         Slug = r.Slug,
         NameOriginal = r.NameOriginal,
@@ -200,7 +197,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             .. r.Platforms.Select(p => new PlatformDTO
             {
                 Name = p.Platform.Name,
-                RawgPlatformId = p.Platform.Id,
+                ApiPlatformId = p.Platform.Id,
                 Slug = p.Platform.Slug,
                 ReleasedAt = p.ReleasedAt
             })
@@ -209,7 +206,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
             .. r.Genres.Select(g => new GenreDTO
             {
                 Name = g.Name,
-                RawgGenreId = g.Id,
+                ApiGenreId = g.Id,
                 Slug = g.Slug
             })
         ]
