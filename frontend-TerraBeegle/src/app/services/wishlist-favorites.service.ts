@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+import { AlertService } from './alert.service';
 import { GameCardDTO, GameSearchResponse } from './game.service';
 import { GridComponentProps } from '../views/grid/grid.component';
 import { MOCK_GAME_COVERS } from '../mocks/games.mock';
@@ -14,6 +15,7 @@ export type GameCollectionType = 'wishlist' | 'favorites';
 export class WishlistFavoritesService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly alertService = inject(AlertService);
 
   private getBaseUrl(type: GameCollectionType, userId?: number): string | null {
     const id = userId ?? this.authService.currentUser()?.id;
@@ -42,6 +44,7 @@ export class WishlistFavoritesService {
   addGame(type: GameCollectionType, rawgGameId: number, userId?: number): Observable<void> {
     const baseUrl = this.getBaseUrl(type, userId);
     if (!baseUrl) {
+      this.alertService.showAlert(`Please log in to add games to your ${type}.`);
       return throwError(() => new Error('User ID is required to add game to collection.'));
     }
     return this.http.post<void>(`${baseUrl}/${rawgGameId}`, {});
@@ -50,6 +53,7 @@ export class WishlistFavoritesService {
   removeGame(type: GameCollectionType, rawgGameId: number, userId?: number): Observable<void> {
     const baseUrl = this.getBaseUrl(type, userId);
     if (!baseUrl) {
+      this.alertService.showAlert(`Please log in to remove games from your ${type}.`);
       return throwError(() => new Error('User ID is required to remove game from collection.'));
     }
     return this.http.delete<void>(`${baseUrl}/${rawgGameId}`);

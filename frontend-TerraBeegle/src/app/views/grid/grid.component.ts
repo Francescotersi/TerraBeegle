@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
 import { AuthService } from '../../services/auth.service';
+import { AlertService } from '../../services/alert.service';
 
 export interface GridComponentProps {
   rawgGameId: number;
@@ -281,7 +282,6 @@ export interface GridComponentProps {
       pointer-events: none;
     }
 
-    /* Pannello dettagli Liquid Glass: sincronizzato istantaneamente con l'espansione della card */
     .game-details-liquid {
       position: absolute;
       top: 100%;
@@ -313,7 +313,6 @@ export interface GridComponentProps {
       margin-top: 0.1rem;
     }
 
-    /* Pulsanti circolari: 32px rotondi */
     .btn-action-circle {
       width: 32px;
       height: 32px;
@@ -358,7 +357,6 @@ export interface GridComponentProps {
       transform: scale(1.08);
     }
 
-    /* Heart Checkbox - Lucky Ape 27 (Catraco) */
     .heart-container {
       --heart-color: var(--tb-accent);
       position: relative;
@@ -498,7 +496,6 @@ export interface GridComponentProps {
       color: var(--tb-text);
     }
 
-    /* Badge Metacritic in stile originale con codifica colori dinamica */
     .metacritic-box {
       display: inline-flex;
       align-items: center;
@@ -603,6 +600,7 @@ export class GridComponent implements OnInit {
   // ---- Wishlist / Favorites functionality ----
   private readonly wishlistService = inject(WishlistFavoritesService);
   private readonly authService = inject(AuthService);
+  private readonly alertService = inject(AlertService);
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
   
@@ -633,7 +631,7 @@ export class GridComponent implements OnInit {
   protected onToggleWishlist(event: MouseEvent, gameId: number): void {
     event.stopPropagation(); // stops from entering game details page
     if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
+      this.alertService.showAlert('Please log in to manage your wishlist.');
       return;
     }
     const isAlreadyAdded = this.wishlistedIds().has(gameId);
@@ -662,7 +660,7 @@ export class GridComponent implements OnInit {
     event.stopPropagation();
     if (!this.authService.isLoggedIn()) {
       event.preventDefault();
-      this.router.navigate(['/login']);
+      this.alertService.showAlert('Please log in to manage your favorites.');
       return;
     }
     const isAlreadyAdded = this.favoritedIds().has(gameId);
