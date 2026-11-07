@@ -11,7 +11,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<Genre> Genres => Set<Genre>();
     public DbSet<Platform> Platforms => Set<Platform>();
-    public DbSet<ParentPlatform> ParentPlatforms => Set<ParentPlatform>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<LoginChallenge> LoginChallenges => Set<LoginChallenge>();
 
@@ -48,7 +47,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.Theme)
                 .HasConversion<string>()
                 .HasMaxLength(10)
-                .HasDefaultValue(Theme.Light);
+                .HasDefaultValue(UserTheme.Light);
 
             e.Property(u => u.CreatedAt)
                 .HasDefaultValueSql("NOW()");
@@ -82,9 +81,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasMany(u => u.LoginChallenges)
+            e.HasOne(u => u.LoginChallenge)
                 .WithOne(c => c.User)
-                .HasForeignKey(c => c.UserId)
+                .HasForeignKey<LoginChallenge>(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -111,12 +110,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(f => f.User1)
                 .WithMany(u => u.FriendRequestsAsUser1)
                 .HasForeignKey(f => f.User1Id)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(f => f.User2)
                 .WithMany(u => u.FriendRequestsAsUser2)
                 .HasForeignKey(f => f.User2Id)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
 
@@ -136,11 +135,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasMaxLength(255);
 
-            e.Property(g => g.Description)
+            e.Property(g => g.Summary)
                 .IsRequired()
                 .HasColumnType("text");
 
-            e.Property(g => g.BackgroundImage)
+            e.Property(g => g.Cover)
                 .HasMaxLength(500);
 
             e.Property(g => g.ReleaseDate)
@@ -228,30 +227,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .UsingEntity(j => j.ToTable("game_platforms"));
         });
 
-        // PARENT PLATFORMS
-        modelBuilder.Entity<ParentPlatform>(e =>
-        {
-            e.Property(pp => pp.Id).ValueGeneratedOnAdd();
-
-            e.Property(pp => pp.ApiPlatformId)
-                .IsRequired();
-
-            e.Property(pp => pp.Name)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            e.HasIndex(pp => pp.ApiPlatformId).IsUnique();
-
-            e.HasMany(pp => pp.Games)
-                .WithMany(g => g.ParentPlatforms)
-                .UsingEntity(j => j.ToTable("game_parent_platforms"));
-
-            e.HasMany(pp => pp.Platforms)
-                .WithOne(p => p.ParentPlatform)
-                .HasForeignKey(p => p.ParentPlatformId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
         // REVIEWS
         modelBuilder.Entity<Review>(e =>
         {
@@ -271,12 +246,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(r => r.User)
                 .WithMany(u => u.Reviews)
                 .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(r => r.Game)
                 .WithMany(g => g.Reviews)
                 .HasForeignKey(r => r.GameId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // LOGIN CHALLENGES (2FA)
@@ -297,9 +272,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(c => c.TokenHash).IsUnique();
 
             e.HasOne(c => c.User)
-                .WithMany(u => u.LoginChallenges)
-                .HasForeignKey(c => c.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .WithOne(u => u.LoginChallenge)
+                .HasForeignKey<LoginChallenge>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -11,7 +11,7 @@ public class User
     public string? ImageProfile { get; set; }          // image URL
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
-    public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
+    public UserTheme Theme { get; set; } = UserTheme.Light;       // "light" | "dark"
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -19,11 +19,12 @@ public class User
     public string? EmailVerificationCodeHash { get; set; }
     public DateTime? EmailVerificationCodeExpiration { get; set; }
     public int EmailVerificationAttempts { get; set; }
-    
     public string? PendingEmail { get; set; }
-    public bool ForgotPasswordRequested { get; set; } = false;
-    
+
+    public bool ForgotPasswordRequested { get; set; } = false;    
     public bool TwoFactorEnabled { get; set; } = false;
+
+    public LoginChallenge? LoginChallenge { get; set; }
     
     public ICollection<Friendship> FriendRequestsAsUser1 { get; set; } = [];
     public ICollection<Friendship> FriendRequestsAsUser2 { get; set; } = [];
@@ -31,5 +32,4 @@ public class User
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<Game> Favorites { get; set; } = [];
     public ICollection<Game> WishlistItems { get; set; } = [];
-    public ICollection<LoginChallenge> LoginChallenges { get; set; } = [];
 }

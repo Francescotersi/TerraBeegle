@@ -79,10 +79,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
-        if (user is null)
-            return Unauthorized("Invalid credentials.");
-
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+        if (user is null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
         
         // The code is checked only after the password, so only the owner of the account can use up its attempts
@@ -115,8 +112,15 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
         
         var (challenge, challengeToken, code) = twoFactorService.CreateChallenge(user);
-        db.LoginChallenges.Add(challenge);
+
+        if (user.LoginChallenge is null)
+        {
+            db.LoginChallenges.Add(challenge);
+        }
+        user.LoginChallenge = challenge;
+
         await db.SaveChangesAsync();
+
         try
         {
 	        await twoFactorService.SendCodeAsync(user.Email, code);

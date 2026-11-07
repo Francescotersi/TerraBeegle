@@ -27,6 +27,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
             reviews = await db.Reviews
                 .Where(r => r.User.Username == username)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .Select(r => new ReviewResponseDTO
@@ -64,6 +65,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             reviews = await db.Reviews
                 .Where(r => r.GameId == gameId)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .Select(r => new ReviewResponseDTO

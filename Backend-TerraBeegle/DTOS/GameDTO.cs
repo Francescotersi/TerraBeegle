@@ -39,30 +39,32 @@ public class GameSearchDTO
     [Range(1, 1000000)]
     public int? Page { get; set; } = 1;
 
-    [Range(1, 40)]
+    [Range(1, 50)]
     public int? PageSize { get; set; } = 20;
-    public bool SearchPrecise { get; set; } = false;
     public bool SearchExact { get; set; } = false;
 
     [StringLength(12)]
-    [RegularExpression(@"^(?i:name|released|added|created|updated|rating|metacritic)$", 
-        ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'added', 'created', 'updated', 'rating', or 'metacritic'.")]
+    [RegularExpression(@"^(?i:name|released|rating|aggregated_rating)$", 
+        ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating', or 'aggregated_rating'.")]
     public string? SortBy { get; set; }
     public bool Ascending { get; set; } = true;
 
     public string? Name { get; set; }
-    public string? ParentPlatforms { get; set; }
+    public string? PlatformsFamily { get; set; }
     public string? Platforms { get; set; }
     public string? Stores { get; set; }
     public string? Developers { get; set; }
     public string? Publishers { get; set; }
     public string? Creators { get; set; }
     public string? Genres { get; set; }
+    public string? Themes { get; set; }
     public string? Tags { get; set; }
-    public string? ReleaseDate { get; set; }
-    public string? Updated { get; set; }
-    public int? PlatformsCount { get; set; }
-    public string? Metacritic { get; set; }
+    public int? ReleaseYearMin { get; set; }
+    public int? ReleaseYearMax { get; set; }
+    public int? UpdatedMin { get; set; }
+    public int? UpdatedMax { get; set; }
+    public int? MetacriticMax { get; set; }
+    public int? MetacriticMin { get; set; }
     public bool? ExcludeAdditions { get; set; }
     public bool? ExcludeParents { get; set; }
     public bool? ExcludeGameSeries { get; set; }

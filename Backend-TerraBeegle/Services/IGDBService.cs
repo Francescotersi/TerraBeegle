@@ -13,7 +13,7 @@ using IGDB.Models;
 namespace Backend_TerraBeegle.Services;
 
 // All the communication with the IGDB API: key, URLs, JSON options and mapping to our DTOs
-public class IGDBService(AppDbContext db, IConfiguration config, IGDBClient igdb) : IIGDBService
+public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 {
     // IGDB sends the fields in snake_case (background_image, name_original, ...)
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -21,41 +21,65 @@ public class IGDBService(AppDbContext db, IConfiguration config, IGDBClient igdb
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
-    // public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query)
-    // {
-    //     IGDBSearchDTO? response;
-    //     try
-    //     {
-    //         if (!string.IsNullOrWhiteSpace(query))
-    //             query = "?" + query;
-
-    //         response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: );
-    //     }
-    //     catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-    //     {
-    //         return null;
-    //     }
-
-    //     if (response is null)
-    //     {
-    //         return new GameSearchResponseDTO { 
-    //             Results = [],
-    //             Count = 0
-    //         };
-    //     }
-
-    //     return new GameSearchResponseDTO {
-    //         Results = [.. response.Results.Select(ToGameCardDTO)],
-    //         Count = response.Count
-    //     };
-    // }
-
-    private async Task<IGDBGameIdDTO?> FetchGameAsync(int GameId)
+    public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query)
     {
-        IGDBGameIdDTO? response;
+        IGDB.Models.Game[]? response;
         try
         {
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"fields id,name,slug,name_original,summary,first_release_date,aggregated_rating,aggregated_rating_count,cover.url,genres.name,platforms.name; where id = {GameId};");
+            var fields = "fields id,name,slug,name_original,summary,first_release_date,aggregated_rating,aggregated_rating_count,cover.url,genres.name,platforms.name;";
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{fields}{query}");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (response is null)
+        {
+            return new GameSearchResponseDTO { 
+                Results = [],
+                Count = 0
+            };
+        }
+
+        return new GameSearchResponseDTO {
+            Results = response.Select(ToGameCardDTO),
+            Count = response.Count
+        };
+    }
+
+    private async Task<IGDBGameDetailsDTO?> FetchGameAsync(int GameId)
+    {
+        IGDB.Models.Game[]? response;
+        try
+        {
+            static string strFields(string str) => $"{str}.name,{str}.slug";
+            static string strUrlFields(string str) => $"{strFields(str)}.rating,{str}.cover.url";
+
+            var keyFields = "id,name,slug,storyline,summary,first_release_date,artworks.url";
+
+            var ageRatingsFields = "age_ratings.organization,age_ratings.rating_category";
+            var aggregatedRatingFields = "aggregated_rating,aggregated_rating_count";
+            var bundlesFields = strUrlFields("bundles");
+            var dlcsFields = strUrlFields("dlcs");
+            var expansionsFields = strUrlFields("expansions");
+            var externalGamesFields = "external_games.url,external_games.external_game_source";
+            var franchisesFields = strFields("franchises");
+            var game_modesFields = strFields("game_modes");
+            var genresFields = strFields("genres");
+
+            //var companiesFields = "involved_companies.company.name,involved_companies.company.slug";
+
+            var keywordsFields = strFields("keywords");
+            var platformsFields = strFields("platforms") + ",platforms.abbreviation,platforms.platform_family";
+            var playerPerspectivesFields = strFields("player_perspectives");
+
+            //from release_dates
+
+            var ratingsFields = "rating,rating_count";
+
+            var fields = $"fields {keyFields},{ageRatingsFields},{aggregatedRatingFields},{bundlesFields},{dlcsFields},{expansionsFields},{externalGamesFields},{franchisesFields},{game_modesFields},{genresFields},{ratingsFields};";
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{fields} w id = {GameId};");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {

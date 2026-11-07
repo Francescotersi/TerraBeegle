@@ -21,7 +21,7 @@ public class UserResponseDTO
     public bool TwoFactorEnabled { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
-    public Theme Theme { get; set; }
+    public UserTheme Theme { get; set; }
 }
 
 public class UpdateUserDTO
@@ -36,7 +36,7 @@ public class UpdateUserDTO
     [MaxLength(100)]
     public string? FamilyName { get; set; }
     public string? ImageProfile { get; set; }
-    public Theme? Theme { get; set; }
+    public UserTheme? Theme { get; set; }
 }
 
 public class UpdateEmailDTO
