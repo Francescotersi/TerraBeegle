@@ -57,3 +57,10 @@ export interface OtpContext {
   password?: string;
   message?: string;
 }
+
+export interface ForgotPasswordPayload {
+  emailOrUsername: string;
+  code: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}

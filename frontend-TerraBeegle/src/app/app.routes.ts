@@ -8,6 +8,7 @@ import { ProfilePageComponent } from './views/profile-page/profile-page.componen
 import { FavoritePageComponent } from './views/favorite-page/favorite-page.component';
 import { CatalogPage } from './views/catalog-page/catalog-page.component';
 import { WishlistPageComponent } from './views/wishlist-page/wishlist-page.component';
+import { ForgotPasswordComponent } from './views/user/forgot-password/forgot-password.component';
 
 export const routes: Routes = [
     {
@@ -41,6 +42,10 @@ export const routes: Routes = [
     {
         path: 'otp',
         component: OtpComponent,
+    },
+    {
+        path: 'forgot-password',
+        component: ForgotPasswordComponent,
     },
     {
         path: 'profile',

@@ -2,9 +2,9 @@ import { Injectable , inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext } from '../models/user.model';
+import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, ForgotPasswordPayload } from '../models/user.model';
 
-export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext } from '../models/user.model';
+export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, ForgotPasswordPayload } from '../models/user.model';
 
 const TOKEN_KEY = 'tb_token';
 const USER_KEY = 'tb_user';
@@ -126,5 +126,21 @@ export class AuthService {
         }
       })
     );
+  }
+
+  forgotPasswordRequest(email: string): Observable<string> {
+    return this.http.post(
+      '/api/auth/forgot-password-request',
+      { email: email.trim().toLowerCase() },
+      { responseType: 'text' }
+    );
+  }
+
+  forgotPassword(payload: ForgotPasswordPayload): Observable<string> {
+    return this.http.patch(
+      '/api/auth/forgot-password',
+      payload,
+      {responseType: 'text'},
+    )
   }
 }
