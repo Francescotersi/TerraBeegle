@@ -2,9 +2,9 @@ import { Injectable , inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext } from '../models/user.model';
+import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload } from '../models/user.model';
 
-export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext } from '../models/user.model';
+export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload } from '../models/user.model';
 
 const TOKEN_KEY = 'tb_token';
 const USER_KEY = 'tb_user';
@@ -126,5 +126,17 @@ export class AuthService {
         }
       })
     );
+  }
+
+  updateUser(data: UpdateUserPayload): Observable<User> {
+    return this.http.patch<User>('/api/users', data).pipe(
+      tap((updateUser) => {
+        if(typeof window !== 'undefined'){
+          localStorage.setItem(USER_KEY, JSON.stringify(updateUser));
+        }
+
+        this.currentUser.set(updateUser);
+      })
+    )
   }
 }

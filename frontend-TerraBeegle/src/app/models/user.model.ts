@@ -57,3 +57,11 @@ export interface OtpContext {
   password?: string;
   message?: string;
 }
+
+export interface UpdateUserPayload{
+  name?: string;
+  familyName?: string;
+  username?: string;
+  imageProfile?: string | null;
+  theme?: Theme;
+}
