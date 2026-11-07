@@ -1,5 +1,7 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { timer } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FriendsService } from '../../../services/friends.service';
 import { FriendshipResponseDTO } from '../../../models/friendship.model';
 import { AlertService } from '../../../services/alert.service';
@@ -16,10 +18,10 @@ type SubTab = 'friends' | 'received' | 'sent';
     <div class="friends-container d-flex flex-column gap-3">
 
       <!-- Add Friend Box con Search Bar a sinistra e Testo a destra -->
-      <app-profile-friend-search (requestSent)="loadAll()" />
+      <app-profile-friend-search (requestSent)="onRequestSent($event)" />
 
       <!-- Navigation Tabs -->
-      <div class="d-flex gap-2 border-bottom border-secondary border-opacity-25 pb-2">
+      <div class="tabs-nav-container d-flex gap-2 border-bottom border-secondary border-opacity-25 pb-2">
         <button
           type="button"
           class="sub-tab-btn"
@@ -129,6 +131,16 @@ type SubTab = 'friends' | 'received' | 'sent';
       width: 100%;
     }
 
+    app-profile-friend-search {
+      position: relative;
+      z-index: 25;
+    }
+
+    .tabs-nav-container {
+      position: relative;
+      z-index: 1;
+    }
+
     .empty-state {
       background: var(--tb-glass-bg);
       border: 1px solid var(--tb-glass-border);
@@ -172,6 +184,7 @@ type SubTab = 'friends' | 'received' | 'sent';
 export class ProfileFriendlistComponent implements OnInit {
   private readonly friendsService = inject(FriendsService);
   private readonly alertService = inject(AlertService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly activeTab = signal<SubTab>('friends');
   readonly friends = signal<FriendshipResponseDTO[]>([]);
@@ -179,12 +192,23 @@ export class ProfileFriendlistComponent implements OnInit {
   readonly sent = signal<FriendshipResponseDTO[]>([]);
   readonly isLoading = signal(false);
 
+  private previousReceivedCount = -1;
+
   ngOnInit(): void {
-    this.loadAll();
+    this.loadAll(true);
+
+    // Polling silenzioso ogni 4 secondi per aggiornamenti in tempo reale (nuove richieste ricevute o inviate)
+    timer(4000, 4000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refreshQuietly();
+      });
   }
 
-  loadAll(): void {
-    this.isLoading.set(true);
+  loadAll(showLoading = false): void {
+    if (showLoading) {
+      this.isLoading.set(true);
+    }
     let loadedCount = 0;
     const checkDone = () => {
       loadedCount++;
@@ -195,27 +219,69 @@ export class ProfileFriendlistComponent implements OnInit {
 
     this.friendsService.getFriends().subscribe({
       next: (res) => {
-        this.friends.set(res.items);
-        checkDone();
+        this.friends.set(res.items || []);
+        if (showLoading) checkDone();
       },
-      error: () => checkDone(),
+      error: () => {
+        if (showLoading) checkDone();
+      },
     });
 
     this.friendsService.getReceivedRequests().subscribe({
       next: (res) => {
-        this.received.set(res.items);
-        checkDone();
+        const items = res.items || [];
+        this.previousReceivedCount = items.length;
+        this.received.set(items);
+        if (showLoading) checkDone();
       },
-      error: () => checkDone(),
+      error: () => {
+        if (showLoading) checkDone();
+      },
     });
 
     this.friendsService.getSentRequests().subscribe({
       next: (res) => {
-        this.sent.set(res.items);
-        checkDone();
+        this.sent.set(res.items || []);
+        if (showLoading) checkDone();
       },
-      error: () => checkDone(),
+      error: () => {
+        if (showLoading) checkDone();
+      },
     });
+  }
+
+  refreshQuietly(): void {
+    this.friendsService.getFriends().subscribe({
+      next: (res) => this.friends.set(res.items || []),
+    });
+
+    this.friendsService.getReceivedRequests().subscribe({
+      next: (res) => {
+        const items = res.items || [];
+        if (this.previousReceivedCount !== -1 && items.length > this.previousReceivedCount) {
+          const diff = items.length - this.previousReceivedCount;
+          this.alertService.showAlert(
+            diff === 1
+              ? 'New friend request received!'
+              : `${diff} new friend requests received!`
+          );
+        }
+        this.previousReceivedCount = items.length;
+        this.received.set(items);
+      },
+    });
+
+    this.friendsService.getSentRequests().subscribe({
+      next: (res) => this.sent.set(res.items || []),
+    });
+  }
+
+  onRequestSent(newRequest?: FriendshipResponseDTO | void): void {
+    if (newRequest) {
+      this.sent.update((list) => [newRequest, ...list.filter((f) => f.id !== newRequest.id)]);
+    }
+    this.activeTab.set('sent');
+    this.refreshQuietly();
   }
 
   switchTab(tab: SubTab): void {
@@ -226,7 +292,9 @@ export class ProfileFriendlistComponent implements OnInit {
     this.friendsService.acceptRequest(f).subscribe({
       next: () => {
         this.alertService.showAlert(`Friend request from @${f.user.username} accepted!`);
-        this.loadAll();
+        this.received.update((items) => items.filter((item) => item.id !== f.id));
+        this.previousReceivedCount = this.received().length;
+        this.refreshQuietly();
       },
       error: () => this.alertService.showAlert('Error accepting friend request'),
     });
@@ -236,7 +304,9 @@ export class ProfileFriendlistComponent implements OnInit {
     this.friendsService.rejectRequest(f).subscribe({
       next: () => {
         this.alertService.showAlert('Friend request declined.');
-        this.loadAll();
+        this.received.update((items) => items.filter((item) => item.id !== f.id));
+        this.previousReceivedCount = this.received().length;
+        this.refreshQuietly();
       },
       error: () => this.alertService.showAlert('Error declining friend request'),
     });
@@ -246,7 +316,9 @@ export class ProfileFriendlistComponent implements OnInit {
     this.friendsService.deleteFriendship(id).subscribe({
       next: () => {
         this.alertService.showAlert(successMessage);
-        this.loadAll();
+        this.friends.update((items) => items.filter((item) => item.id !== id));
+        this.sent.update((items) => items.filter((item) => item.id !== id));
+        this.refreshQuietly();
       },
       error: () => this.alertService.showAlert('Error removing friendship'),
     });

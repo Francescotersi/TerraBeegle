@@ -7,7 +7,7 @@ import { FriendsService } from '../../../services/friends.service';
 import { AuthService } from '../../../services/auth.service';
 import { AlertService } from '../../../services/alert.service';
 import { UserPublicResponseDTO } from '../../../models/user.model';
-import { PagedResponse } from '../../../models/friendship.model';
+import { PagedResponse, FriendshipResponseDTO } from '../../../models/friendship.model';
 
 @Component({
   selector: 'app-profile-friend-search',
@@ -102,6 +102,8 @@ import { PagedResponse } from '../../../models/friendship.model';
     :host {
       display: block;
       width: 100%;
+      position: relative;
+      z-index: 25;
     }
 
     .add-friend-box {
@@ -110,6 +112,8 @@ import { PagedResponse } from '../../../models/friendship.model';
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: border-color 0.2s ease;
+      position: relative;
+      z-index: 25;
     }
 
     .search-input-group {
@@ -163,6 +167,7 @@ import { PagedResponse } from '../../../models/friendship.model';
       -webkit-backdrop-filter: blur(12px);
       max-height: 220px;
       overflow-y: auto;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
     }
 
     :host-context([data-bs-theme="dark"]) .autocomplete-dropdown {
@@ -228,7 +233,7 @@ export class ProfileFriendSearchComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
 
-  readonly requestSent = output<void>();
+  readonly requestSent = output<FriendshipResponseDTO | void>();
 
   searchUsername = '';
   readonly searchResults = signal<UserPublicResponseDTO[]>([]);
@@ -309,11 +314,12 @@ export class ProfileFriendSearchComponent implements OnInit {
 
     this.isSending.set(true);
     this.friendsService.sendRequest(u.id).subscribe({
-      next: () => {
+      next: (created) => {
         this.alertService.showAlert(`Friend request sent to @${u.username}!`);
         this.isSending.set(false);
         this.clearSearch();
-        this.requestSent.emit();
+        const enriched = created ? { ...created, user: created.user || u } : undefined;
+        this.requestSent.emit(enriched);
       },
       error: (err) => {
         this.isSending.set(false);
@@ -329,11 +335,11 @@ export class ProfileFriendSearchComponent implements OnInit {
 
     this.isSending.set(true);
     this.friendsService.sendRequestByUsername(clean).subscribe({
-      next: () => {
+      next: (created) => {
         this.alertService.showAlert(`Friend request sent to @${clean}!`);
         this.isSending.set(false);
         this.clearSearch();
-        this.requestSent.emit();
+        this.requestSent.emit(created);
       },
       error: (err) => {
         this.isSending.set(false);
