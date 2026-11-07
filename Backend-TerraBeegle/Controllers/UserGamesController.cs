@@ -12,6 +12,7 @@ using Mapster;
 using Backend_TerraBeegle.RateLimiting;
 using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Linq.Expressions;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -24,48 +25,8 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     // favorites
     [DisableRateLimiting]
     [HttpGet("favorites")]
-    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
-    {
-        var viewerId = Utils.GetCurrentUserId(User);
-        if (viewerId is null)
-        {
-            return Unauthorized();
-        }
-
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
-        if (!userExists)
-        {
-            return NotFound("User not found.");
-        }
-        
-        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
-            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's favorites.");
-
-        var totalCount = await db.Users
-            .Where(u => u.Id == userId)
-            .SelectMany(u => u.Favorites)
-            .CountAsync();
-
-        var games = new List<GameCardDTO>();
-
-        if (totalCount != 0) {
-            games = await db.Users
-                .Where(u => u.Id == userId)
-                .SelectMany(u => u.Favorites)
-                .OrderBy(g => g.Name)
-                .Skip((pagination.Page - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ProjectToType<GameCardDTO>()
-                .ToListAsync();
-        }
-
-        return Ok(Utils.CreatePagedResponse(
-            games,
-            totalCount,
-            pagination,
-            page => Url.Action(nameof(GetFavorites), new { userId, Page = page, pagination.PageSize })
-        ));
-    }
+    public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] UserGameSearchDTO search)
+        => GetUserGamesAsync(userId, search, u => u.Favorites, "favorites", nameof(GetFavorites));
 
     [HttpPost("favorites/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToFavorites(long userId, int rawgGameId)
@@ -139,47 +100,8 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     // wishlist
     [DisableRateLimiting]
     [HttpGet("wishlist")]
-    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
-    {
-        var viewerId = Utils.GetCurrentUserId(User);
-        if (viewerId is null)
-        {
-            return Unauthorized();
-        }
-
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
-        if (!userExists)
-        {
-            return NotFound("User not found.");
-        }
-        
-        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
-            return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's wishlist.");
-
-        var totalCount = await db.Users
-            .Where(u => u.Id == userId)
-            .SelectMany(u => u.WishlistItems)
-            .CountAsync();
-        
-        var games = new List<GameCardDTO>();
-        if (totalCount != 0) {
-            games = await db.Users
-                .Where(u => u.Id == userId)
-                .SelectMany(u => u.WishlistItems)
-                .OrderBy(g => g.Name)
-                .Skip((pagination.Page - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ProjectToType<GameCardDTO>()
-                .ToListAsync();
-        }
-
-        return Ok(Utils.CreatePagedResponse(
-            games,
-            totalCount,
-            pagination,
-            page => Url.Action(nameof(GetWishlist), new { userId, Page = page, pagination.PageSize })
-        ));
-    }
+    public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] UserGameSearchDTO search)
+        => GetUserGamesAsync(userId, search, u => u.WishlistItems, "wishlist", nameof(GetWishlist));
 
     [HttpPost("wishlist/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToWishlist(long userId, int rawgGameId)
@@ -250,6 +172,112 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
     
+    // Shared by GetFavorites and GetWishlist: only the list, the word in the 403 message and the action
+    // used for the page links differ. Private, otherwise ASP.NET would treat it as an endpoint.
+    // Expression (not Func), so EF can translate u => u.Favorites to a JOIN instead of loading the users
+    private async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetUserGamesAsync(
+        long userId,
+        UserGameSearchDTO search,
+        Expression<Func<User, IEnumerable<Game>>> games,
+        string listName,
+        string actionName)
+    {
+        var viewerId = Utils.GetCurrentUserId(User);
+        if (viewerId is null)
+        {
+            return Unauthorized();
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
+
+        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
+            return StatusCode(StatusCodes.Status403Forbidden, $"Only friends can see this user's {listName}.");
+
+        // One query for both the count and the page, so the filters (next step) apply to both
+        var query = db.Users
+            .Where(u => u.Id == userId)
+            .SelectMany(games);
+
+        if (!string.IsNullOrWhiteSpace(search.Name))
+        {
+            var term = search.Name.Trim().ToLower();
+            query = query.Where(g => g.Name.ToLower().Contains(term));
+        }
+        
+        if (search.Genre.HasValue)
+        {
+            var genre = (GameGenre)search.Genre.Value;
+            query = query.Where(g => g.Genres.Any(x => x.RawgGenreId == genre));
+        }
+        
+        if (search.Platform.HasValue)
+        {
+            var platform = (GamePlatform)search.Platform.Value;
+            query = query.Where(g => g.Platforms.Any(x => x.RawgPlatformId == platform));
+        }
+        
+        if (search.Year.HasValue)
+        {
+            var from = new DateOnly(search.Year.Value, 1, 1);
+            var to = new DateOnly(search.Year.Value, 12, 31);
+            query = query.Where(g => g.ReleaseDate >= from && g.ReleaseDate <= to);
+        }
+        
+        if (search.MinRating.HasValue)
+        {
+            var minRating = search.MinRating.Value;
+            query = query.Where(g => g.Rating >= minRating);
+        }
+        
+        var totalCount = await query.CountAsync();
+        
+        IOrderedQueryable<Game> ordered = search.SortBy?.ToLowerInvariant() switch
+        {
+            "released" => search.Ascending 
+                ? query.OrderBy(g => g.ReleaseDate == null).ThenBy(g => g.ReleaseDate) 
+                : query.OrderBy(g => g.ReleaseDate == null).ThenByDescending(g => g.ReleaseDate),
+            "rating" => search.Ascending 
+                ? query.OrderBy(g => g.Rating == null).ThenBy(g => g.Rating) 
+                : query.OrderBy(g => g.Rating == null).ThenByDescending(g => g.Rating),
+            _ => search.Ascending ? query.OrderBy(g => g.Name) : query.OrderByDescending(g => g.Name),
+        };
+        
+        ordered = ordered.ThenBy(g => g.Id);
+
+        var items = new List<GameCardDTO>();
+        if (totalCount != 0)
+        {
+            items = await ordered
+                .Skip((search.Page - 1) * search.PageSize)
+                .Take(search.PageSize)
+                .ProjectToType<GameCardDTO>()
+                .ToListAsync();
+        }
+
+        return Ok(Utils.CreatePagedResponse(
+            items,
+            totalCount,
+            search,
+            page => Url.Action(actionName, new
+            {
+                userId,
+                Page = page,
+                search.PageSize,
+                search.Name,
+                search.Genre,
+                search.Platform,
+                search.Year,
+                search.MinRating,
+                search.SortBy,
+                search.Ascending
+            })
+        ));
+    }
+
     private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
     {
         if(viewerId == ownerId)

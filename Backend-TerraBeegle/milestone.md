@@ -416,7 +416,7 @@ salvați jocuri.
 
 ## Autentificare în doi pași (2FA)
 
-- [ ] **61. 2FA opțional, cu cod trimis pe email la fiecare login**
+- [x] **61. 2FA opțional, cu cod trimis pe email la fiecare login**
   Userul își activează 2FA din setări. Cu 2FA activ, după parola corectă login-ul **nu** mai întoarce JWT-ul:
   serverul trimite un cod pe email și dă frontend-ului un **challenge token** (string aleator, nu îl vede userul).
   Frontend-ul trimite `challengeToken` + `code` la `POST /api/auth/login/2fa` → abia atunci primește JWT-ul.
@@ -501,17 +501,17 @@ salvați jocuri.
   - [ ] un user nu poate strânge sute de challenge-uri: limitat deja de rate limit-ul de login (5 / min per IP) și
         de parolă; o limită per user (ex: maxim N active) rămâne opțională
 
-  **Testare (din Docker)**
-  - [ ] user fără 2FA → login dă JWT direct
-  - [ ] `enable` cu email neverificat → 400; cu parolă greșită → 400; corect → `TwoFactorEnabled = true`
-  - [ ] login cu 2FA → fără JWT, cu `challengeToken`; email primit
-  - [ ] `login/2fa` cu cod greșit → 400 și `CodeAttempts` crește; × 5, apoi orice cod → 401 și rândul dispare
-  - [ ] `login/2fa` cu cod corect → JWT + `user`, rândul dispare; același `challengeToken` a doua oară → 401
-  - [ ] cod mai vechi de 5 minute → 401; `challengeToken` inventat (64 caractere) → 401
-  - [ ] `login/2fa/resend` → email nou; codul vechi nu mai merge, cel nou da
-  - [ ] rate limit: 6 × `login/2fa` într-un minut → 429; 4 × `resend` în 10 min → 429
-  - [ ] codul 2FA **nu** merge la `forgot-password` / `email/confirm` și invers
-  - [ ] `disable` → login-ul dă din nou JWT direct
+  **Testare (din Docker)** — făcut pe 06.11.2026, totul merge
+  - [x] user fără 2FA → login dă JWT direct
+  - [x] `enable` cu email neverificat → 400; cu parolă greșită → 400; corect → `TwoFactorEnabled = true`
+  - [x] login cu 2FA → fără JWT, cu `challengeToken`; email primit
+  - [x] `login/2fa` cu cod greșit → 400 și `CodeAttempts` crește; × 5, apoi orice cod → 401 și rândul dispare
+  - [x] `login/2fa` cu cod corect → JWT + `user`, rândul dispare; același `challengeToken` a doua oară → 401
+  - [x] cod mai vechi de 5 minute → 401; `challengeToken` inventat (64 caractere) → 401
+  - [x] `login/2fa/resend` → email nou; codul vechi nu mai merge, cel nou da
+  - [x] rate limit: 6 × `login/2fa` într-un minut → 429; 4 × `resend` în 10 min → 429
+  - [x] codul 2FA **nu** merge la `forgot-password` / `email/confirm` și invers
+  - [x] `disable` → login-ul dă din nou JWT direct
 
 ## După merge-ul din 02.11.2026 — grave
 

@@ -74,3 +74,23 @@ public class GameSearchResponseDTO
     public int Count { get; set; }
     public IEnumerable<GameCardDTO> Results { get; set; } = [];
 }
+
+public class UserGameSearchDTO : PaginationDTO
+{
+    [MaxLength(100)]
+    public string? Name { get; set; }
+    public int? Genre { get; set; }
+    public int? Platform { get; set; }
+    
+    [Range(1950, 2100)]
+    public int? Year { get; set; }
+
+    [Range(0.0, 5.0)]
+    public decimal? MinRating { get; set; }
+    
+    [RegularExpression(@"^(?i:name|released|rating)$", 
+        ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released' or 'rating'.")]
+    public string? SortBy { get; set; }
+    
+    public bool Ascending { get; set; } = true;
+}
