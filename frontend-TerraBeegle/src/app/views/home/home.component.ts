@@ -7,7 +7,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
   selector: 'app-home',
   template: `
     <div class="container-fluid px-3 px-md-4 px-xl-5">
-      <div class="row g-4 align-items-start justify-content-center">
+      <div class="row g-3 g-lg-4 align-items-start justify-content-center">
 
         <aside class="col-12 col-lg-4 col-xl-3 col-xxl-2">
           <div class="sidebar-sticky">
@@ -25,9 +25,11 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
     </div>
   `,
   styles: `
-    .sidebar-sticky {
-      position: sticky;
-      top: 90px;
+    @media (min-width: 992px) {
+      .sidebar-sticky {
+        position: sticky;
+        top: 90px;
+      }
     }
   `,
 })

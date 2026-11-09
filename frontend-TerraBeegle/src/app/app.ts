@@ -5,11 +5,11 @@ import { HeaderComponent } from './views/header/header.component';
 import { AlertComponent } from './ui/alert/alert.component';
 
 @Component({
-	imports: [RouterOutlet, BackgroundComponent, HeaderComponent, AlertComponent],
+	imports: [RouterOutlet, HeaderComponent, AlertComponent],
 	standalone: true,
 	selector: 'app-root',
 	template: `
-		<app-background />
+		<!-- <app-background /> -->
 
 		<app-alert />
 

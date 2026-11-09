@@ -97,6 +97,11 @@
   --tb-spinner-four: rgba(44, 123, 161, 0.45);
   --tb-spinner-five: rgba(46, 217, 231, 0.2);
 }
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   background-color: var(--tb-bg);
   color: var(--tb-text);

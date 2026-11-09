@@ -13,7 +13,8 @@ let nextLiquidGlassId = 0;
       [style.width]="width()"
       [style.height]="height()"
       [style.border-radius]="borderRadius()"
-      [style.background]="background()"
+      [style.overflow]="overflow()"
+      [style.--lg-bg]="background()"
       [style.--lg-filter-url]="'url(#' + filterId() + ')'"
       [style.--lg-blur]="blur()"
       [style.--lg-radius]="borderRadius()"
@@ -82,7 +83,16 @@ let nextLiquidGlassId = 0;
       width: 100%;
       border-radius: var(--lg-radius, 24px);
       overflow: hidden;
-      background: var(--tb-glass-bg);
+    }
+
+    .glass-specular {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 1;
+      background: var(--lg-bg, var(--tb-glass-bg));
 
       /* Distorsione ottica liquida accentuata + blur minimale */
       backdrop-filter: var(--lg-filter-url) blur(var(--lg-blur, 2px)) saturate(180%);
@@ -91,18 +101,10 @@ let nextLiquidGlassId = 0;
       border: 1px solid var(--tb-glass-border);
       box-shadow:
         0 16px 36px var(--tb-glass-shadow),
-        inset 0 1px 1px rgba(255, 255, 255, 0.3),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+        inset 1px 1px 2px rgba(255, 255, 255, 0.6),
+        inset -1px -1px 2px rgba(255, 255, 255, 0.15);
       transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
       transform: translateZ(0);
-    }
-
-    .glass-specular {
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      pointer-events: none;
-      box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.15);
     }
 
     .glass-content {
@@ -111,8 +113,6 @@ let nextLiquidGlassId = 0;
       width: 100%;
       height: 100%;
     }
-
-    /* Fallback morbido per browser senza supporto a SVG in backdrop-filter */
 
   `,
 })
@@ -123,6 +123,7 @@ export class LiquidGlassComponent {
   readonly blur = input<string>('2px');
   readonly scale = input<number>(85);
   readonly background = input<string>('var(--tb-glass-bg)');
+  readonly overflow = input<string>('hidden');
   readonly customStyle = input<Record<string, string>>({});
   readonly sharedFilterId = input<string | null>(null);
 

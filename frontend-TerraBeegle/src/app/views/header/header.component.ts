@@ -9,14 +9,22 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
   imports: [RouterLink, RouterLinkActive, LiquidGlassComponent, ThemeSwitchComponent],
   template: `
   <header class="header-wrapper">
+    <div
+      class="mobile-menu-backdrop d-lg-none"
+      [class.show]="isMenuOpen()"
+      (click)="isMenuOpen.set(false)"
+      aria-hidden="true"
+    ></div>
+
     <app-liquid-glass
       borderRadius="100px"
       blur="2px"
       [scale]="80"
+      overflow="visible"
     >
-      <nav class="navbar navbar-expand-lg px-4 py-2 w-100">
-        <div class="container-fluid d-flex align-items-center justify-content-between p-0 w-100">
-          <a class="navbar-brand me-0 d-flex align-items-center" routerLink="/">
+      <nav class="navbar navbar-expand-lg px-3 px-sm-4 py-2 w-100">
+        <div class="container-fluid d-flex align-items-center justify-content-between p-0 w-100 position-relative">
+          <a class="navbar-brand me-0 d-flex align-items-center" routerLink="/" (click)="isMenuOpen.set(false)">
             <img
               src="./Logo.ico"
               alt="TerraBeegle"
@@ -25,103 +33,116 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
               height="40"
             >
           </a>
-          <!-- Bottone per Mobile -->
+
           <button
-            class="navbar-toggler border-0"
+            class="menu-toggle-btn d-lg-none"
             type="button"
             aria-label="Toggle navigation"
+            [attr.aria-expanded]="isMenuOpen()"
+            [class.open]="isMenuOpen()"
             (click)="toggleMenu()"
           >
-            <span class="navbar-toggler-icon"></span>
+            <span class="hamburger-box">
+              <span class="hamburger-line line-1"></span>
+              <span class="hamburger-line line-2"></span>
+              <span class="hamburger-line line-3"></span>
+            </span>
           </button>
-          <div
-            class="collapse navbar-collapse flex-grow-1"
-            id="navBarContent"
-            [class.show]="isMenuOpen()"
-          >
-            <ul class="navbar-nav d-flex justify-content-evenly align-items-center flex-grow-1 mb-0 px-lg-3">
-              <li class="nav-item">
-                <a
-                  class="nav-link fw-semibold px-3 py-1"
-                  routerLink="/"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  (click)="isMenuOpen.set(false)"
-                >
-                  Home
-                </a>
-              </li>
 
-              @if (authService.isLoggedIn()) {
-                <li class="nav-item">
-                  <a
-                    routerLink="/profile"
-                    routerLinkActive="active"
-                    class="nav-link fw-semibold px-3 py-1"
-                    (click)="isMenuOpen.set(false)"
-                  >
-                    Profile
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a
-                    routerLink="/wishlist"
-                    routerLinkActive="active"
-                    class="nav-link fw-semibold px-3 py-1"
-                    (click)="isMenuOpen.set(false)"
-                  >
-                    Wishlist
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a
-                    routerLink="/favorites"
-                    routerLinkActive="active"
-                    class="nav-link fw-semibold px-3 py-1"
-                    (click)="isMenuOpen.set(false)"
-                  >
-                    Favorites
-                  </a>
-                </li>
-              } @else {
-                <li class="nav-item">
-                  <a
-                    routerLink="/login"
-                    routerLinkActive="active"
-                    class="nav-link nav-btn-login fw-semibold px-3 py-1"
-                    (click)="isMenuOpen.set(false)"
-                  >
-                    Log In
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a
-                    routerLink="/register"
-                    routerLinkActive="active"
-                    class="nav-link nav-btn-signup fw-semibold px-3 py-1"
-                    (click)="isMenuOpen.set(false)"
-                  >
-                    Sign Up
-                  </a>
-                </li>
-              }
-            </ul>
-            <app-theme-switch class="ms-lg-3"></app-theme-switch>
-            <form
-              class="d-flex align-items-center header-search-form ms-lg-2"
-              role="search"
-              (submit)="$event.preventDefault(); onSearch()"
+          <div class="header-menu-clip flex-grow-1">
+            <div
+              class="header-menu-panel flex-grow-1"
+              id="navBarContent"
+              [class.show]="isMenuOpen()"
             >
-              <input
-                class="form-control me-2 search-input"
-                type="search"
-                placeholder="Search"
-                aria-label="Search"
-              />
-              <button class="btn search-btn" type="submit">
-                Search
-              </button>
-            </form>
+              <form
+                class="d-flex align-items-center header-search-form order-1 order-lg-3 ms-lg-2"
+                role="search"
+                (submit)="$event.preventDefault(); onSearch()"
+              >
+                <input
+                  class="form-control me-2 search-input"
+                  type="search"
+                  placeholder="Search games..."
+                  aria-label="Search"
+                />
+                <button class="btn search-btn" type="submit">
+                  Search
+                </button>
+              </form>
+
+              <ul class="navbar-nav d-flex justify-content-evenly align-items-center flex-grow-1 mb-0 px-lg-3 order-2 order-lg-1">
+                <li class="nav-item">
+                  <a
+                    class="nav-link fw-semibold px-3 py-1"
+                    routerLink="/"
+                    routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    (click)="isMenuOpen.set(false)"
+                  >
+                    Home
+                  </a>
+                </li>
+
+                @if (authService.isLoggedIn()) {
+                  <li class="nav-item">
+                    <a
+                      routerLink="/profile"
+                      routerLinkActive="active"
+                      class="nav-link fw-semibold px-3 py-1"
+                      (click)="isMenuOpen.set(false)"
+                    >
+                      Profile
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      routerLink="/wishlist"
+                      routerLinkActive="active"
+                      class="nav-link fw-semibold px-3 py-1"
+                      (click)="isMenuOpen.set(false)"
+                    >
+                      Wishlist
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      routerLink="/favorites"
+                      routerLinkActive="active"
+                      class="nav-link fw-semibold px-3 py-1"
+                      (click)="isMenuOpen.set(false)"
+                    >
+                      Favorites
+                    </a>
+                  </li>
+                } @else {
+                  <li class="nav-item">
+                    <a
+                      routerLink="/login"
+                      routerLinkActive="active"
+                      class="nav-link nav-btn-login fw-semibold px-3 py-1"
+                      (click)="isMenuOpen.set(false)"
+                    >
+                      Log In
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      routerLink="/register"
+                      routerLinkActive="active"
+                      class="nav-link nav-btn-signup fw-semibold px-3 py-1"
+                      (click)="isMenuOpen.set(false)"
+                    >
+                      Sign Up
+                    </a>
+                  </li>
+                }
+              </ul>
+
+              <div class="theme-switch-wrapper d-flex align-items-center justify-content-center order-3 order-lg-2 ms-lg-3">
+                <app-theme-switch></app-theme-switch>
+              </div>
+            </div>
           </div>
         </div>
       </nav>
@@ -133,12 +154,13 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       display: block;
       position: sticky;
       top: 1rem;
-      z-index: 1000;
+      z-index: 1050;
       width: 100%;
       pointer-events: none;
     }
 
     .header-wrapper {
+      position: relative;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 1rem;
@@ -148,11 +170,17 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
     .header-wrapper app-liquid-glass {
       display: block;
       width: 100%;
+      position: relative;
+      z-index: 1055;
     }
 
     .site-logo {
       transition: filter 0.4s ease, transform 0.25s ease;
       display: block;
+    }
+
+    .site-logo:hover {
+      transform: scale(1.06);
     }
 
     :host-context([data-bs-theme="dark"]) .site-logo {
@@ -164,6 +192,88 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       width: 100%;
     }
 
+    .menu-toggle-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--tb-glass-border);
+      background: var(--tb-input-bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+      outline: none;
+    }
+
+    .menu-toggle-btn:hover,
+    .menu-toggle-btn.open {
+      border-color: var(--tb-accent);
+      background: var(--tb-accent-subtle);
+    }
+
+    .menu-toggle-btn:focus-visible {
+      box-shadow: 0 0 0 3px var(--tb-accent-glow);
+    }
+
+    .hamburger-box {
+      width: 20px;
+      height: 14px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hamburger-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      border-radius: 2px;
+      background-color: var(--tb-text);
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, background-color 0.25s ease;
+    }
+
+    .menu-toggle-btn:hover .hamburger-line,
+    .menu-toggle-btn.open .hamburger-line {
+      background-color: var(--tb-accent);
+    }
+
+    .hamburger-line.line-1 {
+      top: 0;
+    }
+
+    .hamburger-line.line-2 {
+      top: 6px;
+    }
+
+    .hamburger-line.line-3 {
+      top: 12px;
+    }
+
+    .menu-toggle-btn.open .hamburger-line.line-1 {
+      transform: translateY(6px) rotate(45deg);
+    }
+
+    .menu-toggle-btn.open .hamburger-line.line-2 {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+
+    .menu-toggle-btn.open .hamburger-line.line-3 {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    .header-menu-clip {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-menu-panel {
+      display: flex;
+      align-items: center;
+    }
+
     .navbar-nav {
       width: 100%;
     }
@@ -172,7 +282,7 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       cursor: pointer;
       color: var(--tb-text);
       border-radius: 20px;
-      transition: background 0.2s ease, color 0.2s ease;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
       white-space: nowrap;
     }
 
@@ -186,7 +296,7 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       font-weight: 600;
     }
 
-    /* Pulsanti in evidenza per Login e Sign Up senza effetti glow */
+    /* Pulsanti in evidenza per Login e Sign Up */
     .nav-btn-login {
       background: var(--tb-glass-bg);
       border: 1px solid var(--tb-accent);
@@ -271,23 +381,139 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       transform: translateY(-1px);
     }
 
-    @media (max-width: 991px) {
-      .navbar-nav {
-        flex-direction: column !important;
-        gap: 0.75rem;
-        padding: 1rem 0;
+    @media (max-width: 991.98px) {
+      .mobile-menu-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1040;
+        background: rgba(15, 23, 42, 0.25);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.32s ease, visibility 0.32s ease;
       }
+
+      .mobile-menu-backdrop.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .header-menu-clip {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 1060;
+      }
+
+      .header-menu-panel {
+        position: absolute;
+        top: 5.25rem;
+        right: 1rem;
+        width: min(360px, calc(100vw - 2rem));
+        z-index: 1060;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1.25rem;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(22px) saturate(190%);
+        -webkit-backdrop-filter: blur(22px) saturate(190%);
+        border: 1px solid var(--tb-glass-border);
+        box-shadow:
+          0 22px 48px rgba(0, 0, 0, 0.16),
+          inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+
+        transform: translateX(calc(100% + 2rem));
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+          transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+          opacity 0.28s ease,
+          visibility 0.4s;
+      }
+
+      :host-context([data-bs-theme="dark"]) .header-menu-panel {
+        background: rgba(7, 31, 73, 0.9);
+        box-shadow:
+          0 22px 48px rgba(0, 0, 0, 0.65),
+          inset 1px 1px 2px rgba(46, 217, 231, 0.2);
+      }
+
+      .header-menu-panel.show {
+        transform: translateX(0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .header-menu-panel .header-search-form,
+      .header-menu-panel .navbar-nav,
+      .header-menu-panel .theme-switch-wrapper {
+        transform: translateX(24px);
+        opacity: 0;
+        transition:
+          transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+          opacity 0.28s ease;
+      }
+
+      .header-menu-panel.show .header-search-form {
+        transform: translateX(0);
+        opacity: 1;
+        transition-delay: 0.05s;
+      }
+
+      .header-menu-panel.show .navbar-nav {
+        transform: translateX(0);
+        opacity: 1;
+        transition-delay: 0.1s;
+      }
+
+      .header-menu-panel.show .theme-switch-wrapper {
+        transform: translateX(0);
+        opacity: 1;
+        transition-delay: 0.15s;
+      }
+
       .header-search-form {
         width: 100%;
-        margin-top: 0.5rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid var(--bs-border-color);
       }
-      .search-input {
+
+      .search-input,
+      .search-input:focus {
         width: 100% !important;
+        flex: 1;
       }
-      .nav-btn-login,
-      .nav-btn-signup {
+
+      .navbar-nav {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem;
+        padding: 0;
+      }
+
+      .nav-item {
+        width: 100%;
+      }
+
+      .nav-link {
+        display: block;
         width: 100%;
         text-align: center;
+        padding: 0.55rem 1rem !important;
+      }
+
+      .theme-switch-wrapper {
+        width: 100%;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--bs-border-color);
       }
     }
   `,

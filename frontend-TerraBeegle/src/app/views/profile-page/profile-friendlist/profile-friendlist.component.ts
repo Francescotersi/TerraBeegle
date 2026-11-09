@@ -197,7 +197,6 @@ export class ProfileFriendlistComponent implements OnInit {
   ngOnInit(): void {
     this.loadAll(true);
 
-    // Polling silenzioso ogni 4 secondi per aggiornamenti in tempo reale (nuove richieste ricevute o inviate)
     timer(4000, 4000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
