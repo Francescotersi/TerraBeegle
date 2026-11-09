@@ -5,7 +5,7 @@ import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileStatisticsComponent } from './profile-statistics.component';
 import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendlist.component';
-import { ProfileSettingsComponent } from './profile-settings.component';
+import { ProfileSettingsComponent } from './profile-settings/profile-settings.component';
 
 // da fare tasto modify profile 
 // grafico a torta per i generidi giochi piu giocati
