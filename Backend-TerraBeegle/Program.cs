@@ -134,7 +134,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IRawgService, RawgService>();
+// builder.Services.AddScoped<IRawgService, RawgService>();
 builder.Services.AddScoped<IIGDBService, IGDBService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
@@ -142,12 +142,12 @@ builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddHostedService<UnverifiedUserCleanupService>();
 builder.Services.AddHostedService<ExpiredLoginChallengeCleanupService>();
 
-// IHttpClientFactory for the HTTP calls to RAWG
-builder.Services.AddHttpClient("RawgAPI", client =>
-{
-    client.BaseAddress = new Uri("https://api.rawg.io/api/");
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-});
+// // IHttpClientFactory for the HTTP calls to RAWG
+// builder.Services.AddHttpClient("RawgAPI", client =>
+// {
+//     client.BaseAddress = new Uri("https://api.rawg.io/api/");
+//     client.DefaultRequestHeaders.Add("Accept", "application/json");
+// });
 
 builder.Services.AddSingleton(sp =>
 {
@@ -165,13 +165,13 @@ builder.Services.AddSingleton(sp =>
     return IGDBClient.CreateWithDefaults(clientId, clientSecret);
 });
 
-var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
+// var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
-if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
-{
-    Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
-    Environment.Exit(1);
-}
+// if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
+// {
+//     Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
+//     Environment.Exit(1);
+// }
 
 // without the SMTP settings the verification emails cannot be sent
 string[] smtpSettings = ["Smtp:Host", "Smtp:Port", "Smtp:User", "Smtp:Password", "Smtp:From"];

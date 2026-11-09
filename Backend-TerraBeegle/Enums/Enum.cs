@@ -42,6 +42,16 @@ public enum GameGenre
 
 public enum GameTheme
 {
+    Action = 1,
+    Fantasy = 17,
+    ScienceFiction = 18,
+    Horror = 19,
+    Thriller = 20,
+    Survival = 21,
+    Historical = 22,
+    Stealth = 23,
+    Comedy = 27,
+    Business = 28,
     Drama = 31,
     NonFiction = 32,
     Sandbox = 33,
@@ -53,16 +63,6 @@ public enum GameTheme
     _4X = 41,
     Erotic = 42,
     Mystery = 43,
-    Action = 1,
-    Fantasy = 17,
-    ScienceFiction = 18,
-    Horror = 19,
-    Thriller = 20,
-    Survival = 21,
-    Historical = 22,
-    Stealth = 23,
-    Comedy = 27,
-    Business = 28,
     Romance = 44
 }
 
@@ -80,7 +80,7 @@ public enum GamePlatformFamily
     PlayStation = 1,
     Xbox = 2,
     Sega = 3,
-    Android = 4,
+    Linux = 4,
     Nintendo = 5,
     Atari = 6,
     SNK = 7,

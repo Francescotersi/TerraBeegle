@@ -3,7 +3,7 @@ namespace Backend_TerraBeegle.DTOS;
 public class PlatformDTO
 {
     public string Name { get; set; } = null!;
-    public int ApiPlatformId { get; set; }               // RAWG Id
+    public int ApiPlatformId { get; set; }               // IGDB Id
     public string Slug { get; set; } = null!;
     public string? ReleasedAt { get; set; }
 }

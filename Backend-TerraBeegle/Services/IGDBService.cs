@@ -48,37 +48,49 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         };
     }
 
-    private async Task<IGDBGameDetailsDTO?> FetchGameAsync(int GameId)
+    private async Task<IGDBGameDetailsDTO?> FetchGameAsync(long GameId)
     {
         IGDB.Models.Game[]? response;
         try
         {
             static string strFields(string str) => $"{str}.name,{str}.slug";
-            static string strUrlFields(string str) => $"{strFields(str)}.rating,{str}.cover.url";
+            static string strImageFields(string str, bool b = false) => $"{str}.image_id,{str}.url{(b ? $",{str}.image_type" : "")}";
+            static string strGameFields(string str) => $"{strFields(str)},{str}.rating,{strImageFields(str + ".cover", true)},{str}.first_release_date,{str}.game_type";
+            static string strRatingFields(string str) => $"{str}rating,{str}.rating_count";
 
-            var keyFields = "id,name,slug,storyline,summary,first_release_date,artworks.url";
+            var keyFields = "id,name,slug,storyline,summary,first_release_date,game_type";
 
-            var ageRatingsFields = "age_ratings.organization,age_ratings.rating_category";
-            var aggregatedRatingFields = "aggregated_rating,aggregated_rating_count";
-            var bundlesFields = strUrlFields("bundles");
-            var dlcsFields = strUrlFields("dlcs");
-            var expansionsFields = strUrlFields("expansions");
+            var ageRatingsFields = "age_ratings.organization,age_ratings.rating_category.rating,age_ratings.rating_content_descriptions.description,";
+            var aggregatedRatingFields = strRatingFields("aggregated_");
+            var artworksFields = strImageFields("artworks", true);
+            var bundlesFields = strGameFields("bundles");
+            var coverFields = strImageFields("cover", true);
+            var dlcsFields = strGameFields("dlcs");
+            var expansionsFields = strGameFields("expansions");
             var externalGamesFields = "external_games.url,external_games.external_game_source";
-            var franchisesFields = strFields("franchises");
+            var franchisesFields = strFields("franchises") + "," + strGameFields("franchises.games");
             var game_modesFields = strFields("game_modes");
             var genresFields = strFields("genres");
-
-            //var companiesFields = "involved_companies.company.name,involved_companies.company.slug";
-
+            var companiesFields = "involved_companies.developer,involved_companies.publisher," + strFields("involved_companies.company") + "," + strImageFields("involved_companies.company.logo");
             var keywordsFields = strFields("keywords");
-            var platformsFields = strFields("platforms") + ",platforms.abbreviation,platforms.platform_family";
+            var parentGameFields = strGameFields("parent_game");
+            var platformsFields = strFields("platforms") + ",platforms.abbreviation," + strImageFields("platforms.platform_logo");
+            var platformsFamilyFields = strFields("platforms.platform_family");
             var playerPerspectivesFields = strFields("player_perspectives");
+            var ratingsFields = strRatingFields("");
+            var releaseDatesFields = "release_dates.human,release_dates.date,release_dates.platform.name,release_dates.status.name";
+            var screenshotsFields = strImageFields("screenshots", false);
+            var similarGamesFields = strGameFields("similar_games");
+            var themesFields = strFields("themes");
+            var totalRatingFields = strRatingFields("total_");
+            var videosFields = "videos.name,videos.video_id";
+            var websitesFields = "websites.url,websites.type";
+            var remakesFields = strGameFields("remakes");
+            var remastersFields = strGameFields("remasters");
+            var languagesFields = "language_supports.language.name,language_supports.language_support_type.name";
+            var collectionsFields = strFields("collections") + "," + strGameFields("collections.games");
 
-            //from release_dates
-
-            var ratingsFields = "rating,rating_count";
-
-            var fields = $"fields {keyFields},{ageRatingsFields},{aggregatedRatingFields},{bundlesFields},{dlcsFields},{expansionsFields},{externalGamesFields},{franchisesFields},{game_modesFields},{genresFields},{ratingsFields};";
+            var fields = $"fields {keyFields},{ageRatingsFields},{aggregatedRatingFields},{artworksFields},{bundlesFields},{coverFields},{dlcsFields},{expansionsFields},{externalGamesFields},{franchisesFields},{game_modesFields},{genresFields},{companiesFields},{keywordsFields},{parentGameFields},{platformsFields},{platformsFamilyFields},{playerPerspectivesFields},{ratingsFields},{releaseDatesFields},{screenshotsFields},{similarGamesFields},{themesFields},{totalRatingFields},{videosFields},{websitesFields},{remakesFields},{remastersFields},{languagesFields},{collectionsFields};";
             response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{fields} w id = {GameId};");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -86,11 +98,11 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
             return null;
         }
         
-        return response;
+        return response is { Length: 1 } ? response[0].Adapt<IGDBGameDetailsDTO>() : null;
     }
 
     // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at IGDB
-    public async Task<GameResponseDTO?> GetGameAsync(int IGDBGameId)
+    public async Task<GameResponseDTO?> GetGameAsync(long IGDBGameId)
     {
         // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
         // without Include would return them empty). Placeholders are skipped, so they come from IGDB
@@ -112,7 +124,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         return ToGameResponseDTO(response);
     }
 
-    public async Task<Models.Game?> GetOrCreateGameAsync(int IGDBGameId)
+    public async Task<Models.Game?> GetOrCreateGameAsync(long IGDBGameId)
     {
         var game = await db.Games.FirstOrDefaultAsync(g => g.ApiGameId == IGDBGameId);
         if (game is not null)
@@ -138,10 +150,9 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
             ApiGameId = response.Id,
             Name = response.Name,
             Slug = response.Slug,
-            NameOriginal = response.NameOriginal,
-            Description = response.Description,
-            BackgroundImage = response.BackgroundImage,
-            ReleaseDate = DateOnly.TryParse(response.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
+            Summary = response.Summary,
+            Cover = response.Cover.Adapt<Image>(),
+            ReleaseDate = DateOnly.TryParse(response.FirstReleaseDate, CultureInfo.InvariantCulture, out var releaseDate) ?  : null,
             Tba = response.Tba,
             Website = response.Website,
             Rating = (decimal)response.Rating,

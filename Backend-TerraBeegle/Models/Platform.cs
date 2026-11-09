@@ -6,7 +6,7 @@ public class Platform
 {
     public long Id { get; set; }
 
-    public GamePlatform ApiPlatformId { get; set; }             // RAWG Id
+    public GamePlatform ApiPlatformId { get; set; }             // IGDB Id
     public string Name { get; set; } = null!;
     public string Abbreviation { get; set; } = null!;
     public string Slug { get; set; } = null!;
