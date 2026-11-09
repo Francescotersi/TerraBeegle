@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
@@ -42,36 +42,57 @@ import { ProfilePasswordSettingsComponent } from './profile-password-settings.co
           <div class="dropdown-content-inner profile-form d-flex flex-column gap-3">
             <div class="profile-fields">
           <div class="profile-field">
-            <label for="profile-name" class="form-label small fw-semibold text-body">Name</label>
+            <label for="profile-name" class="form-label small fw-semibold text-body">
+              Name
+              @if (user()?.name) {
+                <span class="text-body-secondary fw-normal">({{ user()?.name }})</span>
+              }
+            </label>
             <input
               id="profile-name"
               type="text"
               class="form-control settings-input"
-              placeholder="{{ this.name }}"
+              [(ngModel)]="name"
+              name="name"
+              [placeholder]="user()?.name || 'Enter new name'"
               maxlength="100"
               autocomplete="given-name"
             />
           </div>
 
           <div class="profile-field">
-            <label for="profile-family-name" class="form-label small fw-semibold text-body">Family name</label>
+            <label for="profile-family-name" class="form-label small fw-semibold text-body">
+              Family name
+              @if (user()?.familyName) {
+                <span class="text-body-secondary fw-normal">({{ user()?.familyName }})</span>
+              }
+            </label>
             <input
               id="profile-family-name"
               type="text"
               class="form-control settings-input"
-              placeholder="{{ this.familyName }}"
+              [(ngModel)]="familyName"
+              name="familyName"
+              [placeholder]="user()?.familyName || 'Enter new family name'"
               maxlength="100"
               autocomplete="family-name"
             />
           </div>
 
           <div class="profile-field">
-            <label for="profile-username" class="form-label small fw-semibold text-body">Username</label>
+            <label for="profile-username" class="form-label small fw-semibold text-body">
+              Username
+              @if (user()?.username) {
+                <span class="text-body-secondary fw-normal">(&#64;{{ user()?.username }})</span>
+              }
+            </label>
             <input
               id="profile-username"
               type="text"
               class="form-control settings-input"
-              placeholder="{{ this.username }}"
+              [(ngModel)]="username"
+              name="username"
+              [placeholder]="user()?.username || 'Enter new username'"
               maxlength="100"
               autocomplete="username"
             />
@@ -83,7 +104,9 @@ import { ProfilePasswordSettingsComponent } from './profile-password-settings.co
               id="profile-image"
               type="url"
               class="form-control settings-input"
-              placeholder="https://example.com/image.jpg"
+              [(ngModel)]="imageProfile"
+              name="imageProfile"
+              [placeholder]="user()?.imageProfile || 'https://example.com/image.jpg'"
               autocomplete="url"
             />
           </div>
@@ -433,10 +456,10 @@ export class ProfileSettingsComponent {
   showPasswordBox = signal(false);
   isLoading = signal(false);
   isProfileLoading = signal(false);
-  name = this.user()?.name ?? '';
-  familyName = this.user()?.familyName ?? '';
-  username = this.user()?.username ?? '';
-  imageProfile = this.user()?.imageProfile ?? '';
+  name = '';
+  familyName = '';
+  username = '';
+  imageProfile = '';
   confirmPassword = '';
 
   toggleProfileForm(): void {
@@ -449,29 +472,48 @@ export class ProfileSettingsComponent {
     const username = this.username.trim();
     const imageProfile = this.imageProfile.trim();
 
-    if (!name || !familyName || !username) {
-      this.alertService.showAlert('Name, family name and username are required.');
+    if (!name && !familyName && !username && !imageProfile) {
+      this.alertService.showAlert('No changes to save.');
       return;
     }
 
+    if (imageProfile && !/^https?:\/\//i.test(imageProfile)) {
+      this.alertService.showAlert('Profile image URL must start with http:// or https://');
+      return;
+    }
+
+    // Inviamo solo i campi che l'utente ha effettivamente compilato
+    const payload: { name?: string; familyName?: string; username?: string; imageProfile?: string | null } = {};
+    if (name) payload.name = name;
+    if (familyName) payload.familyName = familyName;
+    if (username) payload.username = username;
+    if (imageProfile) payload.imageProfile = imageProfile;
+
     this.isProfileLoading.set(true);
-    this.authService.updateUser({
-      name,
-      familyName,
-      username,
-      imageProfile: imageProfile || null,
-    }).subscribe({
+    this.authService.updateUser(payload).subscribe({
       next: () => {
         this.isProfileLoading.set(false);
-        this.name = name;
-        this.familyName = familyName;
-        this.username = username;
-        this.imageProfile = imageProfile;
+        // Svuotiamo i campi di input lasciandoli puliti per la prossima modifica
+        this.name = '';
+        this.familyName = '';
+        this.username = '';
+        this.imageProfile = '';
         this.alertService.showAlert('Profile updated successfully.');
       },
       error: (error) => {
         this.isProfileLoading.set(false);
-        const message = error.error?.detail || error.error;
+        let message: string | undefined;
+        if (typeof error.error === 'string') {
+          try {
+            const parsed = JSON.parse(error.error);
+            message = parsed.detail || parsed.title || error.error;
+          } catch {
+            message = error.error;
+          }
+        } else if (typeof error.error === 'object' && error.error !== null) {
+          const errObj = error.error as Record<string, any>;
+          message = errObj['detail'] || errObj['title'] || errObj['message'];
+        }
         this.alertService.showAlert(
           typeof message === 'string' ? message : 'Could not update profile.'
         );

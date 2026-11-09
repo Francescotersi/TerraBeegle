@@ -21,7 +21,6 @@ import { AlertService } from '../../../services/alert.service';
       <div class="dropdown-content" [class.is-open]="isOpen()"
         [attr.aria-hidden]="!isOpen()" [attr.inert]="isOpen() ? null : ''">
         <div class="dropdown-content-inner d-flex flex-column gap-3">
-          <span class="small text-body-secondary">Current email: {{ user()?.email }}</span>
           @if (!verificationPending()) {
             <div class="fields">
               <div>
@@ -91,8 +90,20 @@ export class ProfileEmailSettingsComponent {
 
   requestEmailChange(): void {
     const email = this.newEmail.trim().toLowerCase();
+    const currentEmail = this.user()?.email?.toLowerCase();
+
     if (!email || !this.password) {
       this.alertService.showAlert('New email and current password are required.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.alertService.showAlert('Please enter a valid email address.');
+      return;
+    }
+
+    if (currentEmail && email === currentEmail) {
+      this.alertService.showAlert('The new email must be different from the current one.');
       return;
     }
 
@@ -122,6 +133,7 @@ export class ProfileEmailSettingsComponent {
         this.verificationPending.set(false);
         this.password = '';
         this.verificationCode = '';
+        this.newEmail = '';
         this.alertService.showAlert(message || 'Email changed successfully.');
       },
       error: (error) => this.handleError(error, 'Could not confirm the email change.'),
@@ -135,12 +147,20 @@ export class ProfileEmailSettingsComponent {
 
   private handleError(error: { error?: unknown }, fallback: string): void {
     this.isLoading.set(false);
-    const message = typeof error.error === 'string'
-      ? error.error
-      : typeof error.error === 'object' && error.error !== null && 'detail' in error.error
-        && typeof error.error.detail === 'string'
-        ? error.error.detail
-        : undefined;
+    let message: string | undefined;
+
+    if (typeof error.error === 'string') {
+      try {
+        const parsed = JSON.parse(error.error);
+        message = parsed.detail || parsed.title || error.error;
+      } catch {
+        message = error.error;
+      }
+    } else if (typeof error.error === 'object' && error.error !== null) {
+      const errObj = error.error as Record<string, any>;
+      message = errObj['detail'] || errObj['title'] || errObj['message'];
+    }
+
     this.alertService.showAlert(message || fallback);
   }
 }

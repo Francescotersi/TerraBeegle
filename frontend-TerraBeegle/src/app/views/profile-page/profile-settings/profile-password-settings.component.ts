@@ -101,12 +101,18 @@ export class ProfilePasswordSettingsComponent {
       },
       error: (error: { error?: unknown }) => {
         this.isLoading.set(false);
-        const message = typeof error.error === 'string'
-          ? error.error
-          : typeof error.error === 'object' && error.error !== null && 'detail' in error.error
-            && typeof error.error.detail === 'string'
-            ? error.error.detail
-            : undefined;
+        let message: string | undefined;
+        if (typeof error.error === 'string') {
+          try {
+            const parsed = JSON.parse(error.error);
+            message = parsed.detail || parsed.title || error.error;
+          } catch {
+            message = error.error;
+          }
+        } else if (typeof error.error === 'object' && error.error !== null) {
+          const errObj = error.error as Record<string, any>;
+          message = errObj['detail'] || errObj['title'] || errObj['message'];
+        }
         this.alertService.showAlert(message || 'Could not change the password.');
       },
     });
