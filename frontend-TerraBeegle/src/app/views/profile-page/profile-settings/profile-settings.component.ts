@@ -1,13 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { AuthService } from '../../services/auth.service';
-import { AlertService } from '../../services/alert.service';
+import { AuthService } from '../../../services/auth.service';
+import { AlertService } from '../../../services/alert.service';
+import { ProfileEmailSettingsComponent } from './profile-email-settings.component';
+import { ProfilePasswordSettingsComponent } from './profile-password-settings.component';
 
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ProfileEmailSettingsComponent, ProfilePasswordSettingsComponent],
   template: `
     <div class="settings-container d-flex flex-column gap-3 py-2">
       <!-- Informatii profil -->
@@ -98,6 +100,9 @@ import { AlertService } from '../../services/alert.service';
           </div>
         </div>
       </div>
+
+      <app-profile-email-settings />
+      <app-profile-password-settings />
 
       <!-- Sezione 2FA -->
       <div class="settings-card p-3 p-sm-4 rounded-3 d-flex flex-column gap-3">

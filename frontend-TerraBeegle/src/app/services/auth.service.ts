@@ -2,9 +2,9 @@ import { Injectable , inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload } from '../models/user.model';
+import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload } from '../models/user.model';
 
-export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload } from '../models/user.model';
+export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload } from '../models/user.model';
 
 const TOKEN_KEY = 'tb_token';
 const USER_KEY = 'tb_user';
@@ -138,5 +138,28 @@ export class AuthService {
         this.currentUser.set(updateUser);
       })
     )
+  }
+
+  changeEmail(data: UpdateEmailPayload): Observable<string> {
+    return this.http.patch('/api/users/email', data, { responseType: 'text' });
+  }
+
+  confirmEmail(data: ConfirmEmailPayload, newEmail: string): Observable<string> {
+    return this.http.post('/api/users/email/confirm', data, { responseType: 'text' }).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updatedUser: User = { ...user, email: newEmail };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          }
+          this.currentUser.set(updatedUser);
+        }
+      })
+    );
+  }
+
+  changePassword(data: UpdatePasswordPayload): Observable<string> {
+    return this.http.patch('/api/users/password', data, { responseType: 'text' });
   }
 }

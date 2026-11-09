@@ -65,3 +65,18 @@ export interface UpdateUserPayload{
   imageProfile?: string | null;
   theme?: Theme;
 }
+
+export interface UpdateEmailPayload {
+  email: string;
+  password: string;
+}
+
+export interface ConfirmEmailPayload {
+  code: string;
+}
+
+export interface UpdatePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
