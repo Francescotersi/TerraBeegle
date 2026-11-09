@@ -61,6 +61,8 @@ export interface OtpContext {
 export interface ForgotPasswordPayload {
   emailOrUsername: string;
   code: string;
+  newPassword: string;
+  confirmNewPassword: string;
 }
 
 export interface UpdateUserPayload{
