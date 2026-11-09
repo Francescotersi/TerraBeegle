@@ -150,6 +150,10 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       width: 100%;
     }
 
+    :host-context([data-bs-theme="light"]) .profile-page-wrapper {
+      filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.12));
+    }
+
     .tracking-wide {
       letter-spacing: 0.05em;
     }
@@ -170,6 +174,11 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       overflow: hidden;
     }
 
+    :host-context([data-bs-theme="light"]) .avatar-circle {
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+      border: 3px solid #ffffff;
+    }
+
     .avatar-img {
       width: 100%;
       height: 100%;
@@ -185,6 +194,11 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
 
     .profile-tabs-nav::-webkit-scrollbar {
       display: none;
+    }
+
+    :host-context([data-bs-theme="light"]) .profile-tabs-nav,
+    :host-context([data-bs-theme="light"]) .profile-wrapper .border-secondary {
+      border-color: rgba(51, 65, 85, 0.35) !important;
     }
 
     .profile-tab-btn {

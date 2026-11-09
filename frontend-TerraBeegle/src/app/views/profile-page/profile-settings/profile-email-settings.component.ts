@@ -61,7 +61,8 @@ import { AlertService } from '../../../services/alert.service';
   `,
   styles: `
     :host { display: block; width: 100%; }
-    .settings-card { background: var(--tb-glass-bg); border: 1px solid var(--tb-glass-border); border-radius: 16px; }
+    .settings-card { background: var(--tb-glass-inner-bg, var(--tb-glass-bg)); border: 1px solid var(--tb-glass-border); border-radius: 16px; }
+    :host-context([data-bs-theme="light"]) .settings-card { background: rgba(255, 255, 255, 0.90); border: 1px solid rgba(51, 65, 85, 0.30); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08); }
     .profile-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: 0; background: transparent; border: 0; color: inherit; text-align: left; cursor: pointer; }
     .toggle-icon { color: var(--tb-accent); font-size: .8rem; transition: transform .2s ease; }
     .toggle-icon.open { transform: rotate(180deg); }

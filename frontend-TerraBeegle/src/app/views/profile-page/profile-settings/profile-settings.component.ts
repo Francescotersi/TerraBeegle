@@ -204,12 +204,18 @@ import { ProfilePasswordSettingsComponent } from './profile-password-settings.co
     }
 
     .settings-card {
-      background: var(--tb-glass-bg);
+      background: var(--tb-glass-inner-bg, var(--tb-glass-bg));
       border: 1px solid var(--tb-glass-border);
       border-radius: 16px;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    :host-context([data-bs-theme="light"]) .settings-card {
+      background: rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(51, 65, 85, 0.30);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     }
 
     .profile-fields {
@@ -358,6 +364,11 @@ import { ProfilePasswordSettingsComponent } from './profile-password-settings.co
       background: var(--tb-accent-subtle);
       border: 1px solid var(--tb-glass-border);
       border-radius: 12px;
+    }
+
+    :host-context([data-bs-theme="light"]) .password-box {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(51, 65, 85, 0.28);
     }
 
     .settings-input {

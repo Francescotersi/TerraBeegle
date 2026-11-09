@@ -166,7 +166,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
     </ng-template>
 
     <!-- ==================== VISTA DESKTOP ==================== -->
-    <div class="d-none d-lg-block w-100">
+    <div class="d-none d-lg-block w-100 sidebar-desktop-card">
       <app-liquid-glass
         borderRadius="24px"
         blur="2px"
@@ -274,6 +274,10 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       width: 100%;
     }
 
+    :host-context([data-bs-theme="light"]) .sidebar-desktop-card {
+      filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.12));
+    }
+
     .mobile-filter-bar {
       display: flex;
       align-items: center;
@@ -358,13 +362,14 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       flex-direction: column;
       padding: 1.25rem;
       border-radius: 28px;
-      background: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(22px) saturate(190%);
       -webkit-backdrop-filter: blur(22px) saturate(190%);
       border: 1px solid var(--tb-glass-border);
       box-shadow:
-        0 22px 48px rgba(0, 0, 0, 0.16),
-        inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+        0 24px 48px rgba(0, 0, 0, 0.16),
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        inset 1px 1px 2px rgba(255, 255, 255, 0.9);
 
       transform: translateX(calc(-100% - 2rem));
       opacity: 0;
@@ -464,6 +469,16 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       border-color: var(--tb-accent);
       box-shadow: 0 0 0 0.25rem var(--tb-accent-glow);
       color: var(--tb-text);
+    }
+
+    :host-context([data-bs-theme="light"]) .sidebar-search {
+      background-color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(51, 65, 85, 0.32);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    :host-context([data-bs-theme="light"]) .border-light-subtle {
+      border-color: rgba(51, 65, 85, 0.35) !important;
     }
 
     .category-btn {

@@ -66,11 +66,17 @@ import { FriendshipResponseDTO } from '../../../models/friendship.model';
     }
 
     .friend-card {
-      background: var(--tb-glass-bg);
+      background: var(--tb-glass-inner-bg, var(--tb-glass-bg));
       border: 1px solid var(--tb-glass-border);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    :host-context([data-bs-theme="light"]) .friend-card {
+      background: rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(51, 65, 85, 0.30);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     }
 
     .friend-card:hover {

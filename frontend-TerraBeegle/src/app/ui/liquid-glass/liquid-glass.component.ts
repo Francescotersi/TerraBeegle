@@ -100,11 +100,19 @@ let nextLiquidGlassId = 0;
 
       border: 1px solid var(--tb-glass-border);
       box-shadow:
-        0 16px 36px var(--tb-glass-shadow),
-        inset 1px 1px 2px rgba(255, 255, 255, 0.6),
-        inset -1px -1px 2px rgba(255, 255, 255, 0.15);
+        0 18px 40px var(--tb-glass-shadow),
+        0 4px 12px rgba(0, 0, 0, 0.06),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.06);
       transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
       transform: translateZ(0);
+    }
+
+    :host-context([data-bs-theme="dark"]) .glass-specular {
+      box-shadow:
+        0 16px 36px var(--tb-glass-shadow),
+        inset 1px 1px 2px rgba(46, 217, 231, 0.2),
+        inset -1px -1px 2px rgba(0, 0, 0, 0.4);
     }
 
     .glass-content {

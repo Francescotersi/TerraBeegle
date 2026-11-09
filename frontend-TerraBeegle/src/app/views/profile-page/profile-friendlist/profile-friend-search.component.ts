@@ -107,13 +107,19 @@ import { PagedResponse, FriendshipResponseDTO } from '../../../models/friendship
     }
 
     .add-friend-box {
-      background: var(--tb-glass-bg);
+      background: var(--tb-glass-inner-bg, var(--tb-glass-bg));
       border: 1px solid var(--tb-glass-border);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: border-color 0.2s ease;
       position: relative;
       z-index: 25;
+    }
+
+    :host-context([data-bs-theme="light"]) .add-friend-box {
+      background: rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(51, 65, 85, 0.30);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     }
 
     .search-input-group {
