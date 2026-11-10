@@ -189,6 +189,26 @@ type SubTab = 'friends' | 'received' | 'sent';
       background: var(--tb-accent);
       color: #fff;
     }
+
+    @media (max-width: 575.98px) {
+      .tabs-nav-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-items: stretch;
+        gap: 0.5rem !important;
+      }
+
+      .sub-tab-btn {
+        justify-content: center;
+        width: 100%;
+      }
+
+      .sub-tab-btn:last-child {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: calc(50% - 0.25rem);
+      }
+    }
   `,
 })
 export class ProfileFriendlistComponent implements OnInit {

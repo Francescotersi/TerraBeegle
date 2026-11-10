@@ -233,6 +233,28 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       border-radius: 3px 3px 0 0;
     }
 
+    @media (max-width: 575.98px) {
+      .profile-tabs-nav {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem !important;
+        overflow-x: visible;
+        white-space: normal;
+      }
+
+      .profile-tab-btn {
+        width: 100%;
+        padding: 0.6rem 0.35rem;
+        text-align: center;
+      }
+
+      .profile-tab-btn.active::after {
+        bottom: 0;
+        left: 15%;
+        right: 15%;
+      }
+    }
+
     .profile-tab-content {
       min-height: 180px;
     }

@@ -119,3 +119,44 @@ body {
 [data-bs-theme="dark"] .site-logo {
   filter: none;
 }
+
+@media (min-width: 2000px) {
+  .profile-wrapper {
+    font-size: 1.3rem;
+  }
+
+  .profile-wrapper .profile-tab-btn,
+  .profile-wrapper .logout-link {
+    font-size: 1.25rem !important;
+  }
+
+  .profile-wrapper .form-control,
+  .profile-wrapper .btn,
+  .profile-wrapper .btn-confirm,
+  .profile-wrapper .btn-cancel {
+    font-size: 1.25rem !important;
+  }
+
+  .profile-wrapper .small,
+  .profile-wrapper .info-label,
+  .profile-wrapper .text-body-secondary.small {
+    font-size: 1.15rem !important;
+  }
+
+  .profile-wrapper .sub-tab-btn {
+    font-size: 1.2rem !important;
+  }
+
+  .profile-wrapper .tab-count-badge {
+    font-size: 1rem !important;
+  }
+
+  .profile-wrapper .friend-search-input {
+    font-size: 1.25rem !important;
+  }
+
+  .profile-wrapper .btn-clear-input,
+  .profile-wrapper .btn-xs {
+    font-size: 1.15rem !important;
+  }
+}
