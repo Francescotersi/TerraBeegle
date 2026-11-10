@@ -70,14 +70,18 @@ export interface GridComponentProps {
                     [src]="game.coverImage"
                     [alt]="game.name"
                     class="card-img game-cover"
-                    loading="lazy"
+                    [attr.loading]="idx === 0 ? 'eager' : 'lazy'"
+                    [attr.fetchpriority]="idx === 0 ? 'high' : 'low'"
+                    width="616"
+                    height="353"
+                    decoding="async"
                   />
 
                   <!-- Overlay titolo -->
                   <div class="card-img-overlay d-flex flex-column justify-content-end p-2.5 card-overlay-title">
-                    <h6 class="card-title fw-bold mb-0 text-white text-truncate" [title]="game.name">
+                    <h3 class="card-title fw-bold mb-0 text-white text-truncate" [title]="game.name">
                       {{ game.name }}
-                    </h6>
+                    </h3>
                   </div>
                 </div>
 
@@ -222,9 +226,9 @@ export interface GridComponentProps {
 
             <div class="mobile-sheet-info flex-grow-1 min-w-0">
               <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
-                <h5 class="mobile-sheet-title fw-bold mb-0 text-truncate" [title]="mobileGame.name">
+                <h3 class="mobile-sheet-title fw-bold mb-0 text-truncate" [title]="mobileGame.name">
                   {{ mobileGame.name }}
-                </h5>
+                </h3>
                 <button
                   type="button"
                   class="mobile-sheet-close flex-shrink-0"
@@ -446,6 +450,10 @@ export interface GridComponentProps {
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    .card-overlay-title .card-title {
+      font-size: 1rem;
       display: block;
     }
 
