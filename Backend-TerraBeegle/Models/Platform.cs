@@ -11,6 +11,8 @@ public class Platform
     public string Abbreviation { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public int? PlatformFamily { get; set; }
+    public long? LogoId { get; set; }
+    public Image? Logo { get; set; }
 
     public ICollection<Game> Games { get; set; } = [];
 }

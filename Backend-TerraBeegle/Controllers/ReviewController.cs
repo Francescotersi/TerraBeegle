@@ -180,11 +180,6 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             return Forbid("You can only update your own reviews.");
         }
 
-        if (reviewUpdateDTO.Rating < 1 || reviewUpdateDTO.Rating > 5)
-        {
-            return BadRequest("Rating must be between 1 and 5.");
-        }
-
         if (reviewUpdateDTO.Content != null)
         {
             review.Content = reviewUpdateDTO.Content;

@@ -19,7 +19,6 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
-    // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
     [HttpGet("friends")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
     GetFriends([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "friends");

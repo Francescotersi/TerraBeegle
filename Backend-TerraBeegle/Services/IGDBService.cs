@@ -57,7 +57,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         try
         {
             static string strFields(string str) => $"{str}.name,{str}.slug";
-            static string strImageFields(string str, bool b = false) => $"{str}.image_id,{str}.url{(b ? $",{str}.image_type" : "")}";
+            static string strImageFields(string str, bool b = false) => $"{str}.image_id,{(b ? $",{str}.image_type" : "")}";
             static string strGameFields(string str) => $"{strFields(str)},{str}.rating,{strImageFields(str + ".cover", true)},{str}.first_release_date,{str}.game_type.type";
             static string strRatingFields(string str) => $"{str}rating,{str}.rating_count";
 
