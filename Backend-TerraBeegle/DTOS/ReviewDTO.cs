@@ -4,8 +4,8 @@ namespace Backend_TerraBeegle.DTOS;
 
 public class ReviewCreateDTO
 {
-    [Range(1, 5)]
-    public int Rating { get; set; }               // 1-5
+    [Range(1, 10)]
+    public int Rating { get; set; }               // 1-10
     public long GameId { get; set; }               // IGDB Id
     public string? Content { get; set; }
 }
@@ -22,10 +22,10 @@ public class ReviewResponseDTO
 {
     public long Id { get; set; }
 
-    [Range(1, 5)]
-    public int Rating { get; set; }               // 1-5
+    [Range(1, 10)]
+    public int Rating { get; set; }               // 1-10
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
     public UserPublicResponseDTO? User { get; set; }
-    public GameMinDTO? Game { get; set; }
+    public GameDetailsDTO? Game { get; set; }
 }

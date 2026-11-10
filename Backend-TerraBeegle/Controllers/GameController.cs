@@ -17,20 +17,22 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
+        string pagination = "";
+
         static string GetBrackets(int values, bool all, bool open) => values <= 1 ? "" : all ? (open ? "(" : ")") : (open ? "[" : "]");
         static string GetQuery (string field, int[] values, bool all) => $"{field}={GetBrackets(values.Length, all, true)}{string.Join(",", values)}{GetBrackets(values.Length, all, false)} &";
         static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
 
         if (search.Page.HasValue && search.Page.Value != 1)
-            query += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 20)};";
+            pagination += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 20)};";
 
         if (search.PageSize.HasValue && search.PageSize.Value != 20)
-            query += $"limit {search.PageSize.Value};";
+            pagination += $"limit {search.PageSize.Value};";
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
             search.SortBy = search.SortBy.Trim().ToLowerInvariant();
-            query += $"sort {(search.SortBy == "critic_rating" ? "aggregated_rating" : search.SortBy)} {(search.Ascending ? "asc" : "desc")};";
+            pagination += $"sort {(search.SortBy == "critic_rating" ? "aggregated_rating" : search.SortBy)} {(search.Ascending ? "asc" : "desc")};";
         }
 
         if (!string.IsNullOrWhiteSpace(search.Name))
@@ -46,10 +48,10 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         }
 
         if (search.PlatformsFamily is { Length: > 0 } && search.Platforms is { Length: > 0 }) {
-            query += $"({GetQuery("platforms.platformsfamily", search.PlatformsFamily, search.PlatformsFamilyExact)} | {GetQuery("platforms", search.Platforms, search.PlatformsExact)}) &";
+            query += $"({GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact)} | {GetQuery("platforms", search.Platforms, search.PlatformsExact)}) &";
         }
         else if (search.PlatformsFamily is { Length: > 0 }){
-            query += GetQuery("platforms.platformsfamily", search.PlatformsFamily, search.PlatformsFamilyExact);
+            query += GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact);
         }
         else if (search.Platforms is { Length: > 0 }) {
             query += GetQuery("platforms", search.Platforms, search.PlatformsExact);
@@ -65,10 +67,13 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             query += GetQuery("themes", search.Themes, search.ThemesExact);
 
         if (search.Developers is { Length: > 0 })
-            query += $"(involved_companies.developer = true & {GetQuery("involved_companies.company", search.Developers, search.DevelopersExact)}) &";
+            query += $"(involved_companies.developer=true & {GetQuery("involved_companies.company", search.Developers, search.DevelopersExact)}) &";
 
         if (search.Publishers is { Length: > 0 })
-            query += $"(involved_companies.publisher = true & {GetQuery("involved_companies.company", search.Publishers, search.PublishersExact)}) &";
+            query += $"(involved_companies.publisher=true & {GetQuery("involved_companies.company", search.Publishers, search.PublishersExact)}) &";
+
+        if (search.Stores is { Length: > 0 })
+            query += GetQuery("website.type", search.Stores, search.StoresExact);
 
         if (search.ReleaseYearMin.HasValue)
             query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMin.Value, true), true);
@@ -88,7 +93,10 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.CriticRatingMax.HasValue)
             query += GetQueryInt("aggregated_rating", search.CriticRatingMax.Value, false);
 
-        var result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '));
+        if (search.GameType is { Length: > 0 })
+            query += GetQuery("game_type", search.GameType, false);
+
+        var result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
 
         if (result is null)
         {
@@ -121,9 +129,9 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         return QueryHelpers.AddQueryString(Request.Path, parameters);
     }
 
-	// retrieving all games from the database and projecting them to GameResponseDTO
+	// retrieving all games from the database and projecting them to GameDetailsDTO
     [HttpGet("all")]
-    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
+    public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
     {
         var games = await db.Games
             .Where(g => !g.IsPlaceholder || IncludePlaceholders) // Only return games that are not placeholders, unless 'IncludePlaceholders' is true
@@ -131,7 +139,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ThenBy(g => g.Slug) // Secondary ordering by slug to ensure consistent ordering for games with the same name
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ProjectToType<GameResponseDTO>()
+            .ProjectToType<GameDetailsDTO>()
             .ToListAsync();
 
         return Ok(Utils.CreatePagedResponse(
@@ -143,23 +151,23 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
     }
 
 	// searching by the IGDB id the same one used for the IGDB request below
-    [HttpGet("{igdbGameId:long}")]
-    public async Task<ActionResult<GameResponseDTO>> GetById(long igdbGameId)
-    {
-        // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
-        GameResponseDTO? game;
-        try
-        {
-            game = await ApiService.GetGameAsync(igdbGameId);
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-        }
+    // [HttpGet("{igdbGameId:long}")]
+    // public async Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId)
+    // {
+    //     // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
+    //     GameDetailsDTO? game;
+    //     try
+    //     {
+    //         game = await ApiService.GetGameAsync(igdbGameId);
+    //     }
+    //     catch (HttpRequestException)
+    //     {
+    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+    //     }
 
-        if (game is null)
-            return NotFound($"Game with IGDB ID {igdbGameId} not found.");
+    //     if (game is null)
+    //         return NotFound($"Game with IGDB ID {igdbGameId} not found.");
 
-        return Ok(game);
-    }
+    //     return Ok(game);
+    // }
 }

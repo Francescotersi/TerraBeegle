@@ -118,7 +118,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-
         // GAMES
         modelBuilder.Entity<Game>(e =>
         {
@@ -148,12 +147,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.Rating)
                 .HasPrecision(4, 2);
 
-            e.Property(g => g.Developer)
-                .HasMaxLength(255);
-
-            e.Property(g => g.Publisher)
-                .HasMaxLength(255);
-
             e.Property(g => g.CreatedAt).HasDefaultValueSql("NOW()");
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");
 
@@ -162,7 +155,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(g => g.Name);
             
             e.OwnsMany(g => g.DLCs, o => o.ToTable("game_dlcs"));
-            e.OwnsMany(g => g.ParentGames, o => o.ToTable("game_parent_games"));
+            e.OwnsOne(g => g.ParentGame, o => o.ToTable("game_parent_games"));
             e.OwnsMany(g => g.Series, o => o.ToTable("game_series"));
 
             e.HasMany(g => g.Genres)
@@ -198,10 +191,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(g => g.Name)
                 .IsRequired()
                 .HasMaxLength(100);
+            e.Property(g => g.Slug)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(g => g.Name);
 
             e.HasIndex(g => g.ApiGenreId).IsUnique();
-
-            e.HasIndex(g => g.Name).IsUnique();
+            e.HasIndex(g => g.Slug).IsUnique();
 
             e.HasMany(g => g.Games)
                 .WithMany(g => g.Genres)
@@ -220,7 +217,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasMaxLength(100);
 
+            e.Property(p => p.Slug)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(p => p.Name);
+
             e.HasIndex(p => p.ApiPlatformId).IsUnique();
+            e.HasIndex(p => p.Slug).IsUnique();
 
             e.HasMany(p => p.Games)
                 .WithMany(g => g.Platforms)
@@ -252,6 +256,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(g => g.Reviews)
                 .HasForeignKey(r => r.GameId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Image>(e =>
+        {
+            e.Property(i => i.Id).ValueGeneratedOnAdd();
+            e.Property(i => i.ApiImageId).IsRequired().HasMaxLength(500);
+            
+            e.HasIndex(i => i.ApiImageId).IsUnique();
         });
 
         // LOGIN CHALLENGES (2FA)

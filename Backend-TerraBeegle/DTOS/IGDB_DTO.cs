@@ -2,14 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class IGDBSearchDTO
-{
-    public int Count { get; set; }
-    public string? Next { get; set; }
-    public string? Previous { get; set; }
-    public IEnumerable<IGDBGameDTO> Results { get; set; } = [];
-}
-
 public class IGDBGameDTO
 {
     public int Id { get; set; }
@@ -18,9 +10,8 @@ public class IGDBGameDTO
     public int? Metacritic { get; set; }
     public string? Released { get; set; }
     public bool Tba { get; set; }
-    public string? BackgroundImage { get; set; }
+    public string? Cover { get; set; }
     public double Rating { get; set; }
-    public IEnumerable<IGDBParentPlatformListDTO> ParentPlatforms { get; set; } = [];
     public IEnumerable<IGDBPlatformListDTO> Platforms { get; set; } = [];
     public IEnumerable<IGDBGenreDTO> Genres { get; set; } = [];
 }
@@ -52,19 +43,20 @@ public class IGDBGameDetailsDTO
     public string? FirstReleaseDate { get; set; }
     public IGDBImageDTO? Cover { get; set; }
     public string? Website { get; set; }
-    public IEnumerable<IGDBImageDTO> Artworks { get; set; }
-    public IEnumerable<IGDBImageDTO> Screenshots { get; set; }
-    public IEnumerable<IGDBPlatformListDTO> Platforms { get; set; } = [];
-    public IEnumerable<IGDBGenreDTO> Genres { get; set; } = [];
-    public IEnumerable<IGDBThemeDTO> Themes { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> Bundles { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> DLCs { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> Expansions { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> Remakes { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> Remasters { get; set; } = [];
-    public IEnumerable<IGDBGameListDTO> Series { get; set; } = [];
-    public IEnumerable<IGDBGameDTO> SimilarGames { get; set; } = [];
+    public IEnumerable<IGDBImageDTO>? Artworks { get; set; }
+    public IEnumerable<IGDBImageDTO>? Screenshots { get; set; }
+    public IEnumerable<IGDBPlatformListDTO>? Platforms { get; set; }
+    public IEnumerable<IGDBGenreDTO>? Genres { get; set; } = [];
+    public IEnumerable<IGDBThemeDTO>? Themes { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? Bundles { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? DLCs { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? Expansions { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? Remakes { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? Remasters { get; set; } = [];
+    public IEnumerable<IGDBGameListDTO>? Series { get; set; } = [];
+    public IEnumerable<IGDBGameDTO>? SimilarGames { get; set; } = [];
     public IGDBGameDTO? ParentGame { get; set; }
+     public IGDBGameDTO? VersionParent { get; set; }
     public IEnumerable<IGDBGameListDTO> Franchises { get; set; } = [];
 }
 
@@ -85,17 +77,12 @@ public class IGDBPlatformListDTO
     public string? ReleasedAt { get; set; }
 }
 
-public class IGDBParentPlatformListDTO
-{
-    [JsonPropertyName("platform")]
-    public IGDBPlatformDTO Platform { get; set; } = null!;
-}
-
 public class IGDBPlatformDTO
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
+    public IGDBImageDTO? Logo { get; set; }
 }
 
 public class IGDBGenreDTO
@@ -105,7 +92,7 @@ public class IGDBGenreDTO
     public string Slug { get; set; } = null!;
 }
 
-public class IGDBObjectDTO
+public class IGDBThemeDTO
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

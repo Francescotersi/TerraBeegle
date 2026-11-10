@@ -2,36 +2,44 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class GameMinDTO
+public record GameCardDTO
 {
-    public int ApiGameId { get; set; }
+    public long ApiGameId { get; set; }
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
-    public string? BackgroundImage { get; set; }
+    public string? Cover { get; set; }
     public double? Rating { get; set; }
+    public int? CriticRating { get; set; }
+    public string? GameType { get; set; }
+    public string? GameStatus { get; set; }
     public DateOnly? ReleaseDate { get; set; }
-    public bool Tba { get; set; }
+    public List<GenreDTO> Genres { get; set; } = [];
+    public List<PlatformDTO> Platforms { get; set; } = [];
+    public List<ThemeDTO> Themes { get; set; } = [];
 }
 
-public class GameResponseDTO : GameMinDTO
+public class GameDetailsDTO
 {
-    public string NameOriginal { get; set; } = null!;
+    public long ApiGameId { get; set; }
+    public string Name { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+    public string? Cover { get; set; }
+    public double? Rating { get; set; }
+    public int? CriticRating { get; set; }
+    public DateOnly? ReleaseDate { get; set; }
+    public string? GameType { get; set; }
+    public string? GameStatus { get; set; }
+    public string Summary { get; set; } = null!;
     public string Description { get; set; } = null!;
     public string Website { get; set; } = null!;
-    public int? Metacritic { get; set; }
-    public string? Developer { get; set; }
-    public string? Publisher { get; set; }
+    public List<CompanyDTO>? Developer { get; set; }
+    public List<CompanyDTO>? Publisher { get; set; }
     public List<GenreDTO> Genres { get; set; } = [];
     public List<PlatformDTO> Platforms { get; set; } = [];
-}
-
-
-public class GameCardDTO : GameMinDTO
-{
-    public List<GenreDTO> Genres { get; set; } = [];
-    public List<PlatformDTO> Platforms { get; set; } = [];
-    //public List<ParentPlatformDTO> ParentPlatforms { get; set; } = [];
-    public List<ReviewResponseDTO> Reviews { get; set; } = [];
+    public List<ThemeDTO> Themes { get; set; } = [];
+    // public List<KeywordDTO> Keywords { get; set; } = [];
+    // public List<StoreDTO> Stores { get; set; } = [];
+    // public List<LanguageSupportDTO> LanguageSupports { get; set; } = [];
 }
 
 public class GameSearchDTO
@@ -61,17 +69,16 @@ public class GameSearchDTO
     public int[]? Platforms { get; set; }
     public bool PlatformsExact { get; set; } = true;
 
-    // Genres and Themes
+    // Genres, Themes and Game Types
     public int[]? Genres { get; set; }
     public bool GenresExact { get; set; } = true;
     public int[]? Themes { get; set; }
     public bool ThemesExact { get; set; } = true;
+    public int[]? GameType { get; set; }
 
-    // Keywords and Tags
+    // Keywords
     public int[]? Keywords { get; set; }
     public bool KeywordsExact { get; set; } = true;
-    public int[]? Tags { get; set; }
-    public bool TagsExact { get; set; } = true;
 
     // Developers and Publishers
     public int[]? Developers { get; set; }
@@ -82,7 +89,6 @@ public class GameSearchDTO
     // Stores
     public int[]? Stores { get; set; }
     public bool StoresExact { get; set; } = true;
-    
 
     // Date
     public int? ReleaseYearMin { get; set; }
@@ -93,13 +99,6 @@ public class GameSearchDTO
     public int? RatingMax { get; set; }
     public int? CriticRatingMin { get; set; }
     public int? CriticRatingMax { get; set; }
-
-    // Exclusions
-    public bool? ExcludeAdditions { get; set; }
-    public bool? ExcludeRemakes { get; set; }
-    public bool? ExcludeRemasters { get; set; }
-    public bool? ExcludeParents { get; set; }
-    public bool? ExcludeFranchises { get; set; }
 }
 
 public class GameSearchResponseDTO

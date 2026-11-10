@@ -12,11 +12,12 @@ public class Game
 
     public string? Summary { get; set; }
     public string? Storyline { get; set; }
-    public int? GameType { get; set; }
+    public GameType? GameType { get; set; }
     public PegiRating? PegiRating { get; set; }
+    public string? PegiRatingDescription { get; set; }
    
     public DateOnly? ReleaseDate { get; set; }
-    public bool? Tba { get; set; }
+    public int? GameStatus { get; set; }
     public string? Website { get; set; }
 
     public decimal? Rating { get; set; }
