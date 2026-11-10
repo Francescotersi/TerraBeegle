@@ -106,3 +106,37 @@ public class GameSearchResponseDTO
     public int Count { get; set; }
     public IEnumerable<GameCardDTO> Results { get; set; } = [];
 }
+
+public class UserGameSearchDTO
+{
+    [MaxLength(100)]
+    public string? Name { get; set; }
+    public int? Genre { get; set; }
+    public int? Platform { get; set; }
+    
+    [Range(1950, 2100)]
+    public int? MinYear { get; set; }
+
+    [Range(1950, 2100)]
+    [Compare(nameof(MinYear), ErrorMessage = "MaxYear must be greater than or equal to MinYear.")]
+    public int? MaxYear { get; set; }
+    public int? GameType { get; set; }
+
+    [Range(0.0, 10.0)]
+    public decimal? MinRating { get; set; }
+    [Range(0.0, 10.0)]
+    [Compare(nameof(MinRating), ErrorMessage = "MaxRating must be greater than or equal to MinRating.")]
+    public decimal? MaxRating { get; set; }
+    [Range(0.0, 10.0)]
+
+    public decimal? MinCriticRating { get; set; }
+    [Range(0.0, 10.0)]
+    [Compare(nameof(MinCriticRating), ErrorMessage = "MaxCriticRating must be greater than or equal to MinCriticRating.")]
+    public decimal? MaxCriticRating { get; set; }
+
+    [RegularExpression(@"^(?i:name|released|rating|critic_rating)$", 
+        ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating' or 'critic_rating'.")]
+    public string? SortBy { get; set; }
+    
+    public bool Ascending { get; set; } = true;
+}
