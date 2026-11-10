@@ -567,9 +567,10 @@ export class GridComponent implements OnInit {
   readonly emptyMessage = input<string>('No games found.');
 
   protected readonly hoveredGameId = signal<number | null>(null);
+  private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   // ---- Show More functuonality ----
-  private readonly step = 20;
-  protected readonly visibleCount = signal(20);
+  private readonly step = 24;
+  protected readonly visibleCount = signal(24);
 
   protected readonly visibleGames = computed(() => {
     return this.games().slice(0, this.visibleCount());
@@ -585,11 +586,22 @@ export class GridComponent implements OnInit {
 
   // -----------------------
   protected onMouseEnter(gameId: number): void {
-    this.hoveredGameId.set(gameId);
+    this.clearHoverTimer();
+    this.hoverTimer = setTimeout(() => {
+      this.hoveredGameId.set(gameId);
+    }, 300);
   }
 
   protected onMouseLeave(): void {
+    this.clearHoverTimer();
     this.hoveredGameId.set(null);
+  }
+
+  private clearHoverTimer(): void {
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
   }
 
   protected getReleaseYear(releasedDate: string): string {

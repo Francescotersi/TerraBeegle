@@ -14,8 +14,8 @@ import { ThemeService } from '../services/theme.service';
       tabindex="0"
       (keydown.enter)="$event.preventDefault(); themeService.toggleTheme()"
       (keydown.space)="$event.preventDefault(); themeService.toggleTheme()"
-      [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
-      [attr.title]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
+      [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      [attr.title]="themeService.currentTheme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
     >
       <input
         type="checkbox"
@@ -26,7 +26,7 @@ import { ThemeService } from '../services/theme.service';
         style="pointer-events: none;"
       />
       <div class="theme-switch__thumb">
-        <!-- Icona Sole Minimale (Light Mode) in ardesia scura -->
+        <!-- Minimal Sun Icon (Light Mode) -->
         <svg
           class="theme-switch__icon theme-switch__icon--sun"
           viewBox="0 0 24 24"
@@ -84,7 +84,7 @@ import { ThemeService } from '../services/theme.service';
       user-select: none;
       -webkit-tap-highlight-color: transparent;
 
-      /* Light mode: neutro, morbido e pulito */
+      /* Light mode: neutral, soft, and clean */
       background: rgba(0, 0, 0, 0.07);
       border: 1px solid rgba(0, 0, 0, 0.08);
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
