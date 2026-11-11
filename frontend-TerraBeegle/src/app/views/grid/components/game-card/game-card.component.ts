@@ -18,7 +18,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
       (mouseleave)="hoverEnd.emit()"
       (click)="cardClick.emit($event)"
     >
-      <!-- Contenitore immagine -->
+      <!-- Image container -->
       <div class="game-cover-container">
         <img
           [src]="game().coverImage"

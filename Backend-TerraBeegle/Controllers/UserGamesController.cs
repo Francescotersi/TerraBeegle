@@ -23,11 +23,13 @@ namespace Backend_TerraBeegle.Controllers;
 public class UserGamesController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
     // favorites
+    // Lists a user's favorite games
     [DisableRateLimiting]
     [HttpGet("favorites")]
     public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] UserGameSearchDTO search)
         => GetUserGamesAsync(userId, search, u => u.Favorites, "favorites", nameof(GetFavorites));
 
+    // Adds a game to favorites
     [HttpPost("favorites/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToFavorites(long userId, int rawgGameId)
     {
@@ -73,6 +75,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
 
+    // Removes a game from favorites
     [HttpDelete("favorites/{rawgGameId:int}")]
     public async Task<IActionResult> DeleteGameFromFavorites(long userId, int rawgGameId)
     {
@@ -98,11 +101,13 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     }
 
     // wishlist
+    // Lists a user's wishlist games
     [DisableRateLimiting]
     [HttpGet("wishlist")]
     public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] UserGameSearchDTO search)
         => GetUserGamesAsync(userId, search, u => u.WishlistItems, "wishlist", nameof(GetWishlist));
 
+    // Adds a game to the wishlist
     [HttpPost("wishlist/{rawgGameId:int}")]
     public async Task<IActionResult> AddGameToWishlist(long userId, int rawgGameId)
     {
@@ -148,6 +153,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         return NoContent();
     }
 
+    // Removes a game from the wishlist
     [HttpDelete("wishlist/{rawgGameId:int}")]
     public async Task<IActionResult> DeleteGameFromWishlist(long userId, int rawgGameId)
     {
@@ -175,6 +181,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
     // Shared by GetFavorites and GetWishlist: only the list, the word in the 403 message and the action
     // used for the page links differ. Private, otherwise ASP.NET would treat it as an endpoint.
     // Expression (not Func), so EF can translate u => u.Favorites to a JOIN instead of loading the users
+    // Returns one of a user's game lists, filtered and sorted
     private async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetUserGamesAsync(
         long userId,
         UserGameSearchDTO search,
@@ -278,6 +285,7 @@ public class UserGamesController(AppDbContext db, IRawgService rawgService) : Co
         ));
     }
 
+    // True if the viewer is the owner or an accepted friend
     private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
     {
         if(viewerId == ownerId)

@@ -1,29 +1,445 @@
+<div align="center">
+
+<img src="frontend-TerraBeegle/public/Logo-dark.png" alt="TerraBeegle logo" width="140" />
+
 # TerraBeegle
 
-Fullstack web application created for the **Terranova Challenge** proposed at **42 Florence**.
+**A full-stack web application for exploring the world of video games.**
 
-## Tech Stack
+Built for the **Terranova Software – Gaming Explorer** challenge at **42 Florence**.
 
-- **Backend**: ASP.NET Core Web API on **.NET 10 LTS**
-- **Frontend**: **Angular LTS** (Standalone Components, Signals & HttpClient)
-- **Database**: **PostgreSQL 17** (via **Entity Framework Core** & **Npgsql**)
-- **Orchestration**: Docker Compose, concurrently
+![.NET](https://img.shields.io/badge/.NET-10_LTS-512BD4?logo=dotnet&logoColor=white)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-Web_API-512BD4)
+![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-## Available Scripts (`package.json`)
-
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Starts the PostgreSQL database, .NET 10 backend, and Angular frontend concurrently. |
-| `npm run backend` | Runs only the .NET 10 Web API (`Backend-TerraBeegle`). |
-| `npm run frontend` | Runs only the Angular dev server with dev proxy (`frontend-TerraBeegle`). |
-| `npm run db:up` | Starts the PostgreSQL container via Docker Compose (or local service fallback). |
-| `npm run db:down` | Stops the PostgreSQL Docker container. |
+</div>
 
 ---
 
-## Database Credentials (Default)
+## Table of Contents
 
-- **Host**: `localhost` (Port: `5432`)
-- **Database**: `terrabeegle_db`
-- **Username**: `terrabeegle`
-- **Password**: `terrabeegle_secret`
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Security](#security)
+- [Rate Limiting](#rate-limiting)
+- [Error Handling](#error-handling)
+- [Background Services](#background-services)
+- [Project Structure](#project-structure)
+- [Credits](#credits)
+
+---
+
+## Overview
+
+TerraBeegle lets users search a large catalog of video games, filter and sort the results, open a detailed
+page for each game and build a personal collection of favorites and a wishlist. On top of the mandatory features,
+it has a complete account system: email verification, optional two-factor authentication, friends, reviews,
+personal statistics and a pixel-art dog companion.
+
+Game data comes from the [IGDB Video Games Database API](https://rawg.io/apidocs). The backend sits between
+the frontend and IGDB, so the API key never reaches the browser.
+
+> **Note:** a migration of the game data source from RAWG to IGDB is in progress on a separate branch.
+> This document describes the current state of `main`.
+
+---
+
+## Features
+
+### Mandatory features
+
+| Feature | Description |
+| :--- | :--- |
+| **Home page** | Entry point with a search bar and a selection of games retrieved from the API. |
+| **Basic search** | Search games by full or partial name; results update dynamically. |
+| **Advanced search** | Filter by genre, platform, release year, Metacritic score, and sort by name, release date, rating, Metacritic and more. |
+| **Game list** | Results shown as a responsive grid of cards: cover, title, release date, rating and platforms. |
+| **Detail page** | Description, images, genres, platforms, rating and Metacritic score. |
+| **Favorites** | Add and remove games; the list is stored in the database and has its own page. |
+| **State management** | Loading indicators, API error handling and "no results" messages. |
+| **Responsive design** | Layout adapted to desktop, tablet and smartphone. |
+
+### Bonus features
+
+| Feature | Description |
+| :--- | :--- |
+| **User authentication** | Registration, login with JWT, email verification and password reset. |
+| **Two-factor authentication** | Optional second step at login, with a one-time code sent by email. |
+| **Dark / Light mode** | Theme preference saved on the user profile and restored on every visit. |
+| **Wishlist** | A separate list of games the user wants to buy or try. |
+| **Personal statistics** | Dashboard with genre and platform distribution of the user's favorites. |
+| **Friends** | Send, accept, reject and remove friend requests; friends can see each other's lists. |
+| **Reviews** | Users can rate games from 1 to 5 and write a review. |
+| **Dog companion** | Each user picks one of four animated pixel-art dogs (Beagle, Elkhound, Golden Retriever, Husky) shown across the app. |
+
+---
+
+## Architecture
+
+```
+┌──────────────────────┐      /api/*       ┌───────────────────────┐      HTTPS      ┌──────────────┐
+│   Angular frontend   │ ────────────────▶ │  ASP.NET Core Web API │ ──────────────▶ │   RAWG API   │
+│  (SSR, Bootstrap 5)  │ ◀──────────────── │       (.NET 10)       │ ◀────────────── │              │
+└──────────────────────┘    JSON + JWT     └───────────┬───────────┘                 └──────────────┘
+                                                       │ EF Core (Npgsql)
+                                                       ▼
+                                              ┌──────────────────┐        SMTP        ┌──────────────┐
+                                              │  PostgreSQL 16   │                    │ Email server │
+                                              └──────────────────┘                    └──────────────┘
+```
+
+- **Client–server separation:** the Angular app talks only to our API, never directly to RAWG.
+- **Thin controllers, focused services:** everything about RAWG lives in `RawgService`; email codes, 2FA,
+  JWT generation and cleanup jobs each have their own service behind an interface.
+- **DTOs everywhere:** entities never leave the backend; requests are validated with data annotations,
+  responses are mapped with Mapster.
+- **Lazy game caching:** a game is saved to the database only when a user adds it to a list or reviews it
+  (`GetOrCreateGameAsync`), together with its genres and platforms.
+- **Automatic migrations:** pending EF Core migrations are applied at startup.
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend** | C#, ASP.NET Core Web API (.NET 10 LTS), Entity Framework Core 10, Npgsql, Mapster, MailKit, Swashbuckle (Swagger) |
+| **Frontend** | Angular 22 (standalone components, signals, `HttpClient`, SSR), TypeScript 6, Bootstrap 5 |
+| **Database** | PostgreSQL 16 |
+| **Infrastructure** | Docker Compose, `concurrently` for local development |
+| **External services** | RAWG Video Games Database API, SMTP (Gmail App Password) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) with Docker Compose
+- A free [RAWG API key](https://rawg.io/apidocs)
+- An SMTP account for sending emails (for example Gmail with an
+  [App Password](https://support.google.com/accounts/answer/185833))
+
+### 1. Configure the environment
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description |
+| :--- | :--- |
+| `USER_POSTGRES` / `PASSWORD_POSTGRES` / `DB_NAME` | PostgreSQL credentials and database name. |
+| `RAWG_API_KEY` | Your RAWG API key. |
+| `JWT_KEY` | Secret used to sign the tokens, **at least 32 characters**. |
+| `SMTP_HOST` / `SMTP_PORT` | SMTP server, e.g. `smtp.gmail.com` / `587`. |
+| `SMTP_USER` / `SMTP_PASSWORD` | SMTP login (for Gmail, the App Password). |
+| `SMTP_FROM` | Sender address, the same as `SMTP_USER` for Gmail. |
+
+The backend refuses to start if the JWT key, the RAWG key or any SMTP setting is missing, so misconfiguration
+is caught immediately instead of at the first request.
+
+### 2. Run with Docker
+
+```bash
+docker compose up --build
+```
+
+| Service | URL |
+| :--- | :--- |
+| Frontend | http://localhost:4200 |
+| Backend API | http://localhost:5144 |
+| Swagger UI (Development) | http://localhost:5144/swagger |
+| Health check | http://localhost:5144/api/health |
+
+To start from an empty database: `docker compose down -v` and then `docker compose up --build`.
+
+### Available npm scripts
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Starts PostgreSQL, the backend and the frontend together. |
+| `npm run backend` | Runs only the .NET Web API. |
+| `npm run frontend` | Runs only the Angular dev server (with the API proxy). |
+| `npm run db:up` / `npm run db:down` | Starts / stops the PostgreSQL container. |
+| `npm run install:all` | Installs all npm and NuGet dependencies. |
+
+---
+
+## API Reference
+
+All endpoints are under `/api`. Requests and responses use JSON, and enums are sent as text
+(`"Dark"`, `"Husky"`, `"Accepted"`).
+
+**Legend:** 🔓 public · 🔒 requires `Authorization: Bearer <token>` · ⏱️ rate limited (see [Rate Limiting](#rate-limiting))
+
+### Pagination
+
+Every list endpoint accepts `page` (default `1`) and `pageSize` (default `20`, max `50`; max `40` for games)
+and returns the same envelope:
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 134,
+  "totalPages": 7,
+  "previousPageUrl": null,
+  "nextPageUrl": "/api/games?name=witcher&page=2"
+}
+```
+
+The page links are built by our API with our own parameter names, so they keep the current filters.
+
+### Authentication — `/api/auth`
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | 🔓 ⏱️ | Creates an account and sends an 8-character verification code by email. Returns `201` without a token. |
+| `POST` | `/auth/login` | 🔓 ⏱️ | Logs in with email or username and password. An unverified account must also send the `code`. With 2FA enabled, returns a `challengeToken` instead of the JWT. |
+| `POST` | `/auth/login/2fa` | 🔓 ⏱️ | Completes a 2FA login with `challengeToken` + `code` and returns the JWT. |
+| `POST` | `/auth/login/2fa/resend` | 🔓 ⏱️ | Sends a new 2FA code for an active login challenge. |
+| `POST` | `/auth/resend-email` | 🔓 ⏱️ | Sends a new email verification code. |
+| `POST` | `/auth/forgot-password-request` | 🔓 ⏱️ | Sends a password reset code by email. |
+| `PATCH` | `/auth/forgot-password` | 🔓 ⏱️ | Sets a new password using the reset code. |
+
+<details>
+<summary><b>Login flow</b></summary>
+
+```
+POST /api/auth/login { emailOrUsername, password, code? }
+│
+├─ wrong credentials ─────────────────────────────▶ 401
+├─ email not verified, no code ───────────────────▶ 403 (show the code field)
+├─ email not verified, wrong / expired code ──────▶ 400
+├─ 2FA disabled ──────────────────────────────────▶ 200 { token, user }
+└─ 2FA enabled ───────────────────────────────────▶ 200 { requires2FA: true, challengeToken }
+                                                         │
+          POST /api/auth/login/2fa { challengeToken, code }
+          ├─ wrong code ────────────────────────────▶ 400 (stay on the code screen)
+          ├─ expired / too many attempts ───────────▶ 401 (back to the password)
+          └─ correct code ──────────────────────────▶ 200 { token, user }
+```
+
+The verification code is checked **after** the password, so only the account owner can use up its attempts.
+`resend-email` and `forgot-password-request` give the same answer whether the email exists or not, so they
+cannot be used to find out who is registered.
+
+</details>
+
+### Users — `/api/users`
+
+The current user is always taken from the token, never from the URL, so a user can only change their own account.
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users` | 🔒 | Paginated list of users (public profile only). |
+| `GET` | `/users/search?username=` | 🔒 | Case-insensitive prefix search by username, paginated. |
+| `GET` | `/users/{username}` | 🔓 | Public profile: id, username, image and dog companion. |
+| `GET` | `/users/{username}/profile` | 🔒 | Full profile of the logged-in user (email, theme, 2FA status, …). |
+| `PATCH` | `/users` | 🔒 ⏱️ | Partial update: name, family name, username, profile image, theme, dog companion. |
+| `PATCH` | `/users/password` | 🔒 ⏱️ | Changes the password (requires the old one). |
+| `PATCH` | `/users/email` | 🔒 ⏱️ | Starts an email change: a code is sent to the **new** address (requires the password). |
+| `POST` | `/users/email/confirm` | 🔒 ⏱️ | Confirms the new email with the code; only then the email is replaced. |
+| `POST` | `/users/2fa/enable` | 🔒 ⏱️ | Enables two-factor authentication (requires the password and a verified email). |
+| `POST` | `/users/2fa/disable` | 🔒 ⏱️ | Disables 2FA (requires the password) and invalidates active login challenges. |
+| `DELETE` | `/users` | 🔒 ⏱️ | Deletes the account with its friendships, reviews and lists. |
+
+Unverified accounts are hidden everywhere: they do not appear in lists, searches or profiles.
+
+### Games — `/api/games`
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/games` | 🔓 | Searches the RAWG catalog with filters, sorting and pagination. Returns game cards. |
+| `GET` | `/games/{rawgGameId}` | 🔓 | Game details: from our database if saved, otherwise from RAWG. |
+| `GET` | `/games/all` | 🔓 | Games saved in our database (paginated). |
+
+<details>
+<summary><b>Search parameters for <code>GET /api/games</code></b></summary>
+
+| Parameter | Example | Description |
+| :--- | :--- | :--- |
+| `name` | `witcher` | Full or partial game name. |
+| `genres` | `4,51` | Comma-separated RAWG genre IDs. |
+| `platforms` / `parentPlatforms` | `187` / `2` | Comma-separated platform IDs. |
+| `releaseDate` | `2015,2020` | Release year range. |
+| `metacritic` | `80,100` | Metacritic score range. |
+| `sortBy` | `rating` | `name`, `released`, `added`, `created`, `updated`, `rating` or `metacritic`. |
+| `ascending` | `false` | Sort direction (default `true`). |
+| `page` / `pageSize` | `2` / `20` | Pagination (`pageSize` max 40, the RAWG limit). |
+
+</details>
+
+### Favorites & Wishlist — `/api/users/{userId}`
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users/{userId}/favorites` | 🔒 | The user's favorites, with filters and sorting. |
+| `POST` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Adds a game to favorites. |
+| `DELETE` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Removes a game from favorites. |
+| `GET` | `/users/{userId}/wishlist` | 🔒 | The user's wishlist, with filters and sorting. |
+| `POST` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Adds a game to the wishlist. |
+| `DELETE` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Removes a game from the wishlist. |
+
+- **Privacy:** a list can be viewed only by its owner and by accepted friends (otherwise `403`).
+  Only the owner can change it.
+- **Filters on the lists:** `name`, `genre`, `platform`, `year`, `minRating`, `sortBy` (`name`, `released`, `rating`),
+  `ascending`, plus pagination. Filtering runs directly in SQL.
+- **Idempotent:** adding a game that is already in the list returns `204`, like the first time.
+
+### Friendships — `/api/users/friendship`
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users/friendship/friends` | 🔒 | Accepted friends, paginated. |
+| `GET` | `/users/friendship/received` | 🔒 | Pending requests received. |
+| `GET` | `/users/friendship/sent` | 🔒 | Pending requests sent. |
+| `POST` | `/users/friendship` | 🔒 ⏱️ | Sends a friend request. |
+| `PATCH` | `/users/friendship` | 🔒 ⏱️ | Accepts or rejects a request (receiver only). |
+| `DELETE` | `/users/friendship/{id}` | 🔒 ⏱️ | Removes a friend or cancels a sent request. |
+
+Each pair of users has a single friendship row, stored in a fixed order (smaller id first), so duplicate or
+crossed requests are impossible.
+
+### Reviews
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/games/{gameId}/reviews` | 🔓 | Reviews of a game, newest first. |
+| `POST` | `/games/{gameId}/reviews` | 🔒 ⏱️ | Writes a review (rating 1–5 and optional text). |
+| `PATCH` | `/games/{gameId}/reviews` | 🔒 ⏱️ | Edits your own review. |
+| `DELETE` | `/games/{gameId}/reviews/{id}` | 🔒 ⏱️ | Deletes your own review. |
+| `GET` | `/user/{username}/reviews` | 🔓 | All reviews written by a user. |
+
+### Health
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health` | 🔓 | Returns `Healthy` with a timestamp, to check that the API is running. |
+
+---
+
+## Security
+
+| Measure | Details |
+| :--- | :--- |
+| **JWT authentication** | Signed tokens (HMAC, key ≥ 32 characters) with issuer, audience and lifetime validation. Valid for 60 minutes. |
+| **Password hashing** | ASP.NET Core Identity `PasswordHasher` (PBKDF2 with salt). Strong password policy: uppercase, lowercase, digit and special character, at least 8 characters. |
+| **Email verification** | 8-character codes from a cryptographically secure generator, without ambiguous characters (`0/O`, `1/I/L`). Only a SHA-256 hash is stored; codes expire after 15 minutes and allow 5 attempts. Comparison in constant time. |
+| **Two-factor authentication** | Optional. Every login attempt gets its own challenge (random 64-character token + code, both stored hashed). The code lasts 5 minutes, the challenge 15, max 5 attempts, single use, protected against two simultaneous requests. |
+| **Safe account changes** | Changing the email, the password or the 2FA status requires the current password, so a stolen token alone cannot take over the account. The new email is saved only after it is confirmed. |
+| **No user enumeration** | Password reset and code resend return the same answer for any email. Login gives the same error for an unknown user and a wrong password. |
+| **Secrets** | All keys and passwords come from environment variables (`.env`, not committed). The RAWG key stays on the server and is never written to logs or responses. |
+| **Race conditions** | Unique constraints in the database plus handling of `UniqueViolation`, so simultaneous requests get `409` instead of `500`. |
+| **CORS** | Only the Angular origin (`localhost:4200`) is allowed. |
+
+---
+
+## Rate Limiting
+
+Every endpoint that writes data or sends an email is protected by a **fixed-window** rate limiter, built into ASP.NET Core.
+
+- **Per IP** for public endpoints, where there is no token.
+- **Per user** (the `sub` claim of the JWT) for authenticated endpoints, so the limit follows the account
+  across networks. The limiter runs after authentication, so a request without a token gets `401`
+  without using up the limit.
+
+| Policy | Limit | Partition | Used by |
+| :--- | :---: | :---: | :--- |
+| `login` | 5 / 1 min | IP | `POST /auth/login` |
+| `register` | 5 / 1 min | IP | `POST /auth/register` |
+| `resend-email` | 3 / 10 min | IP | `POST /auth/resend-email` |
+| `forgot-password-request` | 3 / 10 min | IP | `POST /auth/forgot-password-request` |
+| `forgot-password` | 5 / 1 min | IP | `PATCH /auth/forgot-password` |
+| `login-two-factor` | 5 / 1 min | IP | `POST /auth/login/2fa` |
+| `login-two-factor-resend` | 3 / 10 min | IP | `POST /auth/login/2fa/resend` |
+| `change-email` | 3 / 10 min | User | `PATCH /users/email` |
+| `confirm-email` | 5 / 1 min | User | `POST /users/email/confirm` |
+| `change-password` | 5 / 1 min | User | `PATCH /users/password` |
+| `two-factor` | 5 / 1 min | User | `POST /users/2fa/enable`, `/disable` |
+| `user-write` | 30 / 1 min | User | Profile update, account deletion, friendships, reviews |
+| `user-games` | 30 / 1 min | User | Adding / removing favorites and wishlist games |
+
+When a limit is reached, the API answers `429 Too Many Requests` with a `Retry-After` header and a message
+that gives the real waiting time:
+
+```json
+{
+  "status": 429,
+  "title": "Too many requests",
+  "detail": "Too many requests. Try again in 8 minutes."
+}
+```
+
+Policy names are `const` fields in `RateLimitPolicies`, so a misspelled policy name is a compile error instead of a runtime `500`.
+
+---
+
+## Error Handling
+
+| Status | Meaning |
+| :---: | :--- |
+| `400` | Invalid input or wrong / expired code. |
+| `401` | Missing or invalid token, wrong credentials, expired login challenge. |
+| `403` | Logged in, but not allowed (e.g. someone else's list, unverified email at login). |
+| `404` | Resource not found. |
+| `409` | Conflict (username or email already taken, friendship already exists). |
+| `429` | Rate limit reached. |
+| `503` | RAWG is unreachable. |
+
+- Error messages written by us are returned as plain text.
+- Errors generated by ASP.NET Core (validation errors, empty `401` / `403` / `404`, `500`) are returned as
+  [`ProblemDetails`](https://www.rfc-editor.org/rfc/rfc9457) JSON. Validation errors list every invalid field at once.
+- A **global exception handler** logs the full error and returns a clean `500` without stack traces.
+
+---
+
+## Background Services
+
+| Service | Schedule | Purpose |
+| :--- | :---: | :--- |
+| `UnverifiedUserCleanupService` | Every hour | Deletes accounts whose email was not verified within 2 days. |
+| `ExpiredLoginChallengeCleanupService` | Every hour | Deletes abandoned 2FA login challenges. |
+
+---
+
+## Project Structure
+
+```
+TerraBeegle/
+├── Backend-TerraBeegle/          ASP.NET Core Web API
+│   ├── Controllers/              Auth, User, Game, UserGames, Friendship, Review
+│   ├── Services/                 RAWG, JWT, email, verification codes, 2FA, cleanup jobs
+│   ├── RateLimiting/             Policy names and partitioning helpers
+│   ├── Models/                   EF Core entities
+│   ├── DTOS/                     Request / response contracts
+│   ├── Data/                     AppDbContext and model configuration
+│   ├── Migrations/               EF Core migrations
+│   ├── Enums/                    Theme, DogCompanion, FriendshipStatus, RAWG IDs, …
+│   └── milestone.md              Development log: issues found, decisions taken and why
+├── frontend-TerraBeegle/         Angular application
+│   ├── src/app/views/            Pages: catalog, favorites, wishlist, profile, login, register, …
+│   ├── src/app/services/         HTTP services (auth, games, favorites, friends)
+│   ├── src/app/ui/               Shared UI: theme, spinner, liquid glass, dog companion
+│   └── public/                   Static assets (logo, dog sprites)
+├── docs/                         Challenge specification (EN / IT)
+├── docker-compose.yml            PostgreSQL + backend + frontend
+└── .env.example                  Environment variables template
+```
+
+---
+
+## Credits
+
+- **Game data:** [RAWG Video Games Database API](https://rawg.io/apidocs).
+- **Dog sprites:** [*DogPack*](https://megamicrobats.itch.io/dogpack) by **[megamicrobats](https://megamicrobats.itch.io/)**. Thank you for the lovely pixel art!
+- Project developed for the **Terranova Challenge** at **42 Florence**.

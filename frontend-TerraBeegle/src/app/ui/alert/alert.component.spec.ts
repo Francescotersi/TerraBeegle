@@ -38,6 +38,18 @@ describe('AlertComponent', () => {
     expect(alertEl.textContent).toContain('Please log in to manage your favorites.');
   });
 
+  it('should display green success alert with a check mark', async () => {
+    alertService.showSuccess('Profile updated successfully.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const alertEl = fixture.nativeElement.querySelector('.alert-success');
+    expect(alertEl).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+    expect(alertEl.querySelector('polyline')).toBeTruthy();
+    expect(alertEl.textContent).toContain('Profile updated successfully.');
+  });
+
   it('should dismiss alert when clicking close button', async () => {
     alertService.showAlert('Please log in to manage your wishlist.');
     fixture.detectChanges();

@@ -9,8 +9,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const alertService = inject(AlertService);
   const token = authService.getToken();
 
-  // intercetta la richiesta e aggiunge automaticamente il token 
-  // di autenticazione se presente
+  // Intercepts every request and automatically adds the
+  // authentication token, if there is one
   let authReq = req;
   if (token) {
     authReq = req.clone({

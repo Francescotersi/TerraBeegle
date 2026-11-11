@@ -17,6 +17,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/user/{username}/reviews")]
 public class ReviewUserController(AppDbContext db) : ControllerBase
 {
+    // Lists the reviews written by a user
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(string username, [FromQuery] PaginationDTO pagination)
     {
@@ -54,6 +55,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 [Route("api/games/{gameId:int}/reviews")]
 public class ReviewGameController(AppDbContext db, IRawgService rawgService) : ControllerBase
 {
+    // Lists the reviews of a game
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(int gameId, [FromQuery] PaginationDTO pagination)
     {
@@ -86,6 +88,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         ));
     }
 
+    // Adds a review to a game
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPost]
@@ -150,6 +153,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
     }
 
+    // Edits your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
@@ -202,6 +206,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         return Ok(updatedReview);
     }
 
+    // Deletes your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete("{id}")]

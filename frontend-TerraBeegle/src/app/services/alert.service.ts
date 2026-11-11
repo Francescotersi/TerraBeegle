@@ -12,7 +12,17 @@ export class AlertService {
 
   readonly currentAlert = signal<AlertNotification | null>(null);
 
+  // Shows a red error toast
   showAlert(message: string, durationMs: number = 3000): void {
+    this.show(message, 'danger', durationMs);
+  }
+
+  // Shows a green success toast with a check mark
+  showSuccess(message: string, durationMs: number = 3000): void {
+    this.show(message, 'success', durationMs);
+  }
+
+  private show(message: string, type: AlertType, durationMs: number): void {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -22,7 +32,7 @@ export class AlertService {
     this.currentAlert.set({
       id: alertId,
       message,
-      type: 'danger',
+      type,
       durationMs,
     });
 

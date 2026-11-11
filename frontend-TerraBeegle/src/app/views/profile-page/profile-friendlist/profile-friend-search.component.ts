@@ -17,7 +17,7 @@ import { PagedResponse, FriendshipResponseDTO } from '../../../models-services/f
     <div class="add-friend-box p-3 p-md-4 rounded-4 position-relative">
       <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
         
-        <!-- SINISTRA: Search Bar con Autocomplete Dropdown -->
+        <!-- LEFT: search bar with autocomplete dropdown -->
         <div class="search-bar-wrapper position-relative flex-grow-1">
           <div class="search-input-group d-flex align-items-center">
             <span class="search-icon-box text-body-secondary ps-3 pe-2">
@@ -42,7 +42,7 @@ import { PagedResponse, FriendshipResponseDTO } from '../../../models-services/f
             }
           </div>
 
-          <!-- Tendina Autocomplete dei risultati -->
+          <!-- Autocomplete dropdown with the results -->
           @if (isDropdownOpen() && searchResults().length > 0) {
             <div class="autocomplete-dropdown rounded-3 shadow-sm p-1">
               @for (u of searchResults(); track u.id) {
@@ -81,7 +81,7 @@ import { PagedResponse, FriendshipResponseDTO } from '../../../models-services/f
           }
         </div>
 
-        <!-- DESTRA DELLA SEARCH BAR: "Enter Your Friend Username:" + Tasto Send Request -->
+        <!-- RIGHT OF THE SEARCH BAR: "Enter Your Friend Username:" + Send Request button -->
         <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-2 flex-wrap flex-shrink-0">
           <span class="friend-label text-nowrap small fw-semibold text-body">
             Enter Your Friend Username:
@@ -321,7 +321,7 @@ export class ProfileFriendSearchComponent implements OnInit {
     this.isSending.set(true);
     this.friendsService.sendRequest(u.id).subscribe({
       next: (created) => {
-        this.alertService.showAlert(`Friend request sent to @${u.username}!`);
+        this.alertService.showSuccess(`Friend request sent to @${u.username}!`);
         this.isSending.set(false);
         this.clearSearch();
         const enriched = created ? { ...created, user: created.user || u } : undefined;
@@ -342,7 +342,7 @@ export class ProfileFriendSearchComponent implements OnInit {
     this.isSending.set(true);
     this.friendsService.sendRequestByUsername(clean).subscribe({
       next: (created) => {
-        this.alertService.showAlert(`Friend request sent to @${clean}!`);
+        this.alertService.showSuccess(`Friend request sent to @${clean}!`);
         this.isSending.set(false);
         this.clearSearch();
         this.requestSent.emit(created);

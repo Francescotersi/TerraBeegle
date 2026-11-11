@@ -62,7 +62,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 93,
     description:
-      'Geralt di Rivia, un cacciatore di mostri mutato, viaggia attraverso un mondo devastato dalla guerra alla ricerca della figlia della profezia.',
+      'Geralt of Rivia, a mutated monster hunter, travels through a war-torn world in search of the child of prophecy.',
     genres: ['RPG', 'Adventure'],
     tags: ['open world', 'fantasy', 'story rich'],
     developer: 'CD PROJEKT RED',
@@ -75,7 +75,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.3,
     metacritic: 86,
     description:
-      "Un GDR d'avventura a mondo aperto ambientato nella megalopoli di Night City, dove il potere, il lusso e le modifiche corporee regnano sovrani.",
+      'An open-world action-adventure RPG set in the megalopolis of Night City, where power, luxury and body modification rule.',
     genres: ['Action', 'RPG'],
     tags: ['cyberpunk', 'sci-fi', 'open world'],
     developer: 'CD PROJEKT RED',
@@ -88,7 +88,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.9,
     metacritic: 96,
     description:
-      "L'Interregno ti attende. Alzati, Senzaluce, e lasciati guidare dalla grazia per brandire il potere dell'Anello ancestrale.",
+      'The Lands Between await. Rise, Tarnished, and be guided by grace to wield the power of the Elden Ring.',
     genres: ['RPG', 'Action'],
     tags: ['souls-like', 'dark fantasy', 'difficult'],
     developer: 'FromSoftware Inc.',
@@ -101,7 +101,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 90,
     description:
-      'Forgia il tuo percorso attraverso un vasto regno sotterraneo di insetti ed eroi caduti.',
+      'Forge your own path through a vast underground kingdom of insects and fallen heroes.',
     genres: ['Platformer', 'Adventure', 'Indie'],
     tags: ['metroidvania', 'indie', 'difficult'],
     developer: 'Team Cherry',
@@ -114,7 +114,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.9,
     metacritic: 97,
     description:
-      'America, 1899. Arthur Morgan e la banda di Van der Linde sono fuorilegge in fuga attraverso il cuore selvaggio degli Stati Uniti.',
+      'America, 1899. Arthur Morgan and the Van der Linde gang are outlaws on the run across the wild heart of the United States.',
     genres: ['Action', 'Adventure'],
     tags: ['western', 'open world', 'story rich'],
     developer: 'Rockstar Games',
@@ -127,7 +127,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.9,
     metacritic: 96,
     description:
-      'Ritorna nei Forgotten Realms in una storia di amicizia e tradimento, sacrificio e sopravvivenza, e il fascino del potere assoluto.',
+      'Return to the Forgotten Realms in a tale of fellowship and betrayal, sacrifice and survival, and the lure of absolute power.',
     genres: ['RPG', 'Strategy'],
     tags: ['turn-based', 'choice matters', 'd&d'],
     developer: 'Larian Studios',
@@ -140,7 +140,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 93,
     description:
-      'Sfida il dio dei morti e fatti strada a colpi di spada fuori dagli Inferi in questo frenetico roguelike dungeon crawler.',
+      'Defy the god of the dead and hack and slash your way out of the Underworld in this fast-paced roguelike dungeon crawler.',
     genres: ['Action', 'Indie'],
     tags: ['roguelike', 'mythology', 'hack and slash'],
     developer: 'Supergiant Games',
@@ -153,7 +153,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 94,
     description:
-      'Kratos vive ora come un uomo nel regno delle divinità e dei mostri norreni, insieme al figlio Atreus in una missione profondamente personale.',
+      'Kratos now lives as a man in the realm of Norse gods and monsters, with his son Atreus, on a deeply personal quest.',
     genres: ['Action', 'Adventure'],
     tags: ['mythology', 'action', 'story rich'],
     developer: 'Santa Monica Studio',
@@ -166,7 +166,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.9,
     metacritic: 97,
     description:
-      'Risvegliati da un sonno centenario per scoprire un mondo in rovina ed esplorare le vaste terre di Hyrule in totale libertà.',
+      'Wake up from a hundred-year slumber to find a world in ruins and explore the vast lands of Hyrule in total freedom.',
     genres: ['Adventure', 'Action'],
     tags: ['exploration', 'open world', 'fantasy'],
     developer: 'Nintendo EPD',
@@ -179,7 +179,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 95,
     description:
-      'Indossa la maschera di Joker e unisciti ai Ladri Fantasma di Cuori per liberare Tokyo dai desideri corrotti e dalle ingiustizie.',
+      'Put on the mask of Joker and join the Phantom Thieves of Hearts to free Tokyo from corrupted desires and injustice.',
     genres: ['RPG'],
     tags: ['anime', 'turn-based', 'soundtrack'],
     developer: 'ATLUS',
@@ -192,7 +192,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 90,
     description:
-      'Nel Giappone dell’era Sengoku, un guerriero dal braccio di ferro deve salvare il suo giovane maestro e compiere la sua vendetta.',
+      'In Sengoku-era Japan, a warrior with a prosthetic arm must rescue his young lord and take his revenge.',
     genres: ['Action', 'Adventure'],
     tags: ['souls-like', 'stealth', 'difficult'],
     developer: 'FromSoftware Inc.',
@@ -205,7 +205,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 89,
     description:
-      'Mentre i fuochi svaniscono e il mondo cade in rovina, viaggia in un universo colmo di bestie titaniche e oscurità insondabile.',
+      'As the fires fade and the world falls into ruin, journey into a universe filled with colossal beasts and unfathomable darkness.',
     genres: ['RPG', 'Action'],
     tags: ['dark fantasy', 'difficult', 'souls-like'],
     developer: 'FromSoftware Inc.',
@@ -218,7 +218,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 92,
     description:
-      'Affronta i tuoi incubi nella città gotica in rovina di Yharnam, afflitta da una misteriosa piaga endemica.',
+      'Face your nightmares in the ruined gothic city of Yharnam, cursed by a mysterious endemic illness.',
     genres: ['RPG', 'Action'],
     tags: ['lovecraftian', 'horror', 'gothic'],
     developer: 'FromSoftware Inc.',
@@ -231,7 +231,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.6,
     metacritic: 90,
     description:
-      'Caccia mostri giganteschi in paesaggi mozzafiato come parte della commissione di ricerca nel Nuovo Mondo.',
+      'Hunt gigantic monsters across breathtaking landscapes as part of the research commission in the New World.',
     genres: ['Action', 'RPG'],
     tags: ['hunting', 'co-op', 'multiplayer'],
     developer: 'CAPCOM Co., Ltd.',
@@ -244,7 +244,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 97,
     description:
-      'Tre criminali molto diversi pianificano una serie di audaci colpi a Los Santos e Blaine County.',
+      'Three very different criminals plan a series of daring heists across Los Santos and Blaine County.',
     genres: ['Action', 'Adventure'],
     tags: ['open world', 'multiplayer', 'crime'],
     developer: 'Rockstar North',
@@ -257,7 +257,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 92,
     description:
-      'Aiuta Madeline a scalare la montagna Celeste affrontando le sue paure interiori in questo platform di precisione.',
+      'Help Madeline climb Celeste Mountain and face her inner demons in this precision platformer.',
     genres: ['Platformer', 'Indie'],
     tags: ['precision', 'pixel art', 'great soundtrack'],
     developer: 'Maddy Makes Games',
@@ -270,7 +270,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 97,
     description:
-      'Sei un detective con un set di abilità unico a tua disposizione e un intero isolato urbano da esplorare ed interrogare.',
+      'You are a detective with a unique set of skills at your disposal and an entire city block to explore and interrogate.',
     genres: ['RPG'],
     tags: ['detective', 'narrative', 'dialogue'],
     developer: 'ZA/UM',
@@ -283,7 +283,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 90,
     description:
-      'Rivivi la leggenda del Comandante Shepard nell’acclamata trilogia sci-fi rimasterizzata con grafica 4K Ultra HD.',
+      'Relive the legend of Commander Shepard in the acclaimed sci-fi trilogy, remastered in 4K Ultra HD.',
     genres: ['RPG', 'Action'],
     tags: ['sci-fi', 'space', 'story rich'],
     developer: 'BioWare',
@@ -296,7 +296,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 84,
     description:
-      'Benvenuto a New Vegas. Una città dove ti scaverai la fossa prima ancora di ricevere un proiettile in testa.',
+      'Welcome to New Vegas. A city where you dig your own grave before you even take a bullet to the head.',
     genres: ['RPG', 'Action'],
     tags: ['post-apocalyptic', 'classic', 'open world'],
     developer: 'Obsidian Entertainment',
@@ -309,7 +309,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.6,
     metacritic: 88,
     description:
-      'Gli eserciti dell’Inferno hanno invaso la Terra. Diventa lo Slayer in un’epica campagna per salvare l’umanità e conquistare i demoni.',
+      'Hell\'s armies have invaded Earth. Become the Slayer in an epic campaign to save humanity and conquer the demons.',
     genres: ['Action', 'Shooter'],
     tags: ['fast-paced', 'demons', 'heavy metal'],
     developer: 'id Software',
@@ -322,7 +322,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.9,
     metacritic: 95,
     description:
-      'Ritorna nei laboratori Aperture Science per nuove camere di prova rompicapo con GLaDOS e Wheatley.',
+      'Return to the Aperture Science labs for new mind-bending test chambers with GLaDOS and Wheatley.',
     genres: ['Puzzle', 'Adventure'],
     tags: ['co-op', 'comedy', 'sci-fi'],
     developer: 'Valve',
@@ -335,7 +335,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 93,
     description:
-      'La lotta contro una feroce razza aliena conosciuta come Combine nei panni di Alyx Vance in un’esperienza VR pionieristica.',
+      'Fight a vicious alien race known as the Combine as Alyx Vance in a groundbreaking VR experience.',
     genres: ['Action', 'VR'],
     tags: ['sci-fi', 'vr', 'masterpiece'],
     developer: 'Valve',
@@ -348,7 +348,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.8,
     metacritic: 93,
     description:
-      'La sopravvivenza è solo l’inizio. Leon S. Kennedy viene inviato in un remoto villaggio europeo per salvare la figlia rapita del presidente.',
+      'Survival is just the beginning. Leon S. Kennedy is sent to a remote European village to rescue the president\'s kidnapped daughter.',
     genres: ['Action', 'Horror'],
     tags: ['survival horror', 'action', 'remake'],
     developer: 'CAPCOM Co., Ltd.',
@@ -361,7 +361,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.7,
     metacritic: 87,
     description:
-      'Alla fine del XIII secolo, il guerriero samurai Jin Sakai deve proteggere il suo popolo e riconquistare l’isola di Tsushima contro l’invasione mongola.',
+      'In the late 13th century, samurai warrior Jin Sakai must protect his people and reclaim Tsushima Island from the Mongol invasion.',
     genres: ['Action', 'Adventure'],
     tags: ['samurai', 'open world', 'historical'],
     developer: 'Sucker Punch Productions',
@@ -374,7 +374,7 @@ export const MOCK_GAMES: GridComponentProps[] = [
     rating: 4.6,
     metacritic: 87,
     description:
-      'Il mondo è caduto sotto il controllo della Shinra Electric Power Company. L’ex soldato Cloud Strife si unisce al gruppo ecoterrorista Avalanche.',
+      'The world has fallen under the control of the Shinra Electric Power Company. Former soldier Cloud Strife joins the eco-terrorist group Avalanche.',
     genres: ['RPG', 'Action'],
     tags: ['jrpg', 'remake', 'fantasy'],
     developer: 'Square Enix',

@@ -20,6 +20,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users")]
 public class UserController(AppDbContext db, IPasswordHasher<User> passwordHasher, IEmailVerificationService emailVerificationService, ILogger<UserController> logger) : ControllerBase
 {
+    // Lists verified users, one page at a time
     [Authorize]
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination)
@@ -47,6 +48,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         ));
     }
 
+    // Finds users whose username starts with the given text
     [Authorize]
     [HttpGet("search")]
     public async Task<ActionResult<PagedResponseDTO<UserPublicResponseDTO>>> Search([FromQuery] string username, [FromQuery] PaginationDTO pagination)
@@ -82,6 +84,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         ));
     }
 
+    // Returns the public profile of a user
     [HttpGet("{username}")]
     public async Task<ActionResult<UserPublicResponseDTO>> GetByUsername(string username)
     {
@@ -95,6 +98,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return user.Adapt<UserPublicResponseDTO>();
     }
 
+    // Returns the full profile of the logged-in user
     [Authorize]
     [HttpGet("{username}/profile")]
     public async Task<ActionResult<UserResponseDTO>> GetProfile(string username)
@@ -113,6 +117,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return user.Adapt<UserResponseDTO>();
     }
 
+    // Updates only the profile fields that were sent
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
@@ -195,6 +200,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return user.Adapt<UserResponseDTO>();
     }
 
+    // Changes the password after checking the old one
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.ChangePassword)]
     [HttpPatch("password")]
@@ -221,6 +227,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Password changed successfully.");
     }
     
+    // Starts an email change by sending a code to the new address
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.ChangeEmail)]
     [HttpPatch("email")]
@@ -265,6 +272,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Verification code sent to the new email.");
     }
 
+    // Confirms the new email with the code and saves it
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.ConfirmEmail)]
     [HttpPost("email/confirm")]
@@ -314,6 +322,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Email changed successfully.");
     }
 
+    // Turns on two-factor authentication
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
     [HttpPost("2fa/enable")]
@@ -342,6 +351,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Two-factor authentication enabled successfully.");
     }
     
+    // Turns off two-factor authentication
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
     [HttpPost("2fa/disable")]
@@ -368,6 +378,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("Two-factor authentication disabled successfully.");
     }
 
+    // Deletes the logged-in user's account
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete]

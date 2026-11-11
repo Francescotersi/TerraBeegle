@@ -177,13 +177,13 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.Migrate();
-        app.Logger.LogInformation("Database PostgreSQL verificato e pronto.");
+        app.Logger.LogInformation("PostgreSQL database migrated and ready.");
     }
     // Only "Postgres is not reachable" is tolerated; any other error (e.g. PendingModelChangesException
     // when a model was changed without a migration) stops the app so it is noticed immediately
     catch (Npgsql.NpgsqlException ex) when (ex is not Npgsql.PostgresException)
     {
-        app.Logger.LogWarning(ex, "Impossibile connettersi a PostgreSQL all'avvio. Verifica che il server sia attivo.");
+        app.Logger.LogWarning(ex, "Could not connect to PostgreSQL at startup. Check that the server is running.");
     }
 }
 

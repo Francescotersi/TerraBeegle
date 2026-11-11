@@ -98,7 +98,7 @@ export class ProfilePasswordSettingsComponent {
         this.newPassword = '';
         this.confirmNewPassword = '';
         this.isOpen.set(false);
-        this.alertService.showAlert(message || 'Password changed successfully.');
+        this.alertService.showSuccess(message || 'Password changed successfully.');
       },
       error: (error: { error?: unknown }) => {
         this.isLoading.set(false);

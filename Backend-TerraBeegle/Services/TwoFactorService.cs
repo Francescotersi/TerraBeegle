@@ -14,6 +14,7 @@ public class TwoFactorService(IEmailVerificationService emailVerificationService
     private const int MaxAttempts = 5;
     private const int TokenBytes = 32;
 
+    // Starts a 2FA login: returns the challenge, its token and the code
     public (LoginChallenge Challenge, string Token, string Code) CreateChallenge(User user)
     {
         string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(TokenBytes));
@@ -37,11 +38,13 @@ public class TwoFactorService(IEmailVerificationService emailVerificationService
 
     // No Trim / ToUpper (unlike SecureCode.Hash): the token is not typed, so it must match exactly.
     // A plain SHA256 is enough: 256 random bits cannot be guessed, a slow hash would not add anything
+    // Hashes a challenge token with SHA256
     public string HashToken(string token)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
     }
 
+    // Checks a 2FA code: valid, invalid, expired or too many attempts
     public CodeVerificationResult VerifyChallenge(LoginChallenge challenge, string code)
     {
         var now = DateTime.UtcNow;
@@ -63,6 +66,7 @@ public class TwoFactorService(IEmailVerificationService emailVerificationService
         return CodeVerificationResult.Valid;
     }
 
+    // Creates a new code, without extending the challenge
     public string RenewCode(LoginChallenge challenge)
     {
         string code = SecureCode.Generate();
@@ -76,6 +80,7 @@ public class TwoFactorService(IEmailVerificationService emailVerificationService
         return code;
     }
 
+    // Emails the 2FA code
     public async Task SendCodeAsync(string email, string code)
     {
         await emailVerificationService.SendCodeAsync(email, code, EmailCodePurpose.TwoFactorLogin);

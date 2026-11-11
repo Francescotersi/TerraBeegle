@@ -20,6 +20,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
+    // Searches games at RAWG and maps them to cards
     public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query)
     {
         var client = httpClientFactory.CreateClient("RawgAPI");
@@ -53,6 +54,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         };
     }
 
+    // Downloads one game from RAWG, or null if it does not exist
     private async Task<RawgGameIdDTO?> FetchGameAsync(int rawgGameId)
     {
         var client = httpClientFactory.CreateClient("RawgAPI");
@@ -93,6 +95,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return ToGameResponseDTO(response);
     }
 
+    // Returns the saved game, saving it from RAWG if needed
     public async Task<Game?> GetOrCreateGameAsync(int rawgGameId)
     {
         var game = await db.Games.FirstOrDefaultAsync(g => g.RawgGameId == rawgGameId);
@@ -150,12 +153,14 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         return game;
     }
     
+    // Adds the RAWG API key to a URL
     private string WithKey(string path)
     {
         var separator = path.Contains('?') ? '&' : '?';
         return $"{path}{separator}key={config["EnvironmentVariables:RAWG_API_KEY"]}";
     }
 
+    // Converts a RAWG search result to a game card
     private static readonly Func<RawgGameDTO, GameCardDTO> ToGameCardDTO = r => new GameCardDTO
     {
         RawgGameId = r.Id,
@@ -183,6 +188,7 @@ public class RawgService(AppDbContext db, IConfiguration config, IHttpClientFact
         ]
     };
 
+    // Converts a RAWG game to our detail DTO
     private static readonly Func<RawgGameIdDTO, GameResponseDTO> ToGameResponseDTO = r => new GameResponseDTO
     {
         RawgGameId = r.Id,

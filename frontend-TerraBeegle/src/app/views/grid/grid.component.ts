@@ -120,7 +120,7 @@ export class GridComponent implements OnInit {
   protected readonly hoveredGameId = signal<number | null>(null);
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Stato per la Detail Card Mobile
+  // State of the mobile detail card
   protected readonly selectedMobileGame = signal<GridComponentProps | null>(null);
   protected readonly isMobileSheetOpen = signal<boolean>(false);
   private openedCardIndex = 0;

@@ -114,7 +114,7 @@ export class ProfileEmailSettingsComponent {
         this.isLoading.set(false);
         this.newEmail = email;
         this.verificationPending.set(true);
-        this.alertService.showAlert(message || 'Verification code sent to the new email.');
+        this.alertService.showSuccess(message || 'Verification code sent to the new email.');
       },
       error: (error) => this.handleError(error, 'Could not request the email change.'),
     });
@@ -135,7 +135,7 @@ export class ProfileEmailSettingsComponent {
         this.password = '';
         this.verificationCode = '';
         this.newEmail = '';
-        this.alertService.showAlert(message || 'Email changed successfully.');
+        this.alertService.showSuccess(message || 'Email changed successfully.');
       },
       error: (error) => this.handleError(error, 'Could not confirm the email change.'),
     });

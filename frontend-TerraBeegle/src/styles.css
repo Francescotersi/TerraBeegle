@@ -1,9 +1,9 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
-/* VARIABILI PER IL TEMA LIGHT (Default) */
+/* LIGHT THEME VARIABLES (default) */
 :root, [data-bs-theme="light"] {
-  /* Integrazione variabili Bootstrap 5.3 */
+  /* Bootstrap 5.3 variables */
   --bs-body-bg: #faf6fa;
   --bs-body-color: #1e293b;
   --bs-body-color-rgb: 30, 41, 59;
@@ -36,7 +36,7 @@
   --tb-input-bg-focus: rgba(255, 255, 255, 0.98);
   --tb-input-border: rgba(51, 65, 85, 0.32);
 
-  /* Sfere di sfondo Light */
+  /* Light background spheres */
   --tb-ball-1: #f472b6;
   --tb-ball-2: #a78bfa;
   --tb-ball-3: #fb7185;
@@ -50,9 +50,9 @@
   --tb-spinner-five: rgba(251, 113, 133, 0.2);
 }
 
-/* VARIABILI PER IL TEMA DARK (Star Wars Palette coordinata con lo Switch) */
+/* DARK THEME VARIABLES (Star Wars palette matching the theme switch) */
 [data-bs-theme="dark"] {
-  /* Integrazione variabili Bootstrap 5.3 per uniformità globale */
+  /* Bootstrap 5.3 variables, for a consistent look everywhere */
   --bs-body-bg: #081226;
   --bs-body-color: #f0f6fc;
   --bs-body-color-rgb: 240, 246, 252;
@@ -61,7 +61,7 @@
   --bs-tertiary-bg: #071F49;
   --bs-border-color: rgba(46, 217, 231, 0.2);
 
-  /* Variabili TerraBeegle ispirate alla palette dello switch Star Wars */
+  /* TerraBeegle variables inspired by the Star Wars switch palette */
   --tb-bg: #081226;                 /* --dark-color-background */
   --tb-text: #f0f6fc;
   --tb-text-muted: #8ca3c7;
@@ -75,7 +75,7 @@
   --tb-btn-gradient-hover: linear-gradient(135deg, #236585 0%, #5ce3ee 100%);
   --tb-btn-gradient-shadow: rgba(46, 217, 231, 0.35);
 
-  /* Liquid Glass Dark (Deep Space Surface #071F49 con bordo neon) */
+  /* Dark liquid glass (Deep Space Surface #071F49 with a neon border) */
   --tb-glass-bg: rgba(7, 31, 73, 0.65);
   --tb-glass-inner-bg: rgba(7, 31, 73, 0.75);
   --tb-glass-border: rgba(46, 217, 231, 0.28);
@@ -86,7 +86,7 @@
   --tb-input-bg-focus: rgba(7, 31, 73, 0.9);
   --tb-input-border: rgba(46, 217, 231, 0.4);
 
-  /* Sfere di sfondo Dark (Esatti 4 colori dello switch Star Wars) */
+  /* Dark background spheres (the exact 4 colors of the Star Wars switch) */
   --tb-ball-1: #2ED9E7; /* Lightsaber Cyan (--dark-color-tertiary) */
   --tb-ball-2: #F349A4; /* Sith Pink/Magenta (--dark-color-secondary) */
   --tb-ball-3: #FFE629; /* Star Wars Yellow (--dark-color-primary) */
@@ -110,7 +110,7 @@ body {
   transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-/* Logo in Dark/Light Mode: nessun effetto glow */
+/* Logo in dark / light mode: no glow effect */
 .site-logo {
   transition: transform 0.25s ease;
   filter: none;

@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<LoginChallenge> LoginChallenges => Set<LoginChallenge>();
 
+    // Configures tables, columns, keys and relationships
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // USERS
