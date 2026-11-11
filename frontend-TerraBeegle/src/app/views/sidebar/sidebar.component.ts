@@ -473,10 +473,16 @@ import { DogComponent } from '../../ui/dog/dog.component';
       top: -76px;
       right: -0.5rem;
       z-index: 2;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       pointer-events: none;
+    }
+
+    @media (min-width: 1440px) {
+      .companion-card {
+        display: flex;
+      }
     }
 
     .sidebar-search::placeholder {
