@@ -21,6 +21,24 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
+    public static readonly string GameCardFields = "fields " + string.Join(",", [
+        "id",
+        "name",
+        "slug",
+        "first_release_date",
+        "aggregated_rating",
+        "rating",
+        "cover.image_id",
+        "genres.name",
+        "genres.slug",
+        "platforms.slug",
+        "platforms.abbreviation",
+        "platforms.platform_logo.image_id",
+        "themes.name",
+        "themes.slug",
+        "game_type.type"
+    ]) + ";";
+
     public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query, string pagination)
     {
         IGDB.Models.Game[]? response;
@@ -28,12 +46,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
         try
         {
-            var fields = "fields id,name,slug,first_release_date,aggregated_rating,rating,cover.image_id,genres.name,genres.slug,platforms.slug,platforms.abbreviation,platforms.platform_logo.url,themes.name,themes.slug,game_type.type;";
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{fields}{(query.Length > 0 ? $"where {query};" : "")}{pagination}");
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameCardFields}{(query.Length > 0 ? $"where {query};" : "")}{pagination}");
             totalCount = await igdb.CountAsync(IGDBClient.Endpoints.Games, query: $"{query}");
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        catch (RestEase.ApiException ex)
         {
+            Console.WriteLine($"IGDB API error: {ex.StatusCode} - {ex.Content}");
             return null;
         }
 
@@ -51,58 +69,86 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         };
     }
 
+    private static readonly string GameDetailsFields = "fields " + string.Join(",", [
+        "id",
+        "name",
+        "age_ratings.organization",
+        "age_ratings.rating_category.rating",
+        "age_ratings.rating_content_descriptions.description",
+        "aggregated_rating",
+        "aggregated_rating_count",
+        "artworks.image_id",
+        "cover.image_id",
+        "first_release_date",
+        "franchises.name",
+        "franchises.slug",
+        "game_modes.name",
+        "game_modes.slug",
+        "game_status.status",
+        "genres.name",
+        "genres.slug",
+        "involved_companies.company.name",
+        "involved_companies.company.slug",
+        "involved_companies.company.logo.image_id",
+        "involved_companies.developer",
+        "involved_companies.publisher",
+        "keywords.name",
+        "keywords.slug",
+        "platforms.name",
+        "platforms.slug",
+        "platforms.abbreviation",
+        "platforms.platform_logo.image_id",
+        "platforms.platform_family.name",
+        "platforms.platform_family.slug",
+        "player_perspectives.name",
+        "player_perspectives.slug",
+        "rating",
+        "rating_count",
+        "release_dates.human",
+        "release_dates.date",
+        "release_dates.platform.name",
+        "release_dates.status.name",
+        "screenshots.image_id",
+        "slug",
+        "storyline",
+        "summary",
+        "themes.name",
+        "themes.slug",
+        "videos.name",
+        "videos.video_id",
+        "websites.url",
+        "websites.type",
+        "language_supports.language.name",
+        "language_supports.language_support_type.name",
+        "collections.name",
+        "collections.slug",
+        "game_type.type",
+    ]) + "," + string.Join(",", [ 
+        "bundles", 
+        "dlcs", 
+        "expanded_games", 
+        "expansions", 
+        "forks", 
+        "parent_game", 
+        "ports", 
+        "similar_games",
+        "standalone_expansions",
+        "remakes",
+        "remasters",
+        "version_parent",
+        "collections.games"
+    ]).Select(str => $"{str}.name,{str}.slug,{str}.aggregated_rating,{str}.rating,{str}.cover.image_id,{str}.first_release_date,{str}.game_type.type") + ";";
+
     private async Task<GameDetailsDTO?> FetchGameAsync(long GameId)
     {
         IGDB.Models.Game[]? response;
         try
         {
-            static string strFields(string str) => $"{str}.name,{str}.slug";
-            static string strImageFields(string str, bool b = false) => $"{str}.image_id,{(b ? $",{str}.image_type" : "")}";
-            static string strGameFields(string str) => $"{strFields(str)},{str}.rating,{strImageFields(str + ".cover", true)},{str}.first_release_date,{str}.game_type.type";
-            static string strRatingFields(string str) => $"{str}rating,{str}.rating_count";
-
-            var keyFields = "id,name,slug,storyline,summary,first_release_date,game_type.type";
-
-            var ageRatingsFields = "age_ratings.organization,age_ratings.rating_category.rating,age_ratings.rating_content_descriptions.description,";
-            var aggregatedRatingFields = strRatingFields("aggregated_");
-            var artworksFields = strImageFields("artworks", true);
-            var bundlesFields = strGameFields("bundles");
-            var coverFields = strImageFields("cover", true);
-            var dlcsFields = strGameFields("dlcs");
-            var expandedGamesFields = strGameFields("expanded_games");
-            var expansionsFields = strGameFields("expansions");
-            var forksFields = strGameFields("forks");
-            var franchisesFields = strFields("franchises") + "," + strGameFields("franchises.games");
-            var gameModesFields = strFields("game_modes");
-            var gameStatusFields = "game_status.status";
-            var genresFields = strFields("genres");
-            var companiesFields = "involved_companies.developer,involved_companies.publisher," + strFields("involved_companies.company") + "," + strImageFields("involved_companies.company.logo");
-            var keywordsFields = strFields("keywords");
-            var parentGameFields = strGameFields("parent_game");
-            var platformsFields = strFields("platforms") + ",platforms.abbreviation," + strImageFields("platforms.platform_logo");
-            var platformsFamilyFields = strFields("platforms.platform_family");
-            var playerPerspectivesFields = strFields("player_perspectives");
-            var portsFields = strGameFields("ports");
-            var ratingsFields = strRatingFields("");
-            var releaseDatesFields = "release_dates.human,release_dates.date,release_dates.platform.name,release_dates.status.name";
-            var screenshotsFields = strImageFields("screenshots", false);
-            var similarGamesFields = strGameFields("similar_games");
-            var standaloneExpansionsFields = strGameFields("standalone_expansions");
-            var themesFields = strFields("themes");
-            var totalRatingFields = strRatingFields("total_");
-            var videosFields = "videos.name,videos.video_id";
-            var websitesFields = "websites.url,websites.type";
-            var remakesFields = strGameFields("remakes");
-            var remastersFields = strGameFields("remasters");
-            var versionParentFields = strGameFields("version_parent");
-            var languagesFields = "language_supports.language.name,language_supports.language_support_type.name";
-            var collectionsFields = strFields("collections") + "," + strGameFields("collections.games");
-
-            var fields = $"fields {keyFields},{ageRatingsFields}{aggregatedRatingFields},{artworksFields},{bundlesFields},{coverFields},{dlcsFields},{expandedGamesFields},{expansionsFields},{forksFields},{franchisesFields},{gameModesFields},{gameStatusFields},{genresFields},{companiesFields},{keywordsFields},{parentGameFields},{platformsFields},{platformsFamilyFields},{playerPerspectivesFields},{portsFields},{ratingsFields},{releaseDatesFields},{screenshotsFields},{similarGamesFields},{standaloneExpansionsFields},{themesFields},{totalRatingFields},{videosFields},{websitesFields},{remakesFields},{remastersFields},{versionParentFields},{languagesFields},{collectionsFields};";
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{fields} w id = {GameId};");
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameDetailsFields} w id = {GameId};");
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        catch (RestEase.ApiException ex)
         {
+            Console.WriteLine($"IGDB API error: {ex.StatusCode} - {ex.Content}");
             return null;
         }
         
@@ -110,27 +156,27 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
     }
 
     // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at IGDB
-    // public async Task<GameDetailsDTO?> GetGameAsync(long IGDBGameId)
-    // {
-    //     // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
-    //     // without Include would return them empty). Placeholders are skipped, so they come from IGDB
-    //     var game = await db.Games
-    //         .Where(g => g.ApiGameId == IGDBGameId && !g.IsPlaceholder)
-    //         .ProjectToType<GameDetailsDTO>()
-    //         .FirstOrDefaultAsync();
+    public async Task<GameDetailsDTO?> GetGameAsync(long IGDBGameId)
+    {
+        // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
+        // without Include would return them empty). Placeholders are skipped, so they come from IGDB
+        var game = await db.Games
+            .Where(g => g.ApiGameId == IGDBGameId && !g.IsPlaceholder)
+            .ProjectToType<GameDetailsDTO>()
+            .FirstOrDefaultAsync();
 
-    //     if (game is not null)
-    //     {
-    //         return game;
-    //     }
+        if (game is not null)
+        {
+            return game;
+        }
 
-    //     var response = await FetchGameAsync(IGDBGameId);
+        var response = await FetchGameAsync(IGDBGameId);
 
-    //     if (response is null)
-    //         return null;
+        if (response is null)
+            return null;
 
-    //     return ToGameDetailsDTO(response);
-    // }
+        return ToGameDetailsDTO(response);
+    }
 
     // public async Task<Models.Game?> GetOrCreateGameAsync(long IGDBGameId)
     // {
@@ -219,35 +265,196 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         GameStatus = g.GameStatus.Value?.Status
     };
 
-    // private static GameDetailsDTO ToGameDetailsDTO (IGDB.Models.Game r) => new ()
-    // {
-    //     ApiGameId = r.Id,
-    //     r.Name,
-    //     r.Slug,
-    //     NameOriginal = r.NameOriginal,
-    //     Description = r.Description,
-    //     BackgroundImage = r.BackgroundImage,
-    //     ReleaseDate = DateOnly.TryParse(r.Released, CultureInfo.InvariantCulture, out var releaseDate) ? releaseDate : null,
-    //     Tba = r.Tba,
-    //     Website = r.Website,
-    //     Rating = r.Rating,
-    //     Metacritic = r.Metacritic,
-    //     Platforms = [
-    //         .. r.Platforms.Select(p => new PlatformDTO
-    //         {
-    //             Name = p.Platform.Name,
-    //             ApiPlatformId = p.Platform.Id,
-    //             Slug = p.Platform.Slug,
-    //             ReleasedAt = p.ReleasedAt
-    //         })
-    //     ],
-    //     Genres = [
-    //         .. r.Genres.Select(g => new GenreDTO
-    //         {
-    //             Name = g.Name,
-    //             ApiGenreId = g.Id,
-    //             Slug = g.Slug
-    //         })
-    //     ]
-    // };
+    private static GameDetailsDTO ToGameDetailsDTO (IGDB.Models.Game g) => new ()
+    {
+        ApiGameId = g.Id ?? 0,
+        Name = g.Name,
+        PegiRating = g.AgeRatings?.Values?.FirstOrDefault(ar => ar.Organization?.Id == 2)?.RatingCategory?.Value?.Rating,
+        PegiRatingDescription = g.AgeRatings?.Values?.FirstOrDefault(ar => ar.Organization?.Id == 2)?.RatingContentDescriptions?.Values?.Select(desc => desc.Description).ToList(),
+        CriticRating = g.AggregatedRating is not null ? (int)Math.Round(g.AggregatedRating.Value) : null,
+        CriticRatingCount = g.AggregatedRatingCount ?? 0,
+        Artworks = g.Artworks?.Values?.Select(a => ImageHelper.GetImageUrl(a.ImageId, ImageSize.HD720, false)).ToList() ?? [],
+        Cover = ImageHelper.GetImageUrl(g.Cover?.Value?.ImageId, ImageSize.HD720, false),
+        ReleaseDate = g.FirstReleaseDate.HasValue ? DateOnly.FromDateTime(g.FirstReleaseDate.Value.UtcDateTime) : null,
+        Franchises = g.Franchises?.Values?.Select(f => new ApiObjectDTO
+        {
+            ApiObjectId = f.Id ?? 0,
+            Name = f.Name,
+            Slug = f.Slug
+        }).ToList() ?? [],
+        GameModes = g.GameModes?.Values?.Select(gm => new ApiObjectDTO
+        {
+            ApiObjectId = gm.Id ?? 0,
+            Name = gm.Name,
+            Slug = gm.Slug
+        }).ToList() ?? [],
+        GameStatus = g.GameStatus?.Value?.Status,
+        Genres = g.Genres?.Values?.Select(genre => new GenreDTO
+        {
+            ApiGenreId = genre.Id ?? 0,
+            Name = genre.Name,
+            Slug = genre.Slug
+        }).ToList() ?? [],
+        Developers = g.InvolvedCompanies?.Values?.Where(ic => ic.Developer == true && ic.Company?.Value != null).Select(ic => new CompanyDTO
+        {
+            ApiCompanyId = ic.Company?.Value?.Id ?? 0,
+            Name = ic.Company?.Value?.Name ?? null!,
+            Slug = ic.Company?.Value?.Slug ?? null!,
+            Logo = ImageHelper.GetImageUrl(ic.Company?.Value?.Logo?.Value?.ImageId, ImageSize.HD720, false)
+        }).ToList() ?? [],
+        Publishers = g.InvolvedCompanies?.Values?.Where(ic => ic.Publisher == true).Select(ic => new CompanyDTO
+        {
+            ApiCompanyId = ic.Company?.Value?.Id ?? 0,
+            Name = ic.Company?.Value?.Name ?? null!,
+            Slug = ic.Company?.Value?.Slug ?? null!,
+            Logo = ImageHelper.GetImageUrl(ic.Company?.Value?.Logo?.Value?.ImageId, ImageSize.HD720, false)
+        }).ToList() ?? [],
+        Keywords = g.Keywords?.Values?.Select(k => new ApiObjectDTO
+        {
+            ApiObjectId = k.Id ?? 0,
+            Name = k.Name,
+            Slug = k.Slug
+        }).ToList() ?? [],
+        Platforms = g.Platforms?.Values?.Select(p => new PlatformDTO
+        {
+            ApiPlatformId = p.Id ?? 0,
+            Name = p.Name,
+            Slug = p.Slug,
+            Abbreviation = p.Abbreviation,
+            PlatformFamily = new PlatformFamilyDTO
+            {
+                ApiPlatformFamilyId = p.PlatformFamily?.Value?.Id ?? 0,
+                Name = p.PlatformFamily?.Value?.Name ?? null!,
+                Slug = p.PlatformFamily?.Value?.Slug ?? null!
+            },
+            Logo = ImageHelper.GetImageUrl(p.PlatformLogo?.Value?.ImageId, ImageSize.HD720, false),
+        }).ToList() ?? [],
+        Perspectives = g.PlayerPerspectives?.Values?.Select(pp => new ApiObjectDTO
+        {
+            ApiObjectId = pp.Id ?? 0,
+            Name = pp.Name,
+            Slug = pp.Slug
+        }).ToList() ?? [],
+        Rating = g.Rating,
+        RatingCount = g.RatingCount,
+        ReleaseDates = g.ReleaseDates?.Values?.Select(rd => new ReleaseDateDTO
+        {
+            Human = rd.Human,
+            Date = rd.Date.HasValue ? DateOnly.FromDateTime(rd.Date.Value.UtcDateTime) : null,
+            Platform = rd.Platform?.Value?.Name,
+            Status = rd.Status?.Value?.Name
+        }).ToList() ?? [],
+        Screenshots = g.Screenshots?.Values?.Select(s => ImageHelper.GetImageUrl(s.ImageId, ImageSize.HD720, false)).ToList() ?? [],
+        Slug = g.Slug,
+        Summary = g.Summary,
+        Storyline = g.Storyline,
+        Themes = g.Themes?.Values?.Select(t => new ApiObjectDTO
+        {
+            ApiObjectId = t.Id ?? 0,
+            Name = t.Name,
+            Slug = t.Slug
+        }).ToList() ?? [],
+        Videos = g.Videos?.Values?.Select(v => $"https://www.youtube.com/watch?v={v.VideoId}").ToList() ?? [],
+        Website = g.Websites?.Values?.FirstOrDefault(w => w.Type == 1)?.Url,
+        Websites = g.Websites?.Values?.Where(w => w.Type != 1).Select(w => new WebsiteDTO
+        {
+            Name = w.Name,
+            Url = w.Url
+        }).ToList() ?? [],
+        Stores = g.Websites?.Values?.Where(w => w.Type != 1).Select(w => new WebsiteDTO
+        {
+            Name = w.Name,
+            Url = w.Url
+        }).ToList() ?? [],
+        LanguageSupports = g.LanguageSupports?.Values?.Select(ls => new LanguageSupportDTO
+        {
+            Language = ls.Language?.Value?.Name,
+            LanguageSupportType = ls.LanguageSupportType?.Value?.Name
+        }).ToList() ?? [],
+        Series = g.Collections?.Values?.Select(c => new CollectionDTO
+        {
+            ApiCollectionId = c.Id ?? 0,
+            Name = c.Name,
+            Slug = c.Slug,
+            Games = c.Games?.Values?.Select(g => new ApiObjectDTO
+            {
+                ApiObjectId = g.Id ?? 0,
+                Name = g.Name,
+                Slug = g.Slug
+            }).ToList() ?? [],
+        }).ToList() ?? [],
+        GameType = g.GameType?.Value?.Type,
+        Bundles = g.Bundles?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        DLCs = g.DLCs?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        ExpandedGames = g.ExpandedGames?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        Expansions = g.Expansions?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        Forks = g.Forks?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        ParentGame = g.ParentGame?.Value is not null ? new GameCardDTO
+        {
+            ApiGameId = g.ParentGame.Value.Id ?? 0,
+            Name = g.ParentGame.Value.Name,
+            Slug = g.ParentGame.Value.Slug
+        } : null,
+        Ports = g.Ports?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        SimilarGames = g.SimilarGames?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? []
+        StandaloneExpansions = g.StandaloneExpansions?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        Remakes = g.Remakes?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? [],
+        Remasters = g.Remasters?.Values?.Select(b => new GameCardDTO
+        {
+            ApiGameId = b.Id ?? 0,
+            Name = b.Name,
+            Slug = b.Slug
+        }).ToList() ?? []
+        VersionParent = g.VersionParent?.Value is not null ? new GameCardDTO
+        {
+            ApiGameId = g.VersionParent.Value.Id ?? 0,
+            Name = g.VersionParent.Value.Name,
+            Slug = g.VersionParent.Value.Slug
+        } : null,
+    };
 }

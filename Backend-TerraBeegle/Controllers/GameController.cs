@@ -24,9 +24,9 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
 
         if (search.Page.HasValue && search.Page.Value != 1)
-            pagination += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 20)};";
+            pagination += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 24)};";
 
-        if (search.PageSize.HasValue && search.PageSize.Value != 20)
+        if (search.PageSize.HasValue)
             pagination += $"limit {search.PageSize.Value};";
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
@@ -96,6 +96,9 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.GameType is { Length: > 0 })
             query += GetQuery("game_type", search.GameType, false);
 
+        if (search.PegiRating is { Length: > 0 })
+            query += GetQuery("age_ratings.rating_category", search.PegiRating, false);
+
         var result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
 
         if (result is null)
@@ -104,7 +107,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         }
 
         int page = search.Page ?? 1;
-        int pageSize = search.PageSize ?? 20;
+        int pageSize = search.PageSize ?? 24;
 
         return Ok(new PagedResponseDTO<GameCardDTO>
         {

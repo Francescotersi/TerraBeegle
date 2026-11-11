@@ -8,9 +8,13 @@ public class Platform
 
     public GamePlatform ApiPlatformId { get; set; }             // IGDB Id
     public string Name { get; set; } = null!;
-    public string Abbreviation { get; set; } = null!;
     public string Slug { get; set; } = null!;
+    public string Abbreviation { get; set; } = null!;
+
     public int? PlatformFamily { get; set; }
+    public string? PlatformFamilyName { get; set; }
+    public string? PlatformFamilySlug { get; set; }
+
     public long? LogoId { get; set; }
     public Image? Logo { get; set; }
 

@@ -8,7 +8,7 @@ public class PaginationDTO
     public int Page { get; set; } = 1;
     
     [Range(1, 50)]
-    public int PageSize { get; set; } = 20;
+    public int PageSize { get; set; } = 24;
 }
 
 public class PagedResponseDTO<T>

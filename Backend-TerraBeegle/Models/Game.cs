@@ -26,7 +26,6 @@ public class Game
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public long? CoverId { get; set; }
     public Image? Cover { get; set; }
     public ICollection<Image> Artworks { get; set; } = [];
     public ICollection<Image> Screenshots { get; set; } = [];

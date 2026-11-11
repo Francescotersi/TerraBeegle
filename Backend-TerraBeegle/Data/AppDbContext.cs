@@ -156,17 +156,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(g => g.Name);
 
             e.HasOne(g => g.Cover)
-                .WithMany()
-                .HasForeignKey("CoverId")
+                .WithOne(i => i.Game)
+                .HasForeignKey<Image>("CoverId")
                 .OnDelete(DeleteBehavior.SetNull);
 
             e.HasMany(g => g.Artworks)
-                .WithMany(i => i.ArtworksOfGames)
-                .UsingEntity(j => j.ToTable("game_artworks"));
+                .WithOne(i => i.Game)
+                .HasForeignKey(i => i.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             e.HasMany(g => g.Screenshots)
-                .WithMany(i => i.ScreenshotsOfGames)
-                .UsingEntity(j => j.ToTable("game_screenshots"));
+                .WithOne(i => i.Game)
+                .HasForeignKey(i => i.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
             
             e.HasOne(g => g.ParentGame)
                 .WithMany()
@@ -307,27 +309,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             
             e.HasIndex(i => i.ApiImageId).IsUnique();
 
-            e.HasMany(i => i.ArtworksOfGames)
+            e.HasOne(i => i.Game)
                 .WithMany(g => g.Artworks)
-                .UsingEntity(j => j.ToTable("game_artworks"));
+                .HasForeignKey(i => i.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasMany(i => i.ScreenshotsOfGames)
+            e.HasOne(i => i.Game)
                 .WithMany(g => g.Screenshots)
-                .UsingEntity(j => j.ToTable("game_screenshots"));
-            
+                .HasForeignKey(i => i.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             e.HasOne(i => i.Game)
                 .WithOne(g => g.Cover)
                 .HasForeignKey<Game>("CoverId")
-                .OnDelete(DeleteBehavior.SetNull);
-
-            e.HasOne(i => i.Company)
-                .WithOne(c => c.Logo)
-                .HasForeignKey<Company>("LogoId")
-                .OnDelete(DeleteBehavior.SetNull);
-
-            e.HasOne(i => i.Platform)
-                .WithOne(p => p.Logo)
-                .HasForeignKey<Platform>("LogoId")
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
