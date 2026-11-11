@@ -334,6 +334,13 @@ namespace Backend_TerraBeegle.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<string>("DogCompanion")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Beagle");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)

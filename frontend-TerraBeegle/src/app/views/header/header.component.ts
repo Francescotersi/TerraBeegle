@@ -167,6 +167,21 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       pointer-events: auto;
     }
 
+    @media (min-width: 1200px) {
+      .header-wrapper {
+        max-width: none;
+        width: 66.666667%;
+        margin-left: 25%;
+        margin-right: 0;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      .header-wrapper {
+        margin-left: 16.666667%;
+      }
+    }
+
     .header-wrapper app-liquid-glass {
       display: block;
       width: 100%;
@@ -379,6 +394,51 @@ import { ThemeSwitchComponent } from '../../ui/theme.component';
       color: #ffffff;
       border-color: transparent;
       transform: translateY(-1px);
+    }
+
+    @media (min-width: 2000px) {
+      .header-wrapper {
+        margin-bottom: 1.5rem;
+      }
+
+      .navbar {
+        padding-top: 0.9rem !important;
+        padding-bottom: 0.9rem !important;
+      }
+
+      .site-logo {
+        width: 54px;
+        height: 54px;
+      }
+
+      .nav-link {
+        font-size: 1.5rem;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+      }
+
+      .search-input {
+        width: 220px;
+        font-size: 1.4rem;
+        padding: 0.55rem 1rem;
+      }
+
+      .search-input:focus {
+        width: 260px;
+      }
+
+      .search-btn {
+        font-size: 1.4rem;
+        padding: 0.5rem 1rem;
+      }
+
+      .theme-switch-wrapper {
+        --theme-switch-width: 72px;
+        --theme-switch-height: 38px;
+        --theme-switch-thumb-size: 32px;
+        --theme-switch-thumb-offset: 34px;
+        --theme-switch-icon-size: 20px;
+      }
     }
 
     @media (max-width: 991.98px) {

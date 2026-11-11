@@ -12,6 +12,7 @@ public class User
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
     public Theme Theme { get; set; } = Theme.Light;       // "light" | "dark"
+    public DogCompanion DogCompanion { get; set; } = DogCompanion.Beagle;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

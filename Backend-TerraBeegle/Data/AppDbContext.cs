@@ -50,6 +50,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(10)
                 .HasDefaultValue(Theme.Light);
 
+            e.Property(u => u.DogCompanion)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(DogCompanion.Beagle);
+
             e.Property(u => u.CreatedAt)
                 .HasDefaultValueSql("NOW()");
 

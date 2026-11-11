@@ -9,6 +9,7 @@ public class UserPublicResponseDTO
     public long Id { get; set; }
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
+    public DogCompanion DogCompanion { get; set; }
 }
 
 public class UserResponseDTO
@@ -22,6 +23,7 @@ public class UserResponseDTO
     public string? ImageProfile { get; set; }
     public string Username { get; set; } = string.Empty;
     public Theme Theme { get; set; }
+    public DogCompanion DogCompanion { get; set; }
 }
 
 public class UpdateUserDTO
@@ -37,6 +39,7 @@ public class UpdateUserDTO
     public string? FamilyName { get; set; }
     public string? ImageProfile { get; set; }
     public Theme? Theme { get; set; }
+    public DogCompanion? DogCompanion { get; set; }
 }
 
 public class UpdateEmailDTO

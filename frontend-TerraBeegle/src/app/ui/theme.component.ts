@@ -75,8 +75,8 @@ import { ThemeService } from '../services/theme.service';
       position: relative;
       display: inline-flex;
       align-items: center;
-      width: 52px;
-      height: 28px;
+      width: var(--theme-switch-width, 52px);
+      height: var(--theme-switch-height, 28px);
       padding: 2px;
       border-radius: 9999px;
       cursor: pointer;
@@ -114,8 +114,8 @@ import { ThemeService } from '../services/theme.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
+      width: var(--theme-switch-thumb-size, 22px);
+      height: var(--theme-switch-thumb-size, 22px);
       border-radius: 50%;
       background: #ffffff;
       border: 1px solid rgba(0, 0, 0, 0.06);
@@ -128,7 +128,7 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .theme-switch--dark .theme-switch__thumb {
-      transform: translateX(24px);
+      transform: translateX(var(--theme-switch-thumb-offset, 24px));
       background: #081226;
       border-color: rgba(46, 217, 231, 0.35);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
@@ -136,8 +136,8 @@ import { ThemeService } from '../services/theme.service';
 
     .theme-switch__icon {
       position: absolute;
-      width: 14px;
-      height: 14px;
+      width: var(--theme-switch-icon-size, 14px);
+      height: var(--theme-switch-icon-size, 14px);
       transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 

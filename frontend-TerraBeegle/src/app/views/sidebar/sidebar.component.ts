@@ -1,11 +1,13 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { AuthService } from '../../services/auth.service';
+import { DogComponent } from '../../ui/dog/dog.component';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, NgTemplateOutlet, LiquidGlassComponent],
+  imports: [RouterLink, RouterLinkActive, NgTemplateOutlet, LiquidGlassComponent, DogComponent],
   template: `
     <ng-template #filtersContent>
       <div class="mb-3">
@@ -167,6 +169,9 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
 
     <!-- ==================== VISTA DESKTOP ==================== -->
     <div class="d-none d-lg-block w-100 sidebar-desktop-card">
+      <div class="companion-card" aria-label="Your dog companion">
+        <app-dog [dog]="currentUser()?.dogCompanion ?? 'Beagle'" animation="wag" [size]="84" />
+      </div>
       <app-liquid-glass
         borderRadius="24px"
         blur="2px"
@@ -272,6 +277,10 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
     :host {
       display: block;
       width: 100%;
+    }
+
+    .sidebar-desktop-card {
+      position: relative;
     }
 
     :host-context([data-bs-theme="light"]) .sidebar-desktop-card {
@@ -459,6 +468,23 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
+    .companion-card {
+      position: absolute;
+      top: -76px;
+      right: -0.5rem;
+      z-index: 2;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    @media (min-width: 1440px) {
+      .companion-card {
+        display: flex;
+      }
+    }
+
     .sidebar-search::placeholder {
       color: var(--tb-text-muted);
       opacity: 0.8;
@@ -571,6 +597,9 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
   `,
 })
 export class SidebarComponent {
+  private readonly authService = inject(AuthService);
+
+  protected readonly currentUser = this.authService.currentUser;
   protected readonly searchQuery = signal('');
   protected readonly isMobileDrawerOpen = signal(false);
 
@@ -662,4 +691,3 @@ export class SidebarComponent {
     { id: 6, name: 'Capcom', slug: 'capcom' },
   ];
 }
-
