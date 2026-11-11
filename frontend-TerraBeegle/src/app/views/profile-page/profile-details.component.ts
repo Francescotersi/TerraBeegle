@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { User } from '../../models/user.model';
+import { User } from '../../models-services/user.model';
 import { DogComponent } from '../../ui/dog/dog.component';
 
 @Component({

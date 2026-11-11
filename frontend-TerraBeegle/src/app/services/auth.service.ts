@@ -3,9 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
-import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload} from '../models/user.model';
+import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload} from '../models-services/user.model';
 
-export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload } from '../models/user.model';
+export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload } from '../models-services/user.model';
 
 const TOKEN_KEY = 'tb_token';
 const USER_KEY = 'tb_user';

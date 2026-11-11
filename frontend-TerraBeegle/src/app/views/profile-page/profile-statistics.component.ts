@@ -1,7 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Component, inject, PLATFORM_ID, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
-import { GameCardDTO, GameSearchResponse } from '../../models/game.model';
+import { GameCardDTO, GameSearchResponse } from '../../models-services/game.model';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
 import { AlertService } from '../../services/alert.service';
 

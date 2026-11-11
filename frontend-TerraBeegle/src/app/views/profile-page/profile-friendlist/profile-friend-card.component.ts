@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FriendshipResponseDTO } from '../../../models/friendship.model';
+import { FriendshipResponseDTO } from '../../../models-services/friendship.model';
 
 @Component({
   selector: 'app-profile-friend-card',

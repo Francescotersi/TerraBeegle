@@ -1,11 +1,12 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
 import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 import { AuthService } from '../../../services/auth.service';
 import { AlertService } from '../../../services/alert.service';
-import { OtpContext } from '../../../models/user.model';
+import { OtpContext } from '../../../models-services/user.model';
 
 @Component({
   selector: 'app-otp',
@@ -195,6 +196,7 @@ export class OtpComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
   private readonly router = inject(Router);
+  private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly isLoading = signal(false);
   protected readonly isResending = signal(false);
@@ -210,7 +212,12 @@ export class OtpComponent implements OnInit {
   protected readonly password = signal<string>('');
 
   ngOnInit(): void {
-    const ctx: OtpContext | null = this.authService.pendingOtpContext() || (history.state as OtpContext) || null;
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const navHistoryState = typeof window !== 'undefined' && window.history ? (window.history.state as OtpContext) : null;
+    const ctx: OtpContext | null = this.authService.pendingOtpContext() || navHistoryState || null;
 
     if (ctx && (ctx.type === '2fa' || ctx.type === 'email-verification')) {
       this.is2FA.set(ctx.type === '2fa');

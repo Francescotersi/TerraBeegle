@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import type { DogCompanion } from '../../models/user.model';
+import type { DogCompanion } from '../../models-services/user.model';
 
 export type DogAnimation = 'idle' | 'sit' | 'wag' | 'walk';
 

@@ -7,7 +7,7 @@ import {
   GameCardDTO,
   GameSearchResponse,
   GameDetailsDTO,
-} from '../models/game.model';
+} from '../models-services/game.model';
 
 export type {
   GameSearchParams,

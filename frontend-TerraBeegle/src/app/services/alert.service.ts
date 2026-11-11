@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { AlertNotification, AlertType } from '../models/alert.model';
+import { AlertNotification, AlertType } from '../models-services/alert.model';
 
 export type { AlertNotification, AlertType };
 

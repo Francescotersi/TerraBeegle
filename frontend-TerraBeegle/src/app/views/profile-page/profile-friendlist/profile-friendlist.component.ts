@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { timer } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FriendsService } from '../../../services/friends.service';
-import { FriendshipResponseDTO } from '../../../models/friendship.model';
+import { FriendshipResponseDTO } from '../../../models-services/friendship.model';
 import { AlertService } from '../../../services/alert.service';
 import { ProfileFriendSearchComponent } from './profile-friend-search.component';
 import { ProfileFriendCardComponent } from './profile-friend-card.component';

@@ -6,8 +6,8 @@ import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/
 import { FriendsService } from '../../../services/friends.service';
 import { AuthService } from '../../../services/auth.service';
 import { AlertService } from '../../../services/alert.service';
-import { UserPublicResponseDTO } from '../../../models/user.model';
-import { PagedResponse, FriendshipResponseDTO } from '../../../models/friendship.model';
+import { UserPublicResponseDTO } from '../../../models-services/user.model';
+import { PagedResponse, FriendshipResponseDTO } from '../../../models-services/friendship.model';
 
 @Component({
   selector: 'app-profile-friend-search',

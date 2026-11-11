@@ -3,8 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError, switchMap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AlertService } from './alert.service';
-import { FriendshipResponseDTO, FriendshipUpdateDTO, PagedResponse } from '../models/friendship.model';
-import { UserPublicResponseDTO } from '../models/user.model';
+import { FriendshipResponseDTO, FriendshipUpdateDTO, PagedResponse } from '../models-services/friendship.model';
+import { UserPublicResponseDTO } from '../models-services/user.model';
 
 @Injectable({
   providedIn: 'root',
