@@ -73,7 +73,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             .OrderBy(f => f.User1Id == userId ? f.User2.Username : f.User1.Username) // Order by the other user's username
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select( f => new FriendshipResponseDTO 
+            .Select(f => new FriendshipResponseDTO
             {
                 Id = f.Id,
                 SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
@@ -106,7 +106,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Unauthorized("User ID not found in token.");
         }
 
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
         if (!userExists)
         {
             return NotFound("User not found.");
@@ -115,7 +115,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         if (dto.SenderId != userId)
             return BadRequest("SenderId must match the authenticated user's ID.");
 
-        if (dto.SenderId == dto.ReceiverId)
+        if (userId == dto.ReceiverId)
             return BadRequest("Cannot create friendship with oneself.");
 
         var senderExists = await db.Users.AnyAsync(u => u.Id == dto.SenderId);
@@ -165,9 +165,14 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot create friendship due to database constraints.");
         }
 
-        var createdFriendship = friendship.Adapt<Friendship, FriendshipResponseDTO>();
-        createdFriendship.SenderId = dto.SenderId;
-        createdFriendship.User = receiver.Adapt<UserPublicResponseDTO>();
+        var createdFriendship = new FriendshipResponseDTO
+        {
+            Id = friendship.Id,
+            SenderId = dto.SenderId,
+            ReceiverId = dto.ReceiverId,
+            Status = friendship.Status.ToString(),
+            UpdatedAt = friendship.UpdatedAt
+        };
 
         return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
     }
@@ -183,7 +188,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Unauthorized("User ID not found in token.");
         }
 
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
         if (!userExists)
         {
             return NotFound("User not found.");
@@ -243,7 +248,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Unauthorized("User ID not found in token.");
         }
 
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
         if (!userExists)
         {
             return NotFound("User not found.");

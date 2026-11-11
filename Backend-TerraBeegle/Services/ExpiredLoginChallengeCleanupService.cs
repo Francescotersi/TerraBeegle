@@ -5,7 +5,7 @@ namespace Backend_TerraBeegle.Services;
 
 // Deletes the 2FA logins that were never finished (the user closed the page, the code never arrived...).
 // A used or failed challenge is already deleted by AuthController; only the abandoned ones stay in the table
-public class  ExpiredLoginChallengeCleanupService(
+public class ExpiredLoginChallengeCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<ExpiredLoginChallengeCleanupService> logger) : BackgroundService
 {

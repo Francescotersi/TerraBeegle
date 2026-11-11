@@ -26,19 +26,19 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
-        dto.Email = dto.Email.Trim().ToLowerInvariant();
-        dto.Username = dto.Username.Trim();
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var username = dto.Username.Trim();
 
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
-        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == dto.Username);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
+        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
         if(EmailExists)
             return Conflict("Email already exists.");
         if(UsernameExists)
             return Conflict("Username already exists.");
 
-        dto.Name = dto.Name.Trim();
-        dto.FamilyName = dto.FamilyName.Trim();
+        var name = dto.Name.Trim();
+        var familyName = dto.FamilyName.Trim();
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();
@@ -81,10 +81,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
-        if (user is null)
-            return Unauthorized("Invalid credentials.");
-
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+        if (user is null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
         
         // The code is checked only after the password, so only the owner of the account can use up its attempts
@@ -117,8 +114,15 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
         
         var (challenge, challengeToken, code) = twoFactorService.CreateChallenge(user);
-        db.LoginChallenges.Add(challenge);
+
+        if (user.LoginChallenge is null)
+        {
+            db.LoginChallenges.Add(challenge);
+        }
+        user.LoginChallenge = challenge;
+
         await db.SaveChangesAsync();
+
         try
         {
 	        await twoFactorService.SendCodeAsync(user.Email, code);

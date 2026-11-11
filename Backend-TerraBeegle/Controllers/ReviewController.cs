@@ -28,6 +28,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
             reviews = await db.Reviews
                 .Where(r => r.User.Username == username)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .Select(r => new ReviewResponseDTO
@@ -37,7 +38,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
                     Content = r.Content,
                     CreatedAt = r.CreatedAt,
                     User = null, // no need to include the user since we already know the username
-                    Game = r.Game.Adapt<GameMinDTO>()
+                    Game = r.Game.Adapt<GameDetailsDTO>()
                 })
                 .ToListAsync();
         }
@@ -53,7 +54,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 
 [ApiController]
 [Route("api/games/{gameId:int}/reviews")]
-public class ReviewGameController(AppDbContext db, IRawgService rawgService) : ControllerBase
+public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     // Lists the reviews of a game
     [HttpGet]
@@ -66,6 +67,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
             reviews = await db.Reviews
                 .Where(r => r.GameId == gameId)
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .Select(r => new ReviewResponseDTO
@@ -88,70 +90,66 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         ));
     }
 
-    // Adds a review to a game
-    [Authorize]
-    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
-    [HttpPost]
-    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
-    {
-        if (reviewCreateDTO.Rating < 1 || reviewCreateDTO.Rating > 5)
-        {
-            return BadRequest("Rating must be between 1 and 5.");
-        }
+    // [Authorize]
+    // [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    // [HttpPost]
+    // public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
+    // {
+    //    
 
-        var currentUserId = Utils.GetCurrentUserId(User);
-        if (currentUserId is null)
-        {
-            return Unauthorized("User ID not found in token.");
-        }
+    //     var currentUserId = Utils.GetCurrentUserId(User);
+    //     if (currentUserId is null)
+    //     {
+    //         return Unauthorized("User ID not found in token.");
+    //     }
 
-        var user = await db.Users.FindAsync(currentUserId.Value);
-        if (user is null)
-        {
-            return NotFound("User not found.");
-        }
+    //     var user = await db.Users.FindAsync(currentUserId.Value);
+    //     if (user is null)
+    //     {
+    //         return NotFound("User not found.");
+    //     }
 
-        // Check if the game exists
-        Game? game;
-        try
-        {
-            game = await rawgService.GetOrCreateGameAsync(gameId);
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-        }
+    //     // Check if the game exists
+    //     Game? game;
+    //     try
+    //     {
+    //         game = await ApiService.GetOrCreateGameAsync(gameId);
+    //     }
+    //     catch (HttpRequestException)
+    //     {
+    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+    //     }
 
-        if (game is null)
-        {
-            return NotFound("Game not found.");
-        }
+    //     if (game is null)
+    //     {
+    //         return NotFound("Game not found.");
+    //     }
 
-        // Create a new review
-        var review = new Review
-        {
-            Rating = reviewCreateDTO.Rating,
-            Content = reviewCreateDTO.Content,
-            GameId = game.RawgGameId,
-            UserId = currentUserId.Value,
-            CreatedAt = DateTime.UtcNow
-        };
+    //     // Create a new review
+    //     var review = new Review
+    //     {
+    //         Rating = reviewCreateDTO.Rating,
+    //         Content = reviewCreateDTO.Content,
+    //         GameId = game.ApiGameId,
+    //         UserId = currentUserId.Value,
+    //         CreatedAt = DateTime.UtcNow
+    //     };
 
-        db.Reviews.Add(review);
-        await db.SaveChangesAsync();
+    //     db.Reviews.Add(review);
+    //     await db.SaveChangesAsync();
         
-        // Return the created review
-        var createdReview = new ReviewResponseDTO
-        {
-            Id = review.Id,
-            Rating = review.Rating,
-            Content = review.Content,
-            CreatedAt = review.CreatedAt,
-            User = user.Adapt<UserPublicResponseDTO>()
-        };
+    //     // Return the created review
+    //     var createdReview = new ReviewResponseDTO
+    //     {
+    //         Id = review.Id,
+    //         Rating = review.Rating,
+    //         Content = review.Content,
+    //         CreatedAt = review.CreatedAt,
+    //         User = user.Adapt<UserPublicResponseDTO>()
+    //     };
 
-        return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
-    }
+    //     return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
+    // }
 
     // Edits your own review
     [Authorize]
@@ -172,7 +170,7 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         }
 
         var user = await db.Users.FindAsync(currentUserId.Value);
-        if (user is null)
+        if (user is null || !user.EmailVerified)
         {
             return NotFound("User not found.");
         }
@@ -180,11 +178,6 @@ public class ReviewGameController(AppDbContext db, IRawgService rawgService) : C
         if (review.UserId != currentUserId.Value)
         {
             return Forbid("You can only update your own reviews.");
-        }
-
-        if (reviewUpdateDTO.Rating < 1 || reviewUpdateDTO.Rating > 5)
-        {
-            return BadRequest("Rating must be between 1 and 5.");
         }
 
         if (reviewUpdateDTO.Content != null)

@@ -1,6 +1,9 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 using Backend_TerraBeegle.DTOS;
+using Backend_TerraBeegle.Data;
+using Microsoft.EntityFrameworkCore;
+using Mapster;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -24,7 +27,11 @@ public static class Utils
         return null;
     }
 
-    // True if the text is a valid http/https URL
+    // public static async Task<bool> IsUserVerified(long userId, AppDbContext db)
+    // {
+    //     return await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
+    // }
+
     public static bool IsHttpUrl(string value)
     {
         return Uri.TryCreate(value, UriKind.Absolute, out var uri)
@@ -46,5 +53,14 @@ public static class Utils
             PreviousPageUrl = pagination.Page > 1 ? pageUrl(pagination.Page - 1) : null,
             NextPageUrl = pagination.Page < totalPages ? pageUrl(pagination.Page + 1) : null
         };
+    }
+
+    public static long YearToUnixTimestamp(int anno, bool min = false)
+    {
+        DateTimeOffset data = min
+            ? new (anno, 1, 1, 0, 0, 0, TimeSpan.Zero)
+            : new (anno, 12, 31, 23, 59, 59, TimeSpan.Zero);
+
+        return data.ToUnixTimeSeconds();
     }
 }

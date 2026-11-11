@@ -59,7 +59,6 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         // Case-insensitive: both sides in lower case ("vlad" finds "Vlad").
-        // EF escapes '%' and '_' itself for StartsWith, so "a_b" does not match "axb"
         var term = username.Trim().ToLowerInvariant();
 
         // One filter for both the count and the page, so TotalCount always matches the list.
@@ -109,7 +108,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Unauthorized("User ID not found in token.");
         } 
             
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value && u.Username == username);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value && u.Username == username && u.EmailVerified);
         
         if (user is null)
             return NotFound();
@@ -129,11 +128,11 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Unauthorized("User ID not found in token.");
         }
 
-        // Patch which does not allow empty string or whitespaces.
         var user = await db.Users.FindAsync(userId.Value);
-        if (user is null)
+        if (user is null || !user.EmailVerified) // Only allow modifications for verified users
             return NotFound();
-        
+
+        // Patch which does not allow empty string or whitespaces.
         if (dto.Username is not null && string.IsNullOrWhiteSpace(dto.Username))
             ModelState.AddModelError(nameof(dto.Username), "Username cannot be empty.");
 
@@ -246,12 +245,12 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return BadRequest("Password is incorrect.");
 
-        dto.Email = dto.Email.Trim().ToLowerInvariant();
+        var email = dto.Email.Trim().ToLowerInvariant();
 
-        if(dto.Email == user.Email)
+        if(email == user.Email)
             return BadRequest("New email is the same as the old one.");
         
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
         if(EmailExists)
             return Conflict("Email already exists.");
 
@@ -326,36 +325,14 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
     [HttpPost("2fa/enable")]
-    public async Task<ActionResult> EnableTwoFactor(TwoFactorDTO twoFactorDTO)
-    {
-        var userId = Utils.GetCurrentUserId(User);
-        if (userId is null)
-        {
-            return Unauthorized("User ID not found in token.");
-        }
+    public Task<ActionResult> EnableTwoFactor(TwoFactorDTO twoFactorDTO) => HandleTwoFactor(twoFactorDTO, true);
 
-        var user = await db.Users.FindAsync(userId.Value);
-        if (user is null)
-            return NotFound();
-        
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, twoFactorDTO.Password) == PasswordVerificationResult.Failed)
-            return BadRequest("Password is incorrect.");
-        
-        if(!user.EmailVerified)
-            return BadRequest("Verify your email before enabling two-factor authentication.");
-
-        user.TwoFactorEnabled = true;
-        user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-
-        return Ok("Two-factor authentication enabled successfully.");
-    }
-    
-    // Turns off two-factor authentication
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.TwoFactor)]
     [HttpPost("2fa/disable")]
-    public async Task<ActionResult> DisableTwoFactor(TwoFactorDTO twoFactorDTO)
+    public Task<ActionResult> DisableTwoFactor(TwoFactorDTO twoFactorDTO) => HandleTwoFactor(twoFactorDTO, false);
+    
+    private async Task<ActionResult> HandleTwoFactor(TwoFactorDTO twoFactorDTO, bool enable)
     {
         var userId = Utils.GetCurrentUserId(User);
         if (userId is null)
@@ -366,16 +343,29 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var user = await db.Users.FindAsync(userId.Value);
         if (user is null)
             return NotFound();
+
+        if(!user.EmailVerified && enable)
+            return BadRequest("Verify your email before enabling two-factor authentication.");
         
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, twoFactorDTO.Password) == PasswordVerificationResult.Failed)
             return BadRequest("Password is incorrect.");
 
-        user.TwoFactorEnabled = false;
+        user.TwoFactorEnabled = enable;
         user.UpdatedAt = DateTime.UtcNow;
-        await db.LoginChallenges.Where(c => c.UserId == user.Id).ExecuteDeleteAsync();
+
+        if (!enable)
+        {
+            var loginChallenge = user.LoginChallenge;
+            
+            if (loginChallenge is not null)
+            {
+                db.LoginChallenges.Remove(loginChallenge);
+            }
+        }
+
         await db.SaveChangesAsync();
 
-        return Ok("Two-factor authentication disabled successfully.");
+        return Ok($"Two-factor authentication {(enable ? "enabled" : "disabled")} successfully.");
     }
 
     // Deletes the logged-in user's account

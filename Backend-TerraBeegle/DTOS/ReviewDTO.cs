@@ -2,30 +2,30 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class ReviewCreateDTO
+public record ReviewCreateDTO
 {
-    [Range(1, 5)]
-    public int Rating { get; set; }               // 1-5
-    public long GameId { get; set; }               // RAWG Id
-    public string? Content { get; set; }
+    [Range(1, 10)]
+    public int Rating { get; init; }               // 1-10
+    public long GameId { get; init; }               // IGDB Id
+    public string? Content { get; init; }
 }
 
-public class ReviewUpdateDTO
+public record ReviewUpdateDTO
 {
-    public long Id { get; set; }
-    [Range(1, 5)]
-    public int Rating { get; set; }               // 1-5
-    public string? Content { get; set; }
+    public long Id { get; init; }
+    [Range(1, 10)]
+    public int Rating { get; init; }               // 1-10
+    public string? Content { get; init; }
 }
 
-public class ReviewResponseDTO
+public record ReviewResponseDTO
 {
-    public long Id { get; set; }
+    public long Id { get; init; }
 
-    [Range(1, 5)]
-    public int Rating { get; set; }               // 1-5
-    public string? Content { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public UserPublicResponseDTO? User { get; set; }
-    public GameMinDTO? Game { get; set; }
+    [Range(1, 10)]
+    public int Rating { get; init; }               // 1-10
+    public string? Content { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public UserPublicResponseDTO? User { get; init; }
+    public GameDetailsDTO? Game { get; init; }
 }

@@ -2,12 +2,11 @@ using Backend_TerraBeegle.Enums;
 
 namespace Backend_TerraBeegle.Models;
 
-public class ParentPlatform
+public class PlatformFamily
 {
     public long Id { get; set; }
-    public GameParentPlatform RawgPlatformId { get; set; }             // RAWG Id
+    public GamePlatformFamily ApiPlatformFamilyId { get; set; }               // IGDB Id
     public string Name { get; set; } = null!;
-    public string? Image { get; set; }
+    public string Slug { get; set; } = null!;
     public ICollection<Platform> Platforms { get; set; } = [];
-    public ICollection<Game> Games { get; set; } = [];
 }

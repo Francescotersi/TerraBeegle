@@ -12,6 +12,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.RateLimiting;
+using IGDB;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -133,27 +134,44 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IRawgService, RawgService>();
+// builder.Services.AddScoped<IRawgService, RawgService>();
+builder.Services.AddScoped<IIGDBService, IGDBService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddHostedService<UnverifiedUserCleanupService>();
 builder.Services.AddHostedService<ExpiredLoginChallengeCleanupService>();
 
-// IHttpClientFactory for the HTTP calls to RAWG
-builder.Services.AddHttpClient("RawgAPI", client =>
+// // IHttpClientFactory for the HTTP calls to RAWG
+// builder.Services.AddHttpClient("RawgAPI", client =>
+// {
+//     client.BaseAddress = new Uri("https://api.rawg.io/api/");
+//     client.DefaultRequestHeaders.Add("Accept", "application/json");
+// });
+
+builder.Services.AddSingleton(sp =>
 {
-    client.BaseAddress = new Uri("https://api.rawg.io/api/");
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    var configuration = sp.GetRequiredService<IConfiguration>();
+
+    var clientId = configuration["EnvironmentVariables:IGDB_CLIENT_ID"];
+    var clientSecret = configuration["EnvironmentVariables:IGDB_CLIENT_SECRET"];
+
+    if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+    {
+        Console.Error.WriteLine("EnvironmentVariables:IGDB_CLIENT_ID or IGDB_CLIENT_SECRET is missing. Set them to your IGDB API credentials.");
+        Environment.Exit(1);;
+    }
+
+    return IGDBClient.CreateWithDefaults(clientId, clientSecret);
 });
 
-var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
+// var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
-if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
-{
-    Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
-    Environment.Exit(1);
-}
+// if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
+// {
+//     Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
+//     Environment.Exit(1);
+// }
 
 // without the SMTP settings the verification emails cannot be sent
 string[] smtpSettings = ["Smtp:Host", "Smtp:Port", "Smtp:User", "Smtp:Password", "Smtp:From"];
