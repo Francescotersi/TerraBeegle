@@ -31,8 +31,8 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
-            search.SortBy = search.SortBy.Trim().ToLowerInvariant();
-            pagination += $"sort {(search.SortBy == "critic_rating" ? "aggregated_rating" : search.SortBy)} {(search.Ascending ? "asc" : "desc")};";
+            var sortby = search.SortBy.Trim().ToLowerInvariant();
+            pagination += $"sort {(sortby == "critic_rating" ? "aggregated_rating" : sortby)} {(search.Ascending ? "asc" : "desc")};";
         }
 
         if (!string.IsNullOrWhiteSpace(search.Name))
@@ -154,23 +154,23 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
     }
 
 	// searching by the IGDB id the same one used for the IGDB request below
-    // [HttpGet("{igdbGameId:long}")]
-    // public async Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId)
-    // {
-    //     // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
-    //     GameDetailsDTO? game;
-    //     try
-    //     {
-    //         game = await ApiService.GetGameAsync(igdbGameId);
-    //     }
-    //     catch (HttpRequestException)
-    //     {
-    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-    //     }
+    [HttpGet("{igdbGameId:long}")]
+    public async Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId)
+    {
+        // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
+        GameDetailsDTO? game;
+        try
+        {
+            game = await ApiService.GetGameAsync(igdbGameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
-    //     if (game is null)
-    //         return NotFound($"Game with IGDB ID {igdbGameId} not found.");
+        if (game is null)
+            return NotFound($"Game with IGDB ID {igdbGameId} not found.");
 
-    //     return Ok(game);
-    // }
+        return Ok(game);
+    }
 }

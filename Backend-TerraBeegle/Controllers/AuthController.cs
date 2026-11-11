@@ -25,19 +25,19 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
-        dto.Email = dto.Email.Trim().ToLowerInvariant();
-        dto.Username = dto.Username.Trim();
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var username = dto.Username.Trim();
 
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
-        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == dto.Username);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
+        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
         if(EmailExists)
             return Conflict("Email already exists.");
         if(UsernameExists)
             return Conflict("Username already exists.");
 
-        dto.Name = dto.Name.Trim();
-        dto.FamilyName = dto.FamilyName.Trim();
+        var name = dto.Name.Trim();
+        var familyName = dto.FamilyName.Trim();
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();

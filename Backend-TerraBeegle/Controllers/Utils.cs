@@ -25,10 +25,10 @@ public static class Utils
         return null;
     }
 
-    public static async Task<bool> IsUserVerified(long userId, AppDbContext db)
-    {
-        return await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
-    }
+    // public static async Task<bool> IsUserVerified(long userId, AppDbContext db)
+    // {
+    //     return await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
+    // }
 
     public static bool IsHttpUrl(string value)
     {

@@ -159,9 +159,14 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot create friendship due to database constraints.");
         }
 
-        var createdFriendship = friendship.Adapt<Friendship, FriendshipResponseDTO>();
-        createdFriendship.SenderId = dto.SenderId;
-        createdFriendship.User = receiver.Adapt<UserPublicResponseDTO>();
+        var createdFriendship = new FriendshipResponseDTO
+        {
+            Id = friendship.Id,
+            SenderId = dto.SenderId,
+            ReceiverId = dto.ReceiverId,
+            Status = friendship.Status.ToString(),
+            UpdatedAt = friendship.UpdatedAt
+        };
 
         return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
     }

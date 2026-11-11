@@ -1,13 +1,13 @@
 namespace Backend_TerraBeegle.DTOS;
 
-public class CompanyDTO
+public record CompanyDTO
 {
-    public long ApiCompanyId { get; set; }
-    public string Name { get; set; } = null!;
-    public string Slug { get; set; } = null!;
-    public string? Logo { get; set; }
-    public string? Country { get; set; }
-    public string? Description { get; set; }
-    public ICollection<GameCardDTO> PublishedGames { get; set; } = [];
-    public ICollection<GameCardDTO> DevelopedGames { get; set; } = [];
+    public long ApiCompanyId { get; init; }
+    public string Name { get; init; } = null!;
+    public string Slug { get; init; } = null!;
+    public string? Logo { get; init; }
+    public string? Country { get; init; }
+    public string? Description { get; init; }
+    public ICollection<GameCardDTO> PublishedGames { get; init; } = [];
+    public ICollection<GameCardDTO> DevelopedGames { get; init; } = [];
 }

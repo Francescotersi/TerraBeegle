@@ -232,12 +232,12 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return BadRequest("Password is incorrect.");
 
-        dto.Email = dto.Email.Trim().ToLowerInvariant();
+        var email = dto.Email.Trim().ToLowerInvariant();
 
-        if(dto.Email == user.Email)
+        if(email == user.Email)
             return BadRequest("New email is the same as the old one.");
         
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
         if(EmailExists)
             return Conflict("Email already exists.");
 

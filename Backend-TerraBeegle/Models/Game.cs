@@ -27,28 +27,32 @@ public class Game
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public Image? Cover { get; set; }
-    public ICollection<Image> Artworks { get; set; } = [];
-    public ICollection<Image> Screenshots { get; set; } = [];
+    public ICollection<Image>? Artworks { get; set; }
+    public ICollection<Image>? Screenshots { get; set; }
 
     public Game? ParentGame { get; set; }
-    public ICollection<Game> Bundles { get; set; } = [];
-    public ICollection<Game> DLCs { get; set; } = [];
-    public ICollection<Game> Expansions { get; set; } = [];
-    public ICollection<Game> Remakes { get; set; } = [];
-    public ICollection<Game> Remasters { get; set; } = [];
-    public ICollection<Game> Series { get; set; } = [];
-    public ICollection<Game> Franchises { get; set; } = [];
+    public ICollection<Game>? Bundles { get; set; }
+    public ICollection<Game>? DLCs { get; set; }
+    public ICollection<Game>? Expansions { get; set; }
+    public ICollection<Game>? Remakes { get; set; }
+    public ICollection<Game>? Remasters { get; set; }
+    public ICollection<Game>? Series { get; set; }
+    public ICollection<Game>? Franchises { get; set; }
 
-    public ICollection<Genre> Genres { get; set; } = [];
-    public ICollection<Theme> Themes { get; set; } = [];
-    // public ICollection<Keyword> Keywords { get; set; } = [];
-    // public ICollection<Store> Stores { get; set; } = [];
-    public ICollection<Company> Developers { get; set; } = [];
-    public ICollection<Company> Publishers { get; set; } = [];
+    public ICollection<Genre> Genres { get; set; } = null!;
+    public ICollection<Theme> Themes { get; set; } = null!;
+    public ICollection<Keyword> Keywords { get; set; } = null!;
+    public ICollection<Video>? Videos { get; set; }
 
-    public ICollection<Platform> Platforms { get; set; } = [];
-    public ICollection<Review> Reviews { get; set; } = [];
+    public Website? OfficialWebsite { get; set; }
+    public ICollection<Website>? Websites { get; set; }
+    public ICollection<Website>? Stores { get; set; }
+    public ICollection<Company>? Developers { get; set; }
+    public ICollection<Company>? Publishers { get; set; }
 
-    public ICollection<User> FavoritedByUsers { get; set; } = [];
-    public ICollection<User> WishlistedByUsers { get; set; } = [];
+    public ICollection<Platform>? Platforms { get; set; }
+    public ICollection<Review>? Reviews { get; set; }
+
+    public ICollection<User> FavoritedByUsers { get; set; } = null!;
+    public ICollection<User> WishlistedByUsers { get; set; } = null!;
 }

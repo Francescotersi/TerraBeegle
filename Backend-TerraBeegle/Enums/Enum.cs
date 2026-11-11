@@ -331,6 +331,22 @@ public enum GamePlatform
     Polymega = 509,
 }
 
+public enum Storefront
+{
+    AppStoreiPhone = 10,
+    AppStoreiPad = 11,
+    GooglePlay = 12,
+    Steam = 13,
+    Itch = 15,
+    Epic = 16,
+    GOG = 17,
+    Xbox = 22,
+    Playstation = 23,
+    Nintendo = 24,
+    Meta = 25,
+    GameJolt = 26
+}
+
 public enum GameType
 {
     MainGame,
@@ -366,12 +382,4 @@ public enum EmailCodePurpose
     ForgotPassword,
     ChangeEmail,
     TwoFactorLogin
-}
-
-public enum ImageType
-{
-    Cover,
-    Logo,
-    Screenshot,
-    Artwork
 }
