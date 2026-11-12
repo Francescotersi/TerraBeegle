@@ -313,7 +313,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
             var term = search.Name.Trim().ToLower();
-            query = query.Where(g => g.Name.ToLower().Contains(term));
+            query = query.Where(g => EF.Functions.ILike(g.Name, $"{term}%"));
         }
         
         if (search.Genre.HasValue)

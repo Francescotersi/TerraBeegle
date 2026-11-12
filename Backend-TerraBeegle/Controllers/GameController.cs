@@ -179,7 +179,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         ));
     }
 
-    [HttpGet("coming-soon")]
+    [HttpGet("coming_soon")]
     public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetComingSoon([FromQuery] PaginationDTO pagination)
     {
         var query = $"first_release_date > {DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" +

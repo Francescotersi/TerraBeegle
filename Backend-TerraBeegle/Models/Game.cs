@@ -22,12 +22,19 @@ public class Game
     public decimal? Rating { get; set; }
     public int? AggregatedRating { get; set; }
 
+    public long? CoverId { get; set; }
     public Image? Cover { get; set; }
     public ICollection<Image>? Artworks { get; set; }
     public ICollection<Image>? Screenshots { get; set; }
     public ICollection<Video>? Videos { get; set; }
 
+    public long? ParentGameId { get; set; }
     public Game? ParentGame { get; set; }
+    public ICollection<Game>? GamesAsParent { get; set; }
+    public long? VersionParentId { get; set; }
+    public Game? VersionParent { get; set; }
+    public ICollection<Game>? GamesAsVersionParent { get; set; }
+
     public ICollection<Game>? Bundles { get; set; }
     public ICollection<Game>? DLCs { get; set; }
     public ICollection<Game>? ExpandedGames { get; set; }
@@ -37,7 +44,6 @@ public class Game
     public ICollection<Game>? Remasters { get; set; }
     public ICollection<Serie>? Series { get; set; }
     public ICollection<Franchise>? Franchises { get; set; }
-    public Game? VersionParent { get; set; }
 
     public ICollection<Genre> Genres { get; set; } = null!;
     public ICollection<Theme> Themes { get; set; } = null!;

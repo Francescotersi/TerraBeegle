@@ -59,12 +59,9 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return BadRequest("Username cannot be empty.");
         }
 
-        // Case-insensitive: both sides in lower case ("vlad" finds "Vlad").
-        var term = username.Trim();
-
-        // One filter for both the count and the page, so TotalCount always matches the list.
         // Only users with confirmed emails
-        var query = db.Users.Where(u => EF.Functions.ILike(u.Username, $"{term}%") && u.EmailVerified);
+        var term = username.Trim();
+        var query = db.Users.Where(u => EF.Functions.ILike(u.Username, $"{term}%") && u.EmailVerified); // Case-insensitive: "vlad" finds "Vlad".
 
         // No 404 when nothing is found: an empty list (200) is a normal result for a search
         var totalCount = await query.CountAsync();

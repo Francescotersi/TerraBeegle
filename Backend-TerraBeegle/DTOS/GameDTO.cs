@@ -89,15 +89,15 @@ public record GameSearchDTO
     public bool CaseSensitive { get; init; } = false;
 
     // Platforms
-    [Range(1, 9, ErrorMessage = "PlatformsFamily must be between 1 and 9.")]
+    // [Range(1, 9, ErrorMessage = "PlatformsFamily must be between 1 and 9.")]
     public int[]? PlatformsFamily { get; init; }
     public bool PlatformsFamilyExact { get; init; } = true;
     public int[]? Platforms { get; init; }
     public bool PlatformsExact { get; init; } = true;
 
     // Genres, Themes and Game Types
-    [AllowedValues(4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 
-        ErrorMessage = "Invalid genre ID.")] // Example allowed values for genre IDs
+    // [AllowedValues(4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 
+    //     ErrorMessage = "Invalid genre ID.")] // Example allowed values for genre IDs
     public int[]? Genres { get; init; }
     public bool GenresExact { get; init; } = true;
     public int[]? Themes { get; init; }
@@ -115,7 +115,7 @@ public record GameSearchDTO
     public bool PublishersExact { get; init; } = true;
 
     // Stores
-    [AllowedValues(10, 11, 12, 13, 15, 16, 17, 22, 23, 24, 25, 26, ErrorMessage = "Invalid store ID.")] // Example allowed values for store IDs
+    // [AllowedValues(10, 11, 12, 13, 15, 16, 17, 22, 23, 24, 25, 26, ErrorMessage = "Invalid store ID.")] // Example allowed values for store IDs
     public int[]? Stores { get; init; }
     public bool StoresExact { get; init; } = true;
 
