@@ -31,12 +31,14 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "cover.image_id",
         "genres.name",
         "genres.slug",
+        "platforms.name",
         "platforms.slug",
         "platforms.abbreviation",
         "platforms.platform_logo.image_id",
         "themes.name",
         "themes.slug",
-        "game_type.type"
+        "game_type.type",
+        "game_status.status"
     ]) + ";";
 
     public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query, string pagination)
@@ -47,7 +49,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         try
         {
             response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameCardFields}{(query.Length > 0 ? $"where {query};" : "")}{pagination}");
-            totalCount = await igdb.CountAsync(IGDBClient.Endpoints.Games, query: $"{query}");
+            totalCount = await igdb.CountAsync(IGDBClient.Endpoints.Games, query: query.Length > 0 ? $"where {query};" : "");
         }
         catch (RestEase.ApiException ex)
         {
@@ -119,11 +121,11 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "websites.url",
         "websites.type",
         "language_supports.language.name",
-        "language_supports.language_support_type",
+        "language_supports.language_support_type.name",
         "collections.name",
         "collections.slug",
         "game_type.type",
-    ]) + "," + string.Join(",", [ 
+    ]) + "," + string.Join(",", new[] {
         "bundles", 
         "dlcs", 
         "expanded_games", 
@@ -137,7 +139,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "remasters",
         "version_parent",
         "collections.games"
-    ]).Select(str => $"{str}.name,{str}.slug,{str}.aggregated_rating,{str}.rating,{str}.cover.image_id,{str}.first_release_date,{str}.game_type.type") + ";";
+    // Select on the list (not on the joined string): every related game gets the same card fields
+    }.Select(str => $"{str}.name,{str}.slug,{str}.aggregated_rating,{str}.rating,{str}.cover.image_id,{str}.first_release_date,{str}.game_type.type")) + ";";
 
     private async Task<IGDB.Models.Game?> FetchGameAsync(long GameId)
     {
@@ -155,21 +158,11 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         return response is { Length: 1 } ? response[0] : null;
     }
 
-    // The only place where a game is looked up for GET /api/games/{id}: first in the database, then at IGDB
+    // The only place where a game is looked up for GET /api/games/{id}
     public async Task<GameDetailsDTO?> GetGameAsync(long IGDBGameId)
     {
-        // ProjectToType puts the genres and the platforms in the same SELECT (an Adapt on the entity
-        // without Include would return them empty). Placeholders are skipped, so they come from IGDB
-        var game = await db.Games
-            .Where(g => g.ApiGameId == IGDBGameId && !g.IsPlaceholder)
-            .ProjectToType<GameDetailsDTO>()
-            .FirstOrDefaultAsync();
-
-        if (game is not null)
-        {
-            return game;
-        }
-
+        // Always from IGDB: the database keeps only what the lists need (no screenshots, videos, stores...),
+        // and EF cannot translate the ProjectToType<GameDetailsDTO> projection to SQL (500 on every request)
         var response = await FetchGameAsync(IGDBGameId);
 
         if (response is null)
@@ -253,8 +246,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
             Name = platform.Name,
             Slug = platform.Slug,
             Abbreviation = platform.Abbreviation,
-            Logo = ImageHelper.GetImageUrl(platform.PlatformLogo.Value.ImageId, ImageSize.HD720, false),
-            PlatformFamily = platform.PlatformFamily.Value is {} pf ? new PlatformFamilyDTO
+            Logo = ImageUrl(platform.PlatformLogo?.Value?.ImageId, ImageSize.HD720),
+            PlatformFamily = platform.PlatformFamily?.Value is {} pf ? new PlatformFamilyDTO
             {
                 ApiPlatformFamilyId = pf.Id ?? 0,
                 Name = pf.Name,
@@ -270,12 +263,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
         bool filter(InvolvedCompany ic) => isDev ? ic.Developer == true : ic.Publisher == true;
 
-        return items.Values?.Where(ic => ic.Company.Value is not null && filter(ic)).Select(ic => new CompanyDTO
+        return items.Values?.Where(ic => ic.Company?.Value is not null && filter(ic)).Select(ic => new CompanyDTO
         {
             ApiCompanyId = ic.Company.Value.Id ?? 0,
             Name = ic.Company.Value.Name ?? null!,
             Slug = ic.Company.Value.Slug ?? null!,
-            Logo = ImageHelper.GetImageUrl(ic.Company?.Value?.Logo?.Value?.ImageId, ImageSize.HD720, false)
+            Logo = ImageUrl(ic.Company.Value.Logo?.Value?.ImageId, ImageSize.HD720)
         }).ToList();
     }
 
@@ -295,12 +288,16 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         }).ToList();
     }
 
+    // Full https URL of an IGDB image, or null when the game has no such image
+    private static string? ImageUrl(string? imageId, ImageSize size) =>
+        string.IsNullOrWhiteSpace(imageId) ? null : "https:" + ImageHelper.GetImageUrl(imageId, size, false);
+
     private static GameCardDTO ToGameCardDTO (IGDB.Models.Game g) => new ()
     {
         ApiGameId = g.Id ?? 0,
         Name = g.Name,
         Slug = g.Slug,
-        Cover = ImageHelper.GetImageUrl(g.Cover?.Value?.ImageId, ImageSize.CoverBig, false),
+        Cover = ImageUrl(g.Cover?.Value?.ImageId, ImageSize.CoverBig),
         Rating = g.Rating,
         CriticRating = g.AggregatedRating is not null ? (int)Math.Round(g.AggregatedRating.Value) : null,
         ReleaseDate = g.FirstReleaseDate.HasValue ? DateOnly.FromDateTime(g.FirstReleaseDate.Value.UtcDateTime) : null,
@@ -308,7 +305,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         Genres = MapApiObjectList(g.Genres),
         Platforms = MapPlatformList(g.Platforms),
         Themes = MapApiObjectList(g.Themes),
-        GameStatus = g.GameStatus.Value?.Status
+        GameStatus = g.GameStatus?.Value?.Status
     };
 
     private static GameDetailsDTO ToGameDetailsDTO (IGDB.Models.Game g) => new ()
@@ -319,8 +316,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         PegiRatingDescription = g.AgeRatings?.Values?.FirstOrDefault(ar => ar.Organization?.Id == 2)?.RatingContentDescriptions?.Values?.Select(desc => desc.Description).ToList(),
         CriticRating = g.AggregatedRating is not null ? (int)Math.Round(g.AggregatedRating.Value) : null,
         CriticRatingCount = g.AggregatedRatingCount,
-        Artworks = g.Artworks?.Values?.Select(a => ImageHelper.GetImageUrl(a.ImageId, ImageSize.HD720, false)).ToList() ?? [],
-        Cover = ImageHelper.GetImageUrl(g.Cover?.Value?.ImageId, ImageSize.HD720, false),
+        Artworks = g.Artworks?.Values?.Select(a => ImageUrl(a.ImageId, ImageSize.HD720)).ToList() ?? [],
+        Cover = ImageUrl(g.Cover?.Value?.ImageId, ImageSize.HD720),
         ReleaseDate = g.FirstReleaseDate.HasValue ? DateOnly.FromDateTime(g.FirstReleaseDate.Value.UtcDateTime) : null,
         Franchises = MapApiObjectList(g.Franchises),
         GameModes = MapApiObjectList(g.GameModes),
@@ -337,10 +334,10 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         {
             Human = rd.Human,
             Date = rd.Date?.UtcDateTime,
-            PlatformName = rd.Platform.Value.Name,
-            Status = rd.Status.Value.Name
+            PlatformName = rd.Platform?.Value?.Name,
+            Status = rd.Status?.Value?.Name
         }).ToList(),
-        Screenshots = g.Screenshots?.Values?.Select(s => ImageHelper.GetImageUrl(s.ImageId, ImageSize.HD720, false)).ToList() ?? [],
+        Screenshots = g.Screenshots?.Values?.Select(s => ImageUrl(s.ImageId, ImageSize.HD720)).ToList() ?? [],
         Slug = g.Slug,
         Summary = g.Summary,
         Storyline = g.Storyline,
@@ -350,7 +347,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
             Name = v.Name,
             VideoUrl = $"https://www.youtube.com/watch?v={v.VideoId}"
         }).ToList(),
-        OfficialWebsite = g.Websites?.Values?.FirstOrDefault(w => w.Type.Id == 1)?.Url,
+        OfficialWebsite = g.Websites?.Values?.FirstOrDefault(w => w.Type?.Id == 1)?.Url,
         Websites = MapWebsiteList(g.Websites, false),
         Stores = MapWebsiteList(g.Websites, true),
         LanguageSupports = g.LanguageSupports?.Values?.Select(ls => new LanguageSupportDTO

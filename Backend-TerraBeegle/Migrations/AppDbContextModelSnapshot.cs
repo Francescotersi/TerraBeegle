@@ -30,17 +30,11 @@ namespace Backend_TerraBeegle.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<int>("ApiCompanyId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Country")
-                        .HasColumnType("text");
+                    b.Property<long>("ApiCompanyId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
 
                     b.Property<long?>("LogoId")
                         .HasColumnType("bigint");
@@ -63,7 +57,8 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasIndex("ApiCompanyId")
                         .IsUnique();
 
-                    b.HasIndex("LogoId");
+                    b.HasIndex("LogoId")
+                        .IsUnique();
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -126,9 +121,6 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<long>("ApiGameId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("CoverId")
-                        .HasColumnType("bigint");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -189,9 +181,6 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasIndex("ApiGameId")
                         .IsUnique();
 
-                    b.HasIndex("CoverId")
-                        .IsUnique();
-
                     b.HasIndex("Name");
 
                     b.HasIndex("ParentGameId");
@@ -249,15 +238,18 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<long?>("GameId")
+                    b.Property<long?>("CoverId")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("Type")
-                        .HasColumnType("integer");
+                    b.Property<long?>("GameId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ApiImageId")
+                        .IsUnique();
+
+                    b.HasIndex("CoverId")
                         .IsUnique();
 
                     b.ToTable("Images");
@@ -319,13 +311,17 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<int>("ApiPlatformId")
                         .HasColumnType("integer");
 
+                    b.Property<long?>("LogoId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("PlatformFamily")
-                        .HasColumnType("integer");
+                    b.Property<int?>("PlatformFamilyId")
+                        .HasColumnType("integer")
+                        .HasColumnName("PlatformFamily");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -337,12 +333,49 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasIndex("ApiPlatformId")
                         .IsUnique();
 
+                    b.HasIndex("LogoId")
+                        .IsUnique();
+
                     b.HasIndex("Name");
+
+                    b.HasIndex("PlatformFamilyId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
 
                     b.ToTable("Platforms");
+                });
+
+            modelBuilder.Entity("Backend_TerraBeegle.Models.PlatformFamily", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ApiPlatformFamilyId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiPlatformFamilyId")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("PlatformFamilies");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Review", b =>
@@ -587,27 +620,27 @@ namespace Backend_TerraBeegle.Migrations
                     b.Property<long>("ArtworksId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("ArtworksOfGamesId")
+                    b.Property<long>("Game1Id")
                         .HasColumnType("bigint");
 
-                    b.HasKey("ArtworksId", "ArtworksOfGamesId");
+                    b.HasKey("ArtworksId", "Game1Id");
 
-                    b.HasIndex("ArtworksOfGamesId");
+                    b.HasIndex("Game1Id");
 
                     b.ToTable("game_artworks", (string)null);
                 });
 
             modelBuilder.Entity("GameImage1", b =>
                 {
+                    b.Property<long>("Game2Id")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("ScreenshotsId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("ScreenshotsOfGamesId")
-                        .HasColumnType("bigint");
+                    b.HasKey("Game2Id", "ScreenshotsId");
 
-                    b.HasKey("ScreenshotsId", "ScreenshotsOfGamesId");
-
-                    b.HasIndex("ScreenshotsOfGamesId");
+                    b.HasIndex("ScreenshotsId");
 
                     b.ToTable("game_screenshots", (string)null);
                 });
@@ -675,8 +708,8 @@ namespace Backend_TerraBeegle.Migrations
             modelBuilder.Entity("Backend_TerraBeegle.Models.Company", b =>
                 {
                     b.HasOne("Backend_TerraBeegle.Models.Image", "Logo")
-                        .WithMany()
-                        .HasForeignKey("LogoId");
+                        .WithOne("Company")
+                        .HasForeignKey("Backend_TerraBeegle.Models.Company", "LogoId");
 
                     b.Navigation("Logo");
                 });
@@ -702,20 +735,22 @@ namespace Backend_TerraBeegle.Migrations
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Game", b =>
                 {
-                    b.HasOne("Backend_TerraBeegle.Models.Image", "Cover")
-                        .WithOne("Game")
-                        .HasForeignKey("Backend_TerraBeegle.Models.Game", "CoverId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .IsRequired();
-
                     b.HasOne("Backend_TerraBeegle.Models.Game", "ParentGame")
                         .WithMany()
                         .HasForeignKey("ParentGameId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Cover");
-
                     b.Navigation("ParentGame");
+                });
+
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Image", b =>
+                {
+                    b.HasOne("Backend_TerraBeegle.Models.Game", "Game")
+                        .WithOne("Cover")
+                        .HasForeignKey("Backend_TerraBeegle.Models.Image", "CoverId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.LoginChallenge", b =>
@@ -727,6 +762,23 @@ namespace Backend_TerraBeegle.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Backend_TerraBeegle.Models.Platform", b =>
+                {
+                    b.HasOne("Backend_TerraBeegle.Models.Image", "Logo")
+                        .WithOne("Platform")
+                        .HasForeignKey("Backend_TerraBeegle.Models.Platform", "LogoId");
+
+                    b.HasOne("Backend_TerraBeegle.Models.PlatformFamily", "PlatformFamily")
+                        .WithMany("Platforms")
+                        .HasForeignKey("PlatformFamilyId")
+                        .HasPrincipalKey("ApiPlatformFamilyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Logo");
+
+                    b.Navigation("PlatformFamily");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Review", b =>
@@ -833,22 +885,22 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.HasOne("Backend_TerraBeegle.Models.Game", null)
                         .WithMany()
-                        .HasForeignKey("ArtworksOfGamesId")
+                        .HasForeignKey("Game1Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("GameImage1", b =>
                 {
-                    b.HasOne("Backend_TerraBeegle.Models.Image", null)
+                    b.HasOne("Backend_TerraBeegle.Models.Game", null)
                         .WithMany()
-                        .HasForeignKey("ScreenshotsId")
+                        .HasForeignKey("Game2Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend_TerraBeegle.Models.Game", null)
+                    b.HasOne("Backend_TerraBeegle.Models.Image", null)
                         .WithMany()
-                        .HasForeignKey("ScreenshotsOfGamesId")
+                        .HasForeignKey("ScreenshotsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -915,12 +967,21 @@ namespace Backend_TerraBeegle.Migrations
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Game", b =>
                 {
+                    b.Navigation("Cover");
+
                     b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.Image", b =>
                 {
-                    b.Navigation("Game");
+                    b.Navigation("Company");
+
+                    b.Navigation("Platform");
+                });
+
+            modelBuilder.Entity("Backend_TerraBeegle.Models.PlatformFamily", b =>
+                {
+                    b.Navigation("Platforms");
                 });
 
             modelBuilder.Entity("Backend_TerraBeegle.Models.User", b =>

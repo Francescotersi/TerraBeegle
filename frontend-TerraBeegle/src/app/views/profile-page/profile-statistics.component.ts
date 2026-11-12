@@ -231,15 +231,15 @@ export class ProfileStatisticsComponent {
     };
 
     return {
-      items: response.items ?? response.results ?? [],
-      totalCount: response.totalCount ?? response.count ?? 0,
+      items: response.items ?? [],
+      totalCount: response.totalCount ?? 0,
     };
   }
 
   private buildStatistics(games: GameCardDTO[]): void {
     this.favoriteCount.set(games.length);
     this.genreItems.set(this.createItems(this.countValues(games.flatMap((game) =>
-      game.genres.map((genre) => genre.name)
+      (game.genres ?? []).map((genre) => genre.name)
     )), ['#f472b6', '#a78bfa', '#38bdf8', '#34d399', '#fb7185']));
 
     const multiplayer = games.filter((game) => this.isMultiplayer(game)).length;
@@ -249,7 +249,7 @@ export class ProfileStatisticsComponent {
     ]);
 
     this.platformItems.set(this.createItems(this.countValues(games.flatMap((game) =>
-      game.platforms.map((platform) => platform.name)
+      (game.platforms ?? []).map((platform) => platform.name)
     )), ['#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#a78bfa']));
     this.isLoading.set(false);
   }
@@ -279,7 +279,7 @@ export class ProfileStatisticsComponent {
   }
 
   private isMultiplayer(game: GameCardDTO): boolean {
-    const metadata = game.genres.map((genre) => `${genre.name} ${genre.slug}`).join(' ').toLowerCase();
+    const metadata =     (game.genres ?? []).map((genre) => `${genre.name} ${genre.slug}`).join(' ').toLowerCase();
     return ['multiplayer', 'massively-multiplayer', 'co-op', 'online', 'fighting', 'racing', 'sports']
       .some((keyword) => metadata.includes(keyword));
   }

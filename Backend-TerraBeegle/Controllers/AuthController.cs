@@ -284,8 +284,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
+        // 400 like a wrong code: an error status (not 200), and the same answer whether the account exists or not
         if(user is null || !user.ForgotPasswordRequested)
-            return Ok("Invalid Credentials.");
+            return BadRequest("Invalid code.");
 
         var result = emailVerificationService.VerifyCode(user, dto.Code);
 

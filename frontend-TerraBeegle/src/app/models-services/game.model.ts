@@ -1,61 +1,126 @@
 export type GameCollectionType = 'wishlist' | 'favorites';
 
 export interface GameGenreItem {
-  rawgGenreId: number;
+  id: number;
   name: string;
   slug: string;
 }
 
 export interface GamePlatformItem {
-  rawgPlatformId: number;
+  apiPlatformId: number;
   name: string;
   slug: string;
+  abbreviation?: string;
+  logo?: string | null;
 }
 
 export interface GameCardDTO {
-  rawgGameId: number;
+  apiGameId: number;
   name: string;
-  backgroundImage: string | null;
+  slug: string;
+  cover: string | null;
   rating: number | null;
+  criticRating: number | null;
+  gameType: string | null;
+  gameStatus: string | null;
   releaseDate: string | null;
-  tba: boolean;
-  genres: GameGenreItem[];
-  platforms: GamePlatformItem[];
+  genres: GameGenreItem[] | null;
+  platforms: GamePlatformItem[] | null;
+  themes: GameGenreItem[] | null;
 }
 
 export interface GameSearchResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: GameCardDTO[];
+  items: GameCardDTO[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  previousPageUrl: string | null;
+  nextPageUrl: string | null;
 }
 
 export interface GameSearchParams {
   page?: number;
   pageSize?: number;
   name?: string;
-  sortBy?: 'name' | 'released' | 'added' | 'created' | 'updated' | 'rating' | 'metacritic';
+  sortBy?: 'name' | 'released' | 'rating' | 'critic_rating';
   ascending?: boolean;
-  genres?: string;
-  platforms?: string;
-  releaseDate?: string;
-  metacritic?: string;
+  genres?: number[];
+  platforms?: number[];
+  platformsFamily?: number[];
+  releaseYearMin?: number;
+  releaseYearMax?: number;
+  ratingMin?: number;
+  ratingMax?: number;
+  criticRatingMin?: number;
+  criticRatingMax?: number;
+  minRatingCount?: number;
 }
 
-export interface GameDetailsDTO {
-  rawgGameId: number;
+export interface GameCompanyItem {
+  apiCompanyId: number;
   name: string;
-  nameOriginal: string;
   slug: string;
-  description: string;
-  backgroundImage: string | null;
+  logo: string | null;
+}
+
+export interface GameReleaseDateItem {
+  date: string | null;
+  human: string | null;
+  status: string | null;
+  platformName: string | null;
+}
+
+export interface GameVideoItem {
+  name: string;
+  videoUrl: string;
+}
+
+export interface GameWebsiteItem {
+  type: number;
+  url: string;
+}
+
+export interface GameLanguageItem {
+  language: string | null;
+  languageSupportType: string | null;
+}
+
+// Same fields as GameDetailsDTO in the backend (GET /api/games/{id}); IGDB leaves out the ones it does not have
+export interface GameDetailsDTO {
+  apiGameId: number;
+  name: string;
+  slug: string;
+  summary: string | null;
+  storyline: string | null;
+  cover: string | null;
+  artworks: string[] | null;
+  screenshots: string[] | null;
   releaseDate: string | null;
-  tba: boolean;
-  website: string;
+  releaseDates: GameReleaseDateItem[] | null;
   rating: number | null;
-  metacritic: number | null;
-  developer: string | null;
-  publisher: string | null;
-  genres: GameGenreItem[];
-  platforms: GamePlatformItem[];
+  ratingCount: number | null;
+  criticRating: number | null;
+  criticRatingCount: number | null;
+  pegiRating: string | null;
+  pegiRatingDescription: string[] | null;
+  gameType: string | null;
+  gameStatus: string | null;
+  genres: GameGenreItem[] | null;
+  themes: GameGenreItem[] | null;
+  gameModes: GameGenreItem[] | null;
+  perspectives: GameGenreItem[] | null;
+  keywords: GameGenreItem[] | null;
+  franchises: GameGenreItem[] | null;
+  platforms: GamePlatformItem[] | null;
+  developers: GameCompanyItem[] | null;
+  publishers: GameCompanyItem[] | null;
+  videos: GameVideoItem[] | null;
+  officialWebsite: string | null;
+  websites: GameWebsiteItem[] | null;
+  stores: GameWebsiteItem[] | null;
+  languageSupports: GameLanguageItem[] | null;
+  similarGames: GameCardDTO[] | null;
+  dlcs: GameCardDTO[] | null;
+  expansions: GameCardDTO[] | null;
 }

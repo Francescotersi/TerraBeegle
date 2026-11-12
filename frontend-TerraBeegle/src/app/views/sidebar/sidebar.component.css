@@ -302,3 +302,100 @@
       font-weight: 600;
     }
   
+
+    /* ==================== ADVANCED SEARCH CONTROLS ==================== */
+    .filter-label {
+      display: block;
+      margin-bottom: 0.4rem;
+      padding-left: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--tb-text);
+    }
+
+    /* The genre / platform items are buttons (toggle), with the same look as the old links */
+    button.sidebar-list-link {
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      margin-left: 6px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--tb-btn-gradient);
+      color: #fff;
+      font-size: 0.68rem;
+      text-transform: none;
+    }
+
+    .clear-btn {
+      flex-shrink: 0;
+      border: 1px solid var(--tb-accent);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--tb-accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .clear-btn:hover {
+      background: var(--tb-btn-gradient);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .direction-btn {
+      flex-shrink: 0;
+      width: 34px;
+      border: 1px solid var(--tb-input-border);
+      border-radius: 20px;
+      background: var(--tb-input-bg);
+      color: var(--tb-text);
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .direction-btn:hover {
+      border-color: var(--tb-accent);
+      color: var(--tb-accent);
+    }
+
+    .filter-chip {
+      border: 1px solid var(--tb-input-border);
+      border-radius: 999px;
+      background: var(--tb-input-bg);
+      color: var(--tb-text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.25rem 0.7rem;
+      transition: all 0.15s ease;
+    }
+    .filter-chip:hover {
+      border-color: var(--tb-accent);
+      color: var(--tb-accent);
+    }
+    .filter-chip.active {
+      background: var(--tb-btn-gradient);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 3px 10px var(--tb-btn-gradient-shadow);
+    }
+
+    /* Hide the number arrows of the year inputs */
+    input[type='number'].sidebar-search::-webkit-outer-spin-button,
+    input[type='number'].sidebar-search::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type='number'].sidebar-search {
+      -moz-appearance: textfield;
+    }

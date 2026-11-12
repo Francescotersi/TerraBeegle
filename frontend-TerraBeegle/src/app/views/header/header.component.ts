@@ -4,10 +4,11 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
 import { AuthService } from '../../services/auth.service';
 import { ThemeSwitchComponent } from '../../ui/theme.component';
 import { HeaderBrandComponent } from './header-brand.component';
+import { GameSearchBoxComponent } from './game-search-box.component';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive, LiquidGlassComponent, ThemeSwitchComponent, HeaderBrandComponent],
+  imports: [RouterLink, RouterLinkActive, LiquidGlassComponent, ThemeSwitchComponent, HeaderBrandComponent, GameSearchBoxComponent],
   template: `
   <header class="header-wrapper">
     <div
@@ -48,21 +49,10 @@ import { HeaderBrandComponent } from './header-brand.component';
               id="navBarContent"
               [class.show]="isMenuOpen()"
             >
-              <form
-                class="d-flex align-items-center header-search-form order-1 order-lg-3 ms-lg-2"
-                role="search"
-                (submit)="$event.preventDefault(); onSearch()"
-              >
-                <input
-                  class="form-control me-2 search-input"
-                  type="search"
-                  placeholder="Search games..."
-                  aria-label="Search"
-                />
-                <button class="btn search-btn" type="submit">
-                  Search
-                </button>
-              </form>
+              <app-game-search-box
+                class="header-search-form order-1 order-lg-3 ms-lg-2"
+                (navigated)="isMenuOpen.set(false)"
+              />
 
               <ul class="navbar-nav d-flex justify-content-evenly align-items-center flex-grow-1 mb-0 px-lg-3 order-2 order-lg-1">
                 <li class="nav-item">
@@ -152,6 +142,4 @@ export class HeaderComponent {
     this.isMenuOpen.update((isOpen) => !isOpen);
   }
 
-  // To be implemented
-  protected onSearch(): void { }
 }

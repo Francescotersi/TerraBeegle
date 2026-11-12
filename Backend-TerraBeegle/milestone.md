@@ -57,36 +57,55 @@ după ce acestea sunt complete. Acum backend-ul are doar `GET /api/games/{rawgGa
   Trimite cererea mai departe la `GET /games` de la RAWG și întoarce o listă de carduri.
   - [x] parametri din query (`[FromQuery]` într-un DTO, ca `PaginationDTO`): `search`, `genres`, `platforms`,
         `year`, `ordering`, `metacritic`, `page`, `pageSize`
-  - [ ] traducerea pentru RAWG: `year=2020` → `dates=2020-01-01,2020-12-31`; `genres` / `platforms` ca ID-uri
+  - [x] traducerea pentru RAWG: `year=2020` → `dates=2020-01-01,2020-12-31`; `genres` / `platforms` ca ID-uri
         separate prin virgulă; `page_size` maxim 40 (limita RAWG)
         → parțial: `genres` / `platforms` și `page_size` ≤ 40 sunt făcute; anul merge doar ca interval
         (`"2020,2022"`), un singur an e ignorat (vezi 46)
+        → rezolvat odată cu IGDB (11.11): `ReleaseYearMin` / `ReleaseYearMax` (`int?`) → `first_release_date` în
+        timestamp Unix; un singur an = același an la min și max. `genres` / `platforms` sunt `int[]`, `pageSize` ≤ 50
   - [x] `ordering` validat (doar `name`, `-released`, `-rating`, `-metacritic` și variantele lor) → 400 altfel
         (`SortBy` + `Ascending` cu regex; dar se trimite ca `order=` în loc de `ordering=`, vezi 46)
   - [x] **rating:** RAWG nu are filtru după rating — de decis: filtru după `metacritic` (ex: `80,100`), sau filtrare
         după `rating` pe pagina primită (atenție: strică numărul de rezultate pe pagină)
         → decis: filtru după `metacritic`
-  - [ ] `GameCardDTO` cu ce cere subiectul pentru carduri: `rawgGameId`, `title`, `backgroundImage`, `releaseDate`,
+  - [x] `GameCardDTO` cu ce cere subiectul pentru carduri: `rawgGameId`, `title`, `backgroundImage`, `releaseDate`,
         `rating`, platformele principale (`parent_platforms` de la RAWG)
+        → rezolvat cu IGDB (11.11): `apiGameId`, `name`, `cover`, `releaseDate`, `rating`, `criticRating`, `platforms`
+        (cu `name` / `abbreviation`), `genres`, `themes`
   - [x] răspuns `PagedResponseDTO<GameCardDTO>` (refolosit de la `GET /api/users`), `TotalCount` = `count` de la RAWG
         (vezi 40 și 48)
-  - [ ] fără `search` și filtre → o selecție pentru Home (ex: `ordering=-rating`)
+  - [x] fără `search` și filtre → o selecție pentru Home (ex: `ordering=-rating`)
+        → făcut pe 11.11: `sort rating desc` + parametrul nou `MinRatingCount` (`rating_count >= N`); Home trimite 300,
+        altfel primele erau jocuri obscure cu rating 100 din 2 voturi. Căutarea nu trimite minimul
   - [ ] `GET /api/games` de acum (jocurile din baza de date) dispare — favoritele au endpoint-ul lor (32)
 
 - [ ] **37. 🔴 Pagina de detaliu completă: developer, publisher, screenshots**
+  → stare 11.11: rezolvat cu IGDB, rămân doar erorile (ultimul punct). Testat pe Elden Ring: developer, publisheri,
+  PEGI, scor critici, 10 screenshots, 8 video-uri, 10 jocuri similare. Pagina din frontend: `/game/:id`
   Subiectul (IV.1.5) cere și developer, publisher și imagini / screenshots. Acum `Developer` / `Publisher` vin
   mereu `null` (nu sunt citite de la RAWG) și nu există screenshots.
-  - [ ] în `RawgResponseDTO`: `Developers` și `Publishers` (liste cu `name`), `DescriptionRaw` (descrierea fără HTML)
-  - [ ] în `GameResponseDTO`: listele de developeri / publisheri completate în ramura RAWG
-  - [ ] screenshots de la `GET /games/{id}/screenshots` (RAWG): ori în același răspuns (`Screenshots: string[]`),
+  - [x] în `RawgResponseDTO`: `Developers` și `Publishers` (liste cu `name`), `DescriptionRaw` (descrierea fără HTML)
+        → IGDB: `involved_companies` cu `developer` / `publisher`; `summary` și `storyline` sunt deja text simplu
+  - [x] în `GameResponseDTO`: listele de developeri / publisheri completate în ramura RAWG
+        → `GameDetailsDTO.Developers` / `Publishers` (`CompanyDTO`)
+  - [x] screenshots de la `GET /games/{id}/screenshots` (RAWG): ori în același răspuns (`Screenshots: string[]`),
         ori endpoint separat `GET /api/games/{rawgGameId}/screenshots`
+        → în același răspuns: `Screenshots` și `Artworks` (URL-uri 720p)
   - [ ] erori ca la punctul 31: joc inexistent → 404, RAWG picat → 503
+        → parțial (11.11): joc inexistent → 404 și conexiune picată (`HttpRequestException`) → 503 merg, dar un
+        răspuns de eroare de la IGDB (`ApiException`, ex: 401 cu token expirat) e prins în `FetchGameAsync`, care
+        întoarce `null` → apare tot ca **404**. Ar trebui să fie 503
+  - **Metacritic:** IGDB nu are scorul Metacritic, are `aggregated_rating` (media criticilor) → afișat ca „Critics”.
+    De confirmat cu instructorul (subiectul cere RAWG și Metacritic)
 
-- [ ] **38. 🔴 `GET /api/genres` și `GET /api/platforms` (pentru filtrele din căutarea avansată)**
+- [x] **38. 🔴 `GET /api/genres` și `GET /api/platforms` (pentru filtrele din căutarea avansată)**
   Frontend-ul are nevoie de lista de genuri / platforme ca să afișeze filtrele.
-  - [ ] proxy către `GET /genres` și `GET /platforms/lists/parents` (sau `/platforms`) de la RAWG
-  - [ ] DTO-uri mici: `id`, `name`, `slug`
-  - [ ] cache cu `IMemoryCache` (ex: 24 de ore) — se schimbă rar, iar RAWG are limită de request-uri
+  - [x] proxy către `GET /genres` și `GET /platforms/lists/parents` (sau `/platforms`) de la RAWG
+        → făcut cu IGDB (11.11): `FiltersController` nou, `GET /api/genres` (23) și `GET /api/platforms` (220),
+        sortate după nume; IGDB picat → 503
+  - [x] DTO-uri mici: `id`, `name`, `slug` → refolosit `ApiObjectDTO`
+  - [x] cache cu `IMemoryCache` (ex: 24 de ore) — se schimbă rar, iar RAWG are limită de request-uri
+        → `AddMemoryCache()` în `Program.cs`, 24 de ore
 
 - [ ] **39. 🔴 Testare cu Postman + colecție exportată**
   Subiectul (V.5) cere ca toate API-urile să fie verificate cu Postman și recomandă colecția ca documentație.
@@ -651,21 +670,27 @@ salvați jocuri.
   **body** → `GET /api/games?title=witcher` dă 415 / 400. Soluție: `[FromQuery] GameSearchDTO search`.
   → rezolvat de coleg („Fixed api/games”): `[FromQuery] GameSearchDTO search`; testat — căutarea funcționează.
 
-- [ ] **46. Parametri greșiți trimiși la RAWG**
+- [x] **46. Parametri greșiți trimiși la RAWG**
   - [x] sortarea se trimite ca `order=`, dar RAWG cere `ordering=` → sortarea nu are niciun efect
   - [x] `Updated` se trimite tot ca `dates=` (copiat de la `ReleaseDate`) → RAWG primește două `dates`;
         trebuie `updated=`
-  - [ ] valorile nu sunt encodate: `title=Ratchet & Clank` taie căutarea la `Ratchet` și adaugă un parametru
+  - [x] valorile nu sunt encodate: `title=Ratchet & Clank` taie căutarea la `Ratchet` și adaugă un parametru
         `Clank`; un `title` cu `&...=` poate adăuga orice parametru în cererea către RAWG.
         Soluție: `Uri.EscapeDataString(...)` sau `QueryHelpers.AddQueryString(...)`
-  - [ ] `ReleaseDate` acceptă doar `"2020,2022"`; un singur an (`"2020"`) sau o valoare greșită (`"abc,def"`) sunt
+        → cu IGDB (11.11) query-ul e text în body (Apicalypse), deci problema e alta: un `"` în nume închidea
+        string-ul și putea adăuga condiții. Rezolvat: `\` și `"` escapate în `Name`; filtrele sunt `int[]` /
+        `int?`, deci nu pot conține text. Testat: `name=say "hi"` → 200
+  - [x] `ReleaseDate` acceptă doar `"2020,2022"`; un singur an (`"2020"`) sau o valoare greșită (`"abc,def"`) sunt
         ignorate în tăcere → userul primește rezultate nefiltrate fără să știe. Subiectul cere filtru după **an**:
         ori `Year` (`int?`), ori 400 pentru format invalid
+        → rezolvat cu IGDB: `ReleaseYearMin` / `ReleaseYearMax` (`int?`), o valoare greșită dă 400 la binding
 
-- [ ] **47. RAWG picat → 500, nu 503**
+- [x] **47. RAWG picat → 500, nu 503**
+  → rezolvat cu IGDB (11.11): `Search` prinde `HttpRequestException` → 503 (ca `GetById`); un răspuns de eroare
+  de la IGDB → `null` → 503. O pagină după ultima nu mai e o eroare: IGDB întoarce o listă goală → 200
   `GetById` prinde `HttpRequestException` și întoarce 503, `Search` nu → excepția ajunge la `GlobalExceptionHandler`.
   La fel pentru un filtru pe care RAWG îl respinge (ex: gen inexistent) → tot 500.
-  - [ ] nou după fix: `SearchGamesAsync` întoarce `null` la 404 de la RAWG (ex: pagină după ultima), iar
+  - [x] nou după fix: `SearchGamesAsync` întoarce `null` la 404 de la RAWG (ex: pagină după ultima), iar
         `Ok(null)` devine **204 No Content** fără body → frontend-ul primește un răspuns gol în loc de o listă goală.
         Soluție: la 404 aceeași listă goală ca la `response is null` (`Count = 0`, `Results = []`)
         → stare 04.11: nu mai e 204, dar `Search` întoarce acum **503** „External API is unavailable” la `null`,
@@ -738,14 +763,21 @@ salvați jocuri.
   → stare 05.11: `RawgService` are încă `using Backend_TerraBeegle.Controllers;`, dar nu mai folosește `Utils`
   (import inutil, se poate șterge). `Utils` e tot în `Controllers`; acum are și `GetCurrentUserId`, folosit în
   `UserController`, `FriendshipController`, `UserGamesController`
+  → stare 11.11: `RawgService` a fost șters (IGDB), iar `IGDBService` nu importă `Controllers` → importul a dispărut.
+  Rămâne doar `Utils` în namespace-ul `Controllers` (acum îl folosește și `GameController` pentru
+  `YearToUnixTimestamp`)
 
 - [ ] **55. Cod nefolosit**
   - [x] `User.IsChangingMail` — nefolosit (probabil pentru punctul 14); de scos până atunci, altfel intră degeaba în migrație
         → înlocuit cu `PendingEmail` la punctul 14
-  - [ ] `RawgGameDTO.ParentPlatforms` se deserializează, dar nu ajunge în `GameCardDTO` (`ParentPlatformDTO` e comentat).
+  - [x] `RawgGameDTO.ParentPlatforms` se deserializează, dar nu ajunge în `GameCardDTO` (`ParentPlatformDTO` e comentat).
         Subiectul cere „main platforms” pe card → exact `parent_platforms`
-  - [ ] `RawgObjectDTO`, `GameStore` — nefolosite
+        → dispărut cu RAWG (11.11): `GameCardDTO.Platforms` vine de la IGDB, cu `PlatformFamily` în detalii
+  - [x] `RawgObjectDTO`, `GameStore` — nefolosite
+        → șterse la migrarea pe IGDB
   - [ ] `GET /api/games/all` — la 36 s-a decis că dispare; acum întoarce `GameResponseDTO` complet (cu descriere)
+        → stare 11.11: există încă (acum `GameDetailsDTO`). Atenție: folosește `ProjectToType<GameDetailsDTO>`, pe care
+        EF nu îl poate traduce în SQL (vezi 62) → probabil 500 imediat ce sunt jocuri în baza de date
 
 - [x] **56. Mesaje / documentație care nu mai corespund**
   - [x] rate limit: „Try again in a minute”, dar `resend-email` are fereastră de 10 minute
@@ -762,5 +794,71 @@ salvați jocuri.
   - [x] `CreateGameAsync` întoarce și jocuri existente → numele vechi `GetOrCreateGameAsync` era mai corect
         → redenumit în `IRawgService`, `RawgService`, `UserGamesController` și `ReviewController`
   - [x] comentariile din cod traduse în engleză (05.11): `Program.cs` (italiană), `UserController.cs`, `User.cs` (română)
-  - [ ] mesajele de log din `Program.cs` sunt încă în italiană („Database PostgreSQL verificato e pronto.”,
+  - [x] mesajele de log din `Program.cs` sunt încă în italiană („Database PostgreSQL verificato e pronto.”,
         „Impossibile connettersi a PostgreSQL...”)
+        → traduse (11.11): „PostgreSQL database migrated and ready.” / „Could not connect to PostgreSQL at startup...”.
+        Tot codul (backend + frontend) e acum în engleză
+
+## Migrarea de la RAWG la IGDB (11.11.2026)
+
+Colegul a înlocuit `RawgService` cu `IGDBService` (pachetul `IGDB` 6.1.0, cheile `IGDB_CLIENT_ID` /
+`IGDB_CLIENT_SECRET` în `.env`). După merge, căutarea și pagina de detaliu nu mergeau. Testat pe 11.11 cu backend-ul
+pornit local, legat de Postgres-ul din Docker, și cu IGDB-ul real.
+
+- [x] **62. Bug-uri găsite după merge-ul cu IGDB**
+  - [x] `GET /api/games` → 500 la fiecare cerere: câmpurile pe care IGDB nu le trimite (`game_status`,
+        `platform_family`, `platform_logo`) vin `null`, iar codul le citea cu `.Value` → `NullReferenceException`.
+        Rezolvat cu `?.` peste tot (`MapPlatformList`, `MapCompanyList`, `ToGameCardDTO`, `ReleaseDates`, `OfficialWebsite`)
+  - [x] numărarea (`CountAsync`) primea filtrele fără `where` → orice căutare cu filtre dădea eroare la IGDB → 503
+  - [x] căutarea după nume nu găsea nimic: `name~*"Elden Ring*"` (steluța **în** ghilimele = caracterul `*` în nume).
+        Corect: `*"Elden Ring"*`; la fel pentru `SearchStartExact`. Testat: „Elden Ring” → 24 de rezultate
+  - [x] sortarea `released` → `first_release_date` (numele câmpului la IGDB)
+  - [x] detaliile → mereu 404: în `GameDetailsFields`, `.Select(...)` era aplicat pe rezultatul lui `string.Join`
+        (un string), deci în query ajungea un nume de tip .NET → „Syntax Error” de la IGDB
+  - [x] detaliile → 500: `GetGameAsync` căuta întâi în baza de date cu `ProjectToType<GameDetailsDTO>`, iar EF nu
+        poate traduce în SQL proiecția listelor (`ApiObjectDTO`). Decis: detaliile vin mereu de la IGDB (în baza de
+        date sunt doar câmpurile pentru liste, fără screenshots / video / magazine)
+  - [x] imaginile lipsă dădeau URL-ul stricat `//images.igdb.com/.../.jpg` → acum `null`; URL-urile încep cu `https:`
+  - [x] `platforms.name` și `game_status.status` adăugate în `GameCardFields` (folosite de statistici și de card)
+  - [x] `language_supports.language_support_type` → `.name` (altfel numele limbii de suport era mereu `null`)
+  - [x] un singur gen / o singură platformă se trimitea fără paranteze: `platforms = 167` înseamnă la IGDB „lista e
+        exact [167]” → PS5 dădea doar 9 jocuri exclusive. Acum mereu `platforms = (167)` („conține”); `(...)` = măcar
+        unul, `[...]` = toate. Testat: PS5 → 1487, RPG + PS5 + 2020–2024 + rating ≥ 8 → 104 (Elden Ring, BG3...)
+
+- [ ] **63. Ce a rămas după migrarea la IGDB**
+  - [ ] `GetOrCreateGameAsync` e comentat → `POST` la favorite / wishlist și `POST` la review-uri sunt comentate în
+        controllere (butoanele din frontend dau eroare). De rescris pentru IGDB (lucrează colegul)
+  - [ ] migrația mare după ce colegul termină modelele; migrația necomisă `FixGameAndPlatformRelationships` există
+        deja (`has-pending-model-changes` → fără schimbări pe 11.11)
+  - [ ] `GetFavorites` / `GetWishlist` au pierdut filtrele (`UserGameSearchDTO`) la merge: acum doar paginare.
+        `GetUserGamesAsync` cu filtre există încă, dar nu e folosit
+  - [ ] erorile IGDB la detalii → 404 în loc de 503 (vezi 37)
+  - [x] `GameController.Search` are comentariul „Searches RAWG games” → acum IGDB (corectat pe 11.11)
+
+- [x] **64. Bug-uri în `ReviewController` și `AuthController` (găsite și rezolvate pe 11.11)**
+  - [x] `UpdateReview` / `DeleteReview` folosesc `Forbid("mesaj")` → **500** când cineva încearcă să modifice
+        review-ul altcuiva (aceeași greșeală ca la 16). Soluție: `StatusCode(StatusCodes.Status403Forbidden, "...")`
+        → făcut: ambele întorc 403 cu mesajul lor
+  - [x] `UpdateReview` validează `Rating`, dar nu face niciodată `review.Rating = ...` → se schimbă doar textul
+        → făcut: `review.Rating = dto.Rating` (validarea 1–10 e deja `[Range]` pe `ReviewUpdateDTO`)
+  - [x] `PATCH /api/auth/forgot-password` cu un user inexistent → **200** „Invalid Credentials.” (mesaj de eroare cu
+        status de succes; frontend-ul poate crede că parola a fost resetată)
+        → confirmat în frontend: la 200 pagina de resetare te trimitea la login. Acum **400** „Invalid code.”, același
+        răspuns ca la un cod greșit, deci endpoint-ul tot nu arată dacă un cont există
+
+## Frontend ↔ IGDB (11.11.2026)
+
+- [x] **65. Integrarea frontend-ului cu noul API**
+  - [x] modelele TypeScript (`game.model.ts`) cu câmpurile IGDB (`apiGameId`, `cover`, `criticRating`, `items`, ...)
+  - [x] căutarea din header (era goală): `/?search=...` → catalogul se reîncarcă; fără rezultate → „No games found”
+  - [x] rating-ul IGDB (0–100) afișat din 10 pe carduri și pe detalii
+  - [x] listele (`genres`, `platforms`) trimise ca chei repetate (`genres=4&genres=5`), cum le citește ASP.NET
+  - [x] pagina de detaliu `/game/:id`: copertă, scoruri, PEGI, genuri, developer / publisher, platforme, About,
+        galerie cu screenshots, video-uri, linkuri spre magazine, jocuri similare; spinner + mesaj de eroare
+  - [x] notificări verzi pentru succes (`AlertService.showSuccess`), roșii pentru erori
+  - [x] filtrele din sidebar sunt date de exemplu → depind de 38 (genuri / platforme de la IGDB)
+        → făcut (11.11): căutarea avansată (IV.1.3) în sidebar — sortare (rating, scor critici, dată, nume + direcție),
+        genuri și platforme (selecție multiplă), an de la / până la, rating minim (useri / critici), „Clear filters”.
+        Starea e în URL (`/?genres=12&platforms=167&yearMin=2020&rating=8&sort=released`), citită și scrisă de
+        `CatalogFiltersService`; se combină cu căutarea din header și cu „Show More”. Tags / Publishers (date de
+        exemplu) scoase

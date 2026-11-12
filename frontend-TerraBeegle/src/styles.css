@@ -160,3 +160,8 @@ body {
     font-size: 1.15rem !important;
   }
 }
+
+/* Bootstrap has no min-w-0 utility: lets a flex child shrink, so text-truncate can show "..." */
+.min-w-0 {
+  min-width: 0 !important;
+}

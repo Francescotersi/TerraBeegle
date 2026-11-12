@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Genre> Genres => Set<Genre>();
     public DbSet<Platform> Platforms => Set<Platform>();
+    public DbSet<PlatformFamily> PlatformFamilies => Set<PlatformFamily>();
     public DbSet<Theme> Themes => Set<Theme>();
     // public DbSet<Keyword> Keywords => Set<Keyword>();
     public DbSet<Image> Images => Set<Image>();
@@ -161,20 +162,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(g => g.Slug).IsUnique();
             e.HasIndex(g => g.Name);
 
+            e.Ignore(g => g.OfficialWebsite);
+            e.Ignore(g => g.Websites);
+            e.Ignore(g => g.Stores);
+            e.Ignore(g => g.Videos);
+            e.Ignore(g => g.Keywords);
+
             e.HasOne(g => g.Cover)
                 .WithOne(i => i.Game)
                 .HasForeignKey<Image>("CoverId")
                 .OnDelete(DeleteBehavior.SetNull);
 
             e.HasMany(g => g.Artworks)
-                .WithOne(i => i.Game)
-                .HasForeignKey(i => i.GameId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .WithMany()
+                .UsingEntity(j => j.ToTable("game_artworks"));
 
             e.HasMany(g => g.Screenshots)
-                .WithOne(i => i.Game)
-                .HasForeignKey(i => i.GameId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .WithMany()
+                .UsingEntity(j => j.ToTable("game_screenshots"));
             
             e.HasOne(g => g.ParentGame)
                 .WithMany()
@@ -259,6 +264,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(p => p.ApiPlatformId).IsUnique();
             e.HasIndex(p => p.Slug).IsUnique();
 
+            e.Property(p => p.PlatformFamilyId)
+                .HasConversion<int?>()
+                .HasColumnName("PlatformFamily");
+
+            e.HasOne(p => p.PlatformFamily)
+                .WithMany(f => f.Platforms)
+                .HasForeignKey(p => p.PlatformFamilyId)
+                .HasPrincipalKey(f => f.ApiPlatformFamilyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             e.HasMany(p => p.Games)
                 .WithMany(g => g.Platforms)
                 .UsingEntity(j => j.ToTable("game_platforms"));
@@ -308,27 +323,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .UsingEntity(j => j.ToTable("game_themes"));
         });
 
+        modelBuilder.Entity<PlatformFamily>(e =>
+        {
+            e.Property(p => p.Id).ValueGeneratedOnAdd();
+            e.Property(p => p.ApiPlatformFamilyId)
+                .HasConversion<int>()
+                .IsRequired();
+            e.Property(p => p.Name).IsRequired().HasMaxLength(100);
+            e.Property(p => p.Slug).IsRequired().HasMaxLength(100);
+
+            e.HasIndex(p => p.ApiPlatformFamilyId).IsUnique();
+            e.HasIndex(p => p.Slug).IsUnique();
+        });
+
         modelBuilder.Entity<Image>(e =>
         {
             e.Property(i => i.Id).ValueGeneratedOnAdd();
             e.Property(i => i.ApiImageId).IsRequired().HasMaxLength(500);
             
             e.HasIndex(i => i.ApiImageId).IsUnique();
-
-            e.HasOne(i => i.Game)
-                .WithMany(g => g.Artworks)
-                .HasForeignKey(i => i.GameId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            e.HasOne(i => i.Game)
-                .WithMany(g => g.Screenshots)
-                .HasForeignKey(i => i.GameId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            e.HasOne(i => i.Game)
-                .WithOne(g => g.Cover)
-                .HasForeignKey<Game>("CoverId")
-                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // COMPANIES

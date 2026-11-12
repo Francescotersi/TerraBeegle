@@ -125,6 +125,10 @@ public record GameSearchDTO
     public int? CriticRatingMin { get; init; }
     public int? CriticRatingMax { get; init; }
 
+    // Minimum number of user votes, so a game rated 100 by 2 people does not top the list
+    [Range(0, 1000000)]
+    public int? MinRatingCount { get; init; }
+
     // PEGI Ratings
     public int[]? PegiRating { get; init; }
 }

@@ -31,7 +31,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
           decoding="async"
         />
 
-        <!-- Overlay titolo -->
+        <!-- Title overlay -->
         <div class="card-img-overlay d-flex flex-column justify-content-end p-2.5 card-overlay-title">
           <h3 class="card-title fw-bold mb-0 text-white text-truncate" [title]="game().name">
             {{ game().name }}
@@ -39,7 +39,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
         </div>
       </div>
 
-      <!-- Pannello dettagli -->
+      <!-- Details panel -->
       @if (isHovered()) {
         <div class="game-details-liquid">
           <app-liquid-glass
@@ -102,7 +102,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
                   </div>
                 </button>
 
-                <button class="btn-action-circle btn-more ms-auto" type="button" title="Game details">
+                <button class="btn-action-circle btn-more ms-auto" type="button" title="Game details" (click)="openDetails($event)">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
@@ -132,7 +132,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
                 }
               </div>
 
-              <!-- Categorie / Generi -->
+              <!-- Categories / genres -->
               @if (game().genres && game().genres.length > 0) {
                 <div class="game-genres-line text-truncate">
                   {{ game().genres.slice(0, 3).join(' • ') }}
@@ -273,9 +273,16 @@ export class GameCardComponent {
   readonly isMobileSelected = input<boolean>(false);
 
   readonly hoverStart = output<void>();
+  readonly detailsClick = output<void>();
   readonly hoverEnd = output<void>();
   readonly cardClick = output<MouseEvent>();
 
   protected readonly actions = inject(GridGameActionsService);
   protected readonly getReleaseYear = getReleaseYear;
+
+  // Opens the details page without also triggering the card click
+  protected openDetails(event: MouseEvent): void {
+    event.stopPropagation();
+    this.detailsClick.emit();
+  }
 }

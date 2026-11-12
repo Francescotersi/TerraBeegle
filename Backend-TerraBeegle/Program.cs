@@ -136,6 +136,8 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 // builder.Services.AddScoped<IRawgService, RawgService>();
 builder.Services.AddScoped<IIGDBService, IGDBService>();
+// Cache for the genres / platforms lists (FiltersController)
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();

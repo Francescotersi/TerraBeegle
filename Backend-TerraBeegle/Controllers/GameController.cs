@@ -13,14 +13,16 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/games")]
 public class GameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
-    // Searches RAWG games with filters, sorting and pagination
+    // Searches IGDB games with filters, sorting and pagination
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
         string pagination = "";
 
-        static string GetBrackets(int values, bool all, bool open) => values <= 1 ? "" : all ? (open ? "(" : ")") : (open ? "[" : "]");
+        // Always brackets: "platforms = 167" means "exactly [167]" at IGDB (only PS5 exclusives), "platforms = (167)"
+        // means "contains 167". (...) = at least one of the values, [...] = all of them
+        static string GetBrackets(int values, bool all, bool open) => all ? (open ? "(" : ")") : (open ? "[" : "]");
         static string GetQuery (string field, int[] values, bool all) => $"{field}={GetBrackets(values.Length, all, true)}{string.Join(",", values)}{GetBrackets(values.Length, all, false)} &";
         static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
 
@@ -33,19 +35,28 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
             var sortby = search.SortBy.Trim().ToLowerInvariant();
-            pagination += $"sort {(sortby == "critic_rating" ? "aggregated_rating" : sortby)} {(search.Ascending ? "asc" : "desc")};";
+            // Our names -> IGDB field names
+            var igdbField = sortby switch
+            {
+                "critic_rating" => "aggregated_rating",
+                "released" => "first_release_date",
+                _ => sortby
+            };
+            pagination += $"sort {igdbField} {(search.Ascending ? "asc" : "desc")};";
         }
 
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
             var opr = search.CaseSensitive ? '=' : '~';
+            // Escaped, so a " in the name cannot close the string and add other conditions to the IGDB query
+            var name = search.Name.Trim().Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             if (search.SearchExact)
-                query += $"name{opr}\"{search.Name.Trim()}\" &";
+                query += $"name{opr}\"{name}\" &";
             else if (search.SearchStartExact)
-                query += $"name{opr}\"{search.Name.Trim()}*\" &";
+                query += $"name{opr}\"{name}\"* &";
             else
-                query += $"name{opr}*\"{search.Name.Trim()}*\" &";
+                query += $"name{opr}*\"{name}\"* &";
         }
 
         if (search.PlatformsFamily is { Length: > 0 } && search.Platforms is { Length: > 0 }) {
@@ -88,6 +99,9 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.RatingMax.HasValue)
             query += GetQueryInt("rating", search.RatingMax.Value, false);
 
+        if (search.MinRatingCount.HasValue)
+            query += GetQueryInt("rating_count", search.MinRatingCount.Value, true);
+
         if (search.CriticRatingMin.HasValue)
             query += GetQueryInt("aggregated_rating", search.CriticRatingMin.Value, true);
 
@@ -100,7 +114,15 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.PegiRating is { Length: > 0 })
             query += GetQuery("age_ratings.rating_category", search.PegiRating, false);
 
-        var result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+        GameSearchResponseDTO? result;
+        try
+        {
+            result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
         if (result is null)
         {
