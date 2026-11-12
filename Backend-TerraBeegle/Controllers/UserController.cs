@@ -151,9 +151,6 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         if (dto.Theme is not null && !Enum.IsDefined(dto.Theme.Value))
             ModelState.AddModelError(nameof(dto.Theme), "Invalid theme.");
 
-        if (dto.DogCompanion is not null && !Enum.IsDefined(dto.DogCompanion.Value))
-            ModelState.AddModelError(nameof(dto.DogCompanion), "Invalid dog companion.");
-
         // Same format as the automatic validations, with all the field errors at once
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
@@ -163,9 +160,6 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         if (dto.Theme is not null)
             user.Theme = dto.Theme.Value;
-
-        if (dto.DogCompanion is not null)
-            user.DogCompanion = dto.DogCompanion.Value;
         
         if (dto.Username is not null)
         {
