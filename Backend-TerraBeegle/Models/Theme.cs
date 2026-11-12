@@ -10,4 +10,7 @@ public class Theme
     public string Slug { get; set; } = null!;
 
     public ICollection<Game> Games { get; set; } = [];
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

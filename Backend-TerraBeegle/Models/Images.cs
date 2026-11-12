@@ -10,4 +10,7 @@ public class Image
     public Game? Game { get; set; }
     public Company? Company { get; set; }
     public Platform? Platform { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

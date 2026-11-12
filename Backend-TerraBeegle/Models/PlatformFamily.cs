@@ -9,4 +9,7 @@ public class PlatformFamily
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public ICollection<Platform> Platforms { get; set; } = [];
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
