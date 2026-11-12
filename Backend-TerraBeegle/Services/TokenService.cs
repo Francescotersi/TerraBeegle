@@ -7,6 +7,7 @@ namespace Backend_TerraBeegle.Services;
 
 public class TokenService(IConfiguration config) : ITokenService
 {
+    // Creates a signed JWT for the user
     public string CreateToken(User user)
     {
         var claims = new Dictionary<string, object>

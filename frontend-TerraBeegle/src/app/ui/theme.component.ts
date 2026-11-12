@@ -1,13 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { ThemeService } from '../services/theme.service';
 
-/**
- * Minimalist Theme Switch:
- * - Design ultra-pulito ed essenziale ispirato ai migliori minimal toggle di Uiverse.io.
- * - Light Mode: Pista soft neutra frosted, dischetto bianco puro e icona Sole minimale in ardesia scura (zero giallo, zero rosa).
- * - Dark Mode: Pista blu notte profondo (#071F49), dischetto scuro (#081226) e icona Luna minimale in Cyan (#2ED9E7).
- * - Transizione fluida e morbida con rotazione e crossfade delle icone vettoriali.
- */
 @Component({
   selector: 'app-theme-switch',
   standalone: true,
@@ -21,8 +14,8 @@ import { ThemeService } from '../services/theme.service';
       tabindex="0"
       (keydown.enter)="$event.preventDefault(); themeService.toggleTheme()"
       (keydown.space)="$event.preventDefault(); themeService.toggleTheme()"
-      [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
-      [attr.title]="themeService.currentTheme() === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'"
+      [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      [attr.title]="themeService.currentTheme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
     >
       <input
         type="checkbox"
@@ -33,7 +26,7 @@ import { ThemeService } from '../services/theme.service';
         style="pointer-events: none;"
       />
       <div class="theme-switch__thumb">
-        <!-- Icona Sole Minimale (Light Mode) in ardesia scura -->
+        <!-- Minimal Sun Icon (Light Mode) -->
         <svg
           class="theme-switch__icon theme-switch__icon--sun"
           viewBox="0 0 24 24"
@@ -55,7 +48,6 @@ import { ThemeService } from '../services/theme.service';
           <path d="m19.07 4.93-1.41 1.41"></path>
         </svg>
 
-        <!-- Icona Luna Minimale (Dark Mode) - Sagoma elegante e rifinita in Cyan (#2ED9E7) -->
         <svg
           class="theme-switch__icon theme-switch__icon--moon"
           viewBox="0 0 20 20"
@@ -83,8 +75,8 @@ import { ThemeService } from '../services/theme.service';
       position: relative;
       display: inline-flex;
       align-items: center;
-      width: 52px;
-      height: 28px;
+      width: var(--theme-switch-width, 52px);
+      height: var(--theme-switch-height, 28px);
       padding: 2px;
       border-radius: 9999px;
       cursor: pointer;
@@ -92,7 +84,7 @@ import { ThemeService } from '../services/theme.service';
       user-select: none;
       -webkit-tap-highlight-color: transparent;
 
-      /* Light mode: neutro, morbido e pulito */
+      /* Light mode: neutral, soft, and clean */
       background: rgba(0, 0, 0, 0.07);
       border: 1px solid rgba(0, 0, 0, 0.08);
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -107,7 +99,6 @@ import { ThemeService } from '../services/theme.service';
       outline: 2px solid var(--tb-accent);
     }
 
-    /* Dark mode track: coordinata con #071F49 e bordo Cyan soft */
     .theme-switch--dark {
       background: #071F49;
       border-color: rgba(46, 217, 231, 0.3);
@@ -118,14 +109,13 @@ import { ThemeService } from '../services/theme.service';
       display: none;
     }
 
-    /* Dischetto / Thumb scorrevole */
     .theme-switch__thumb {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
+      width: var(--theme-switch-thumb-size, 22px);
+      height: var(--theme-switch-thumb-size, 22px);
       border-radius: 50%;
       background: #ffffff;
       border: 1px solid rgba(0, 0, 0, 0.06);
@@ -138,21 +128,19 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .theme-switch--dark .theme-switch__thumb {
-      transform: translateX(24px);
+      transform: translateX(var(--theme-switch-thumb-offset, 24px));
       background: #081226;
       border-color: rgba(46, 217, 231, 0.35);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     }
 
-    /* Icone vettoriali minimaliste con micro-rotazione e crossfade */
     .theme-switch__icon {
       position: absolute;
-      width: 14px;
-      height: 14px;
+      width: var(--theme-switch-icon-size, 14px);
+      height: var(--theme-switch-icon-size, 14px);
       transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Sole: ardesia sobrio (#334155), nessun giallo */
     .theme-switch__icon--sun {
       color: #334155;
       opacity: 1;
@@ -164,7 +152,6 @@ import { ThemeService } from '../services/theme.service';
       transform: rotate(90deg) scale(0.4);
     }
 
-    /* Luna: sagoma pura Cyan (#2ED9E7), curvature morbide ed eleganti */
     .theme-switch__icon--moon {
       color: #2ED9E7;
       opacity: 0;

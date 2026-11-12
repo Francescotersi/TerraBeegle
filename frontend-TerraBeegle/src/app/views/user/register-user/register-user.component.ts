@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
-import { form, FormField, required, email, minLength } from '@angular/forms/signals';
+import { form, FormField, required, email, minLength, validate } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
 import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 import { AuthService } from '../../../services/auth.service';
@@ -11,6 +11,7 @@ interface UserModel {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string;
 }
 
 @Component({
@@ -82,7 +83,7 @@ interface UserModel {
                   type="email"
                   id="email"
                   class="form-control glass-input"
-                  placeholder="mario.rossi@esempio.com"
+                  placeholder="john.smith@example.com"
                   [formField]="registerForm.email"
                   [class.is-invalid]="registerForm.email().invalid() && registerForm.email().touched()"
                 />
@@ -91,7 +92,7 @@ interface UserModel {
                 }
               </div>
               <!-- Password -->
-              <div class="mb-4">
+              <div class="mb-3">
                 <label for="password" class="form-label fw-semibold small text-dark">Password</label>
                 <input
                   type="password"
@@ -105,8 +106,29 @@ interface UserModel {
                   <div class="invalid-feedback fw-medium">The password must be at least 8 characters long.</div>
                 }
               </div>
+              <!-- Confirm Password -->
+              <div class="mb-4">
+                <label for="confirmPassword" class="form-label fw-semibold small text-dark">Confirm password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  class="form-control glass-input"
+                  placeholder="••••••••"
+                  [formField]="registerForm.confirmPassword"
+                  [class.is-invalid]="registerForm.confirmPassword().invalid() && registerForm.confirmPassword().touched()"
+                />
+                @if (registerForm.confirmPassword().invalid() && registerForm.confirmPassword().touched()) {
+                  <div class="invalid-feedback fw-medium">
+                    @if (userModel().password !== userModel().confirmPassword) {
+                      Passwords do not match.
+                    } @else {
+                      Confirm password is required.
+                    }
+                  </div>
+                }
+              </div>
 
-              <!-- Errore dal backend -->
+              <!-- Error from the backend -->
               @if (errorMessage()) {
                 <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
                   {{ errorMessage() }}
@@ -121,7 +143,6 @@ interface UserModel {
               >
                 @if (isLoading()) {
                   <app-spinner size="btn" />
-                  <span>Creating account...</span>
                 } @else {
                   <span>Register</span>
                 }
@@ -200,6 +221,7 @@ export class RegisterUser {
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
   });
 
   protected readonly registerForm = form(this.userModel, (schema) => {
@@ -210,13 +232,21 @@ export class RegisterUser {
     minLength(schema.familyName, 1, { message: 'familyName must be at least 1 characters long' });
 
     required(schema.username, { message: 'Username is required' });
-    minLength(schema.username, 1, { message: 'Username must be at least 3 characters long' });
+    minLength(schema.username, 3, { message: 'Username must be at least 3 characters long' });
 
     required(schema.email, { message: 'Email is required' });
     email(schema.email);
 
     required(schema.password, { message: 'Password is required' });
     minLength(schema.password, 8, { message: 'Password must be at least 8 characters long' });
+
+    required(schema.confirmPassword, { message: 'Confirm password is required' });
+    validate(schema.confirmPassword, (ctx) => {
+      if (ctx.value() && ctx.value() !== this.userModel().password) {
+        return { kind: 'passwordMismatch', message: 'Passwords do not match' };
+      }
+      return null;
+    });
   });
 
   protected onSubmit(): void {
@@ -224,14 +254,32 @@ export class RegisterUser {
       return;
     }
     const data = this.userModel();
+    if (data.password !== data.confirmPassword) {
+      this.errorMessage.set('Passwords do not match.');
+      return;
+    }
     
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.authService.register(this.userModel()).subscribe({
+    this.authService.register(data).subscribe({
       next: (response) => {
         this.isLoading.set(false);
-        console.log('Registration was successfull', data);
-        this.router.navigate(['/login']);
+        this.authService.setOtpContext({
+          type: 'email-verification',
+          emailOrUsername: data.username || data.email,
+          email: data.email,
+          password: data.password,
+          message: 'Registration successful! An 8-character verification code has been sent to your email.',
+        });
+        this.router.navigate(['/otp'], {
+          state: {
+            type: 'email-verification',
+            emailOrUsername: data.username || data.email,
+            email: data.email,
+            password: data.password,
+            message: 'Registration successful! An 8-character verification code has been sent to your email.',
+          }
+        });
       },
       error: (error) => {
         this.isLoading.set(false);

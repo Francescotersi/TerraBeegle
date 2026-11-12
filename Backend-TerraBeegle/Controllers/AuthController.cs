@@ -21,6 +21,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
     ITokenService tokenService, IEmailVerificationService emailVerificationService, 
     ITwoFactorService twoFactorService, ILogger<AuthController> logger) : ControllerBase
 {
+    // Creates an account and emails a verification code
     [EnableRateLimiting(RateLimitPolicies.Register)]
     [HttpPost("register")]
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
@@ -72,6 +73,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return CreatedAtAction(nameof(UserController.GetByUsername), "User", new { username = user.Username }, user.Adapt<UserResponseDTO>());
     }
     
+    // Logs in; returns a JWT, or a 2FA challenge if 2FA is on
     [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
@@ -133,6 +135,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Requires2FA = true, ChallengeToken = challengeToken });
     }
 
+    // Finishes a 2FA login with the emailed code and returns a JWT
     [EnableRateLimiting(RateLimitPolicies.LoginTwoFactor)]
     [HttpPost("login/2fa")]
     public async Task<ActionResult<AuthResponseDTO>> LoginTwoFactor(TwoFactorLoginDTO dto)
@@ -177,6 +180,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Token = token, User = challenge.User.Adapt<UserResponseDTO>() });
     }
 
+    // Sends a new 2FA code for an active login challenge
     [EnableRateLimiting(RateLimitPolicies.LoginTwoFactorResend)]
     [HttpPost("login/2fa/resend")]
     public async Task<IActionResult> ResendTwoFactorCode(TwoFactorResendDTO dto)
@@ -211,6 +215,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("A new code has been sent to your email.");
     }
 
+	// Sends a new email verification code
 	[EnableRateLimiting(RateLimitPolicies.ResendEmail)]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail(SendEmailDTO dto)
@@ -240,6 +245,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
+	// Emails a password reset code
 	[EnableRateLimiting(RateLimitPolicies.ForgotPasswordRequest)]
 	[HttpPost("forgot-password-request")]
 	public async Task<IActionResult> ForgotPasswordRequest(SendEmailDTO dto)
@@ -270,6 +276,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
+    // Resets the password using the emailed code
     [EnableRateLimiting(RateLimitPolicies.ForgotPassword)]
     [HttpPatch("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)

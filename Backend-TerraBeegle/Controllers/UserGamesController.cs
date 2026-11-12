@@ -24,6 +24,7 @@ namespace Backend_TerraBeegle.Controllers;
 public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     // favorites
+    // Lists a user's favorite games
     [DisableRateLimiting]
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
@@ -160,6 +161,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
 public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     // wishlist
+    // Lists a user's wishlist games
     [DisableRateLimiting]
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
@@ -279,6 +281,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
     // Shared by GetFavorites and GetWishlist: only the list, the word in the 403 message and the action
     // used for the page links differ. Private, otherwise ASP.NET would treat it as an endpoint.
     // Expression (not Func), so EF can translate u => u.Favorites to a JOIN instead of loading the users
+    // Returns one of a user's game lists, filtered and sorted
     private async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetUserGamesAsync(
         long userId,
         UserGameSearchDTO search,
@@ -416,6 +419,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
         ));
     }
 
+    // True if the viewer is the owner or an accepted friend
     private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
     {
         if (viewerId == ownerId)

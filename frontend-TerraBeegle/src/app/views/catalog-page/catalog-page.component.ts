@@ -40,7 +40,7 @@ import { GameService } from '../../services/game.service';
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <span class="small fw-medium">
-            API non disponibile: visualizzazione dei giochi mock di esempio.
+            API unavailable: showing sample games.
           </span>
         </div>
       }
@@ -67,7 +67,7 @@ export class CatalogPage implements OnInit {
   }
 
   loadCatalogGames(page: number = 1): void {
-    // Durante il prerendering server-side (SSR), carica direttamente i mock per evitare chiamate HTTP relative non gestite
+    // During server-side prerendering (SSR) load the mocks directly, relative HTTP calls are not handled there
     if (!isPlatformBrowser(this.platformId)) {
       this.catalogGames.set(MOCK_GAMES);
       this.isLoading.set(false);

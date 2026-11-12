@@ -41,6 +41,7 @@ services:
   frontend:
     build: ./frontend-TerraBeegle
     container_name: terrabeegle-frontend
+    init: true
     restart: unless-stopped
     ports:
       - "4200:4200"

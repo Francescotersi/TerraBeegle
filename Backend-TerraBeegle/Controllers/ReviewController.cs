@@ -18,6 +18,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/user/{username}/reviews")]
 public class ReviewUserController(AppDbContext db) : ControllerBase
 {
+    // Lists the reviews written by a user
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(string username, [FromQuery] PaginationDTO pagination)
     {
@@ -56,6 +57,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 [Route("api/games/{gameId:int}/reviews")]
 public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
+    // Lists the reviews of a game
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(int gameId, [FromQuery] PaginationDTO pagination)
     {
@@ -94,10 +96,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     // [HttpPost]
     // public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
     // {
-    //     if (reviewCreateDTO.Rating < 1 || reviewCreateDTO.Rating > 5)
-    //     {
-    //         return BadRequest("Rating must be between 1 and 5.");
-    //     }
+    //    
 
     //     var currentUserId = GetCurrentUserId(User);
     //     if (currentUserId is null)
@@ -153,6 +152,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     //     return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
     // }
 
+    // Edits your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
@@ -200,6 +200,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         return Ok(updatedReview);
     }
 
+    // Deletes your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete("{id}")]

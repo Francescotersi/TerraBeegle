@@ -6,6 +6,14 @@ public enum UserTheme
     Dark
 }
 
+public enum DogCompanion
+{
+    Beagle,
+    Elkhound,
+    GoldenRetriever,
+    Husky
+}
+
 public enum FriendshipStatus
 {
     Pending,
@@ -374,7 +382,6 @@ public enum CodeVerificationResult
     TooManyAttempts
 }
 
-// Why a code is sent: each one gets its own email text
 public enum EmailCodePurpose
 {
     Register,

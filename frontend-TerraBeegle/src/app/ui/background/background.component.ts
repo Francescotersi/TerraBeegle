@@ -89,7 +89,7 @@ import { ThemeService } from '../../services/theme.service';
       background: radial-gradient(ellipse at center, rgba(7, 31, 73, 0.12) 0%, rgba(8, 18, 38, 0.35) 100%);
     }
 
-    /* Ottimizzazioni grafiche Mobile */
+    /* Mobile graphics optimizations */
     @media (max-width: 768px) {
       .wave-canvas {
         filter: blur(18px);
@@ -145,7 +145,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
     window.addEventListener('resize', this.boundResizeHandler, { passive: true });
     document.addEventListener('visibilitychange', this.boundVisibilityHandler, { passive: true });
 
-    // Animazione 60fps fuori dalla zone di Angular per prestazioni massime
+    // 60fps animation outside Angular's zone, for maximum performance
     this.ngZone.runOutsideAngular(() => {
       this.lastTime = performance.now();
       this.startAnimationLoop();
@@ -161,7 +161,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Pausa automatica in background: azzera il consumo di CPU e batteria quando la scheda non è visibile
+   * Automatic pause in the background: no CPU or battery usage while the tab is hidden
    */
   private onVisibilityChange(): void {
     if (typeof document === 'undefined') return;
@@ -174,7 +174,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Downsampling dinamico su mobile: dimezza la risoluzione interna del canvas per risparmiare il 75% di GPU
+   * Dynamic downsampling on mobile: halves the canvas resolution to save 75% of the GPU work
    */
   private onResize(): void {
     if (!this.isBrowser || !this.waveCanvasRef) return;
@@ -183,7 +183,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
     this.height = window.innerHeight;
     this.isMobile = this.width < 768;
 
-    // Scala interna: 0.5x su mobile (82k pixel invece di 1M+), 1.0x su desktop
+    // Internal scale: 0.5x on mobile (82k pixels instead of 1M+), 1.0x on desktop
     const scale = this.isMobile ? 0.5 : 1.0;
     this.canvasWidth = Math.floor(this.width * scale);
     this.canvasHeight = Math.floor(this.height * scale);
@@ -284,7 +284,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Disegno unificato: genera nastro riempito e contorno luminoso riutilizzando gli stessi punti
+   * Single drawing pass: the filled ribbon and its glowing outline reuse the same points
    */
   private drawRibbonWithStroke(
     ctx: CanvasRenderingContext2D,
@@ -303,7 +303,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
       points.push(this.getWavePoint(i / steps, t, isTop, strandIndex, w, h));
     }
 
-    // 1. Corpo del nastro
+    // 1. Ribbon body
     ctx.beginPath();
     ctx.moveTo(points[0].x, h * 0.5);
 
@@ -319,7 +319,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
     ctx.fillStyle = fillGrad;
     ctx.fill();
 
-    // 2. Tratto ridge luminoso (riutilizza i punti già calcolati in memoria)
+    // 2. Glowing ridge line (reuses the points already computed)
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i++) {
@@ -372,7 +372,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Aloni d'atmosfera sfumata (profondità aura)
+    // 1. Soft atmospheric halos (aura depth)
     const leftCol = this.isDark ? '46, 217, 231' : '254, 165, 130';
     const leftGlow = ctx.createRadialGradient(w * 0.1, h * 0.45, 0, w * 0.1, h * 0.45, w * 0.35);
     leftGlow.addColorStop(0, `rgba(${leftCol}, ${0.45 * this.opacity})`);
@@ -393,7 +393,7 @@ export class BackgroundComponent implements AfterViewInit, OnDestroy {
     const stroke1 = this.createWaveGradient(ctx, w, 0.70 * this.opacity);
     const stroke2 = this.createSecondaryGradient(ctx, w, 0.60 * this.opacity);
 
-    // 3. Ciclo consolidato dei nastri (ridotto a 60 step su mobile per leggerezza)
+    // 3. Ribbon loop (reduced to 60 steps on mobile, to keep it light)
     const steps = this.isMobile ? 60 : 160;
     const waves = [
       { isTop: true,  strand: 0, t: this.time,              fill: fill1, stroke: stroke1 },

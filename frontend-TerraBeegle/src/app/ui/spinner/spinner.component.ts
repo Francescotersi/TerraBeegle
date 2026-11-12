@@ -98,7 +98,7 @@ export type SpinnerPalette = 'theme' | 'original';
       animation: colorize-orig calc(var(--time-animation) * 3) ease-in-out infinite;
     }
 
-    /* Palette integrata con il tema TerraBeegle (Light e Dark) */
+    /* Palette matching the TerraBeegle theme (light and dark) */
     .loader.theme-palette {
       --color-one: var(--tb-spinner-one, #2ED9E7);
       --color-two: var(--tb-spinner-two, #2C7BA1);
@@ -259,8 +259,8 @@ export type SpinnerPalette = 'theme' | 'original';
       }
     }
 
-    /* Keyframes coerente con il tema TerraBeegle:
-       oscilla fluidamente all'interno della famiglia di toni (cyan/blue in dark, rose/magenta in light) */
+    /* Keyframes matching the TerraBeegle theme:
+       smoothly cycles through the theme colors (cyan/blue in dark, rose/magenta in light) */
     @keyframes colorize-theme {
       0%, 100% {
         filter: hue-rotate(0deg);

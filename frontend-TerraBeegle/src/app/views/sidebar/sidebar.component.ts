@@ -1,41 +1,36 @@
 import { Component, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, LiquidGlassComponent],
+  imports: [RouterLink, RouterLinkActive, NgTemplateOutlet, LiquidGlassComponent],
   template: `
-    <app-liquid-glass
-      borderRadius="24px"
-      blur="2px"
-      [scale]="85"
-    >
-      <nav class="sidebar-content p-3 w-100">
-
-        <!-- Barra di ricerca -->
-        <div class="mb-5">
-          <div class="input-group input-group-sm">
-            <input
-              type="search"
-              class="form-control sidebar-search"
-              placeholder="Search Filters..."
-              [value]="searchQuery()"
-              (input)="onSearchInput($event)"
-            />
-          </div>
+    <ng-template #filtersContent>
+      <div class="mb-3">
+        <div class="input-group input-group-sm">
+          <input
+            type="search"
+            class="form-control sidebar-search"
+            placeholder="Search Filters..."
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+          />
         </div>
+      </div>
 
-        <div class="mb-3 pb-2 border-bottom border-light-subtle">
-          <a
-            class="nav-link sidebar-item rounded-3 fw-bold"
-            routerLink="/"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
-          >
-            All Games
-          </a>
-        </div>
+      <div class="mb-3 pb-2 border-bottom border-light-subtle">
+        <a
+          class="nav-link sidebar-item rounded-3 fw-bold"
+          routerLink="/"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMobileDrawer()"
+        >
+          All Games
+        </a>
+      </div>
 
       <!-- Generi -->
       <div class="category-group mb-2">
@@ -57,13 +52,14 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
                   class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
                   [routerLink]="['/genre', genre.slug]"
                   routerLinkActive="active"
+                  (click)="closeMobileDrawer()"
                 >
                   <span>{{ genre.name }}</span>
                 </a>
               </li>
             }
             @if (filteredGenres().length === 0) {
-              <li class="text-muted small px-3 py-1">Nessun genere trovato</li>
+              <li class="text-muted small px-3 py-1">No genres found</li>
             }
           </ul>
         </div>
@@ -89,6 +85,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
                   class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
                   [routerLink]="['/tag', tag.slug]"
                   routerLinkActive="active"
+                  (click)="closeMobileDrawer()"
                 >
                   <span>#{{ tag.name }}</span>
                 </a>
@@ -121,6 +118,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
                   class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
                   [routerLink]="['/platform', platform.slug]"
                   routerLinkActive="active"
+                  (click)="closeMobileDrawer()"
                 >
                   <span>{{ platform.name }}</span>
                 </a>
@@ -153,6 +151,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
                   class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
                   [routerLink]="['/publisher', pub.slug]"
                   routerLinkActive="active"
+                  (click)="closeMobileDrawer()"
                 >
                   <span>{{ pub.name }}</span>
                 </a>
@@ -164,123 +163,116 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
           </ul>
         </div>
       </div>
-    </nav>
-  </app-liquid-glass>
+    </ng-template>
+
+    <!-- ==================== VISTA DESKTOP ==================== -->
+    <div class="d-none d-lg-block w-100 sidebar-desktop-card">
+      <app-liquid-glass
+        borderRadius="24px"
+        blur="2px"
+        [scale]="85"
+      >
+        <nav class="sidebar-content p-3 w-100">
+          <ng-container *ngTemplateOutlet="filtersContent" />
+        </nav>
+      </app-liquid-glass>
+    </div>
+
+    <!-- ==================== VISTA MOBILE ==================== -->
+    <div class="mobile-filter-bar d-lg-none">
+      <button
+        class="mobile-filter-btn"
+        type="button"
+        (click)="openMobileDrawer()"
+        aria-label="Filtra catalogo"
+      >
+        <svg
+          class="filter-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+      </button>
+    </div>
+
+    <div
+      class="sidebar-mobile-backdrop d-lg-none"
+      [class.show]="isMobileDrawerOpen()"
+      (click)="closeMobileDrawer()"
+      aria-hidden="true"
+    ></div>
+
+    <div class="sidebar-drawer-clip d-lg-none">
+      <div
+        class="sidebar-menu-panel"
+        [class.show]="isMobileDrawerOpen()"
+        aria-label="Navigation Filters"
+      >
+        <div class="sidebar-panel-header d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <svg
+              class="filter-header-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            <span class="fw-bold fs-6">Filters</span>
+          </div>
+          <button
+            type="button"
+            class="sidebar-close-btn"
+            (click)="closeMobileDrawer()"
+            aria-label="Closer filters"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-panel-scroll">
+          <nav class="sidebar-content w-100 py-1">
+            <ng-container *ngTemplateOutlet="filtersContent" />
+          </nav>
+        </div>
+      </div>
+    </div>
   `,
-  styles: `
-    :host {
-      display: block;
-      width: 100%;
-    }
-    app-liquid-glass {
-      display: block;
-      width: 100%;
-    }
-    .sidebar-content {
-      background: transparent;
-      width: 100%;
-    }
-    .sidebar-search {
-      background-color: var(--tb-input-bg);
-      border: 1px solid var(--tb-input-border);
-      border-radius: 20px;
-      font-size: 0.85rem;
-      padding: 0.4rem 0.75rem;
-      color: var(--tb-text);
-      transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    }
-    .sidebar-search::placeholder {
-      color: var(--tb-text-muted);
-      opacity: 0.8;
-    }
-    .sidebar-search:focus {
-      background-color: var(--tb-input-bg-focus);
-      border-color: var(--tb-accent);
-      box-shadow: 0 0 0 0.25rem var(--tb-accent-glow);
-      color: var(--tb-text);
-    }
-    /* Pulsante dell'intestazione categoria */
-    .category-btn {
-      background: transparent;
-      color: var(--tb-text);
-      transition: background 0.2s ease, color 0.2s ease;
-    }
-    .category-btn:hover {
-      background-color: var(--tb-accent-subtle);
-      color: var(--tb-accent);
-    }
-    /* Freccetta che ruota quando la sezione è aperta */
-    .chevron {
-      font-size: 0.9rem;
-      transition: transform 0.2s ease, color 0.2s ease;
-      display: inline-block;
-      transform: rotate(-90deg);
-      color: var(--tb-text-muted);
-    }
-    .chevron.open {
-      transform: rotate(0deg);
-      color: var(--tb-accent);
-    }
-    /* Elenco interno a tendina in vera lista verticale con scrollbar sottile */
-    .category-list {
-      max-height: 180px;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--tb-accent) transparent;
-      padding-left: 0.5rem;
-      padding-right: 0.25rem;
-    }
-    .category-list::-webkit-scrollbar {
-      width: 4px;
-    }
-    .category-list::-webkit-scrollbar-thumb {
-      background: var(--tb-accent-glow);
-      border-radius: 4px;
-    }
-    .category-item {
-      margin-bottom: 2px;
-    }
-    /* Singola voce della lista verticale */
-    .sidebar-list-link {
-      color: var(--tb-text-muted);
-      font-size: 0.85rem;
-      padding: 0.35rem 0.65rem;
-      text-decoration: none;
-      display: flex;
-      width: 100%;
-      transition: all 0.15s ease;
-    }
-    .sidebar-list-link:hover {
-      background-color: var(--tb-accent-subtle);
-      color: var(--tb-accent);
-      transform: translateX(4px);
-    }
-    .sidebar-list-link.active {
-      background: var(--tb-btn-gradient) !important;
-      color: #ffffff !important;
-      font-weight: 600;
-      box-shadow: 0 3px 10px var(--tb-btn-gradient-shadow);
-    }
-    .sidebar-item {
-      color: var(--tb-text);
-      padding: 0.5rem 0.75rem;
-      text-decoration: none;
-      display: flex;
-      transition: all 0.15s ease;
-    }
-    .sidebar-item:hover {
-      background-color: var(--tb-accent-subtle);
-      color: var(--tb-accent);
-    }
-    .sidebar-item.active {
-      background-color: var(--tb-accent-subtle);
-      color: var(--tb-accent);
-      font-weight: 600;
-    }
-  `,
+  styleUrl: './sidebar.component.css',
 })
 export class SidebarComponent {
   protected readonly searchQuery = signal('');
+  protected readonly isMobileDrawerOpen = signal(false);
 
   protected readonly openSections = signal<Record<string, boolean>>({
     genres: false,
@@ -288,6 +280,14 @@ export class SidebarComponent {
     platforms: false,
     publishers: false,
   });
+
+  protected openMobileDrawer(): void {
+    this.isMobileDrawerOpen.set(true);
+  }
+
+  protected closeMobileDrawer(): void {
+    this.isMobileDrawerOpen.set(false);
+  }
 
   protected onSearchInput(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -326,17 +326,17 @@ export class SidebarComponent {
   protected readonly filteredPublishers = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     return this.publishers.filter((publisher) => publisher.name.toLowerCase().includes(query));
-  })
+  });
 
-  // --- DATI DI ESEMPIO ---
+  // --- SAMPLE DATA ---
   protected readonly genres = [
-    { id: 1, name: 'Azione', slug: 'action' },
+    { id: 1, name: 'Action', slug: 'action' },
     { id: 2, name: 'RPG', slug: 'role-playing-games-rpg' },
-    { id: 3, name: 'Avventura', slug: 'adventure' },
-    { id: 4, name: 'Strategia', slug: 'strategy' },
-    { id: 5, name: 'Sparatutto', slug: 'shooter' },
+    { id: 3, name: 'Adventure', slug: 'adventure' },
+    { id: 4, name: 'Strategy', slug: 'strategy' },
+    { id: 5, name: 'Shooter', slug: 'shooter' },
     { id: 6, name: 'Indie', slug: 'indie' },
-    { id: 7, name: 'Piattaforme', slug: 'platformer' },
+    { id: 7, name: 'Platformer', slug: 'platformer' },
   ];
   protected readonly tags = [
     { id: 1, name: 'Open World', slug: 'open-world' },

@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ComponentRef } from '@angular/core';
 import { GridComponent, GridComponentProps } from './grid.component';
 import { createMockGame } from '../../mocks/games.mock';
+import { AlertService } from '../../services/alert.service';
+import { AuthService } from '../../services/auth.service';
 
 describe('GridComponent', () => {
   let component: GridComponent;
@@ -159,5 +161,67 @@ describe('GridComponent', () => {
 
     const heartContainer = fixture.nativeElement.querySelector('.heart-container');
     expect(heartContainer.classList.contains('is-active')).toBe(true);
+  });
+
+  it('should trigger alert when unauthenticated user clicks on wishlist', async () => {
+    const alertService = TestBed.inject(AlertService);
+    const authService = TestBed.inject(AuthService);
+    authService.currentUser.set(null); // ensure unauthenticated
+
+    const testGame = createMockGame({
+      rawgGameId: 101,
+      name: 'Wishlist Test',
+      released: '2024-01-01',
+      rating: 4.5,
+      metacritic: 80,
+    });
+    componentRef.setInput('games', [testGame]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Hover to reveal buttons
+    const card = fixture.nativeElement.querySelector('.game-card') as HTMLElement;
+    card.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const wishlistBtn = fixture.nativeElement.querySelector('.action-buttons .btn-action-circle') as HTMLButtonElement;
+    expect(wishlistBtn).toBeTruthy();
+    wishlistBtn.click();
+    fixture.detectChanges();
+
+    expect(alertService.currentAlert()).not.toBeNull();
+    expect(alertService.currentAlert()?.message).toBe('Please log in to manage your wishlist.');
+  });
+
+  it('should trigger alert when unauthenticated user clicks on favorites', async () => {
+    const alertService = TestBed.inject(AlertService);
+    const authService = TestBed.inject(AuthService);
+    authService.currentUser.set(null); // ensure unauthenticated
+
+    const testGame = createMockGame({
+      rawgGameId: 102,
+      name: 'Favorites Test',
+      released: '2024-01-01',
+      rating: 4.5,
+      metacritic: 80,
+    });
+    componentRef.setInput('games', [testGame]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Hover to reveal buttons
+    const card = fixture.nativeElement.querySelector('.game-card') as HTMLElement;
+    card.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const checkbox = fixture.nativeElement.querySelector('.heart-container input.checkbox') as HTMLInputElement;
+    expect(checkbox).toBeTruthy();
+    checkbox.click();
+    fixture.detectChanges();
+
+    expect(alertService.currentAlert()).not.toBeNull();
+    expect(alertService.currentAlert()?.message).toBe('Please log in to manage your favorites.');
   });
 });

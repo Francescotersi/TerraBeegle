@@ -20,18 +20,23 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/users/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
+    // Three list endpoints: /friends, /received and /sent
+    // Lists accepted friends
     [HttpGet("friends")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
     GetFriends([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "friends");
 
+    // Lists pending requests received
     [HttpGet("received")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
     GetReceivedFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "received");
 
+    // Lists pending requests sent
     [HttpGet("sent")]
     public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
     GetSentFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "sent");
 
+    // Shared logic: lists friendships of one kind, paginated
     private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships([FromQuery] PaginationDTO pagination, string search)
     {
         var userId = GetCurrentUserId(User);
@@ -91,6 +96,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         ));
     }
 
+    // Sends a friend request
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(FriendshipCreateDTO dto)
@@ -172,6 +178,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
     }
 
+    // Accepts or rejects a friend request
     [HttpPatch]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(FriendshipUpdateDTO dto)
@@ -231,6 +238,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         });
     }
 
+    // Removes a friend or cancels a sent request
     [HttpDelete("{id:long}")]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult> DeleteFriendship(long id)

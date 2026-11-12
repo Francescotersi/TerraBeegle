@@ -1,6 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
-import { form, FormField, required, email, minLength } from '@angular/forms/signals';
+import { form, FormField, required, minLength } from '@angular/forms/signals';
 import { LiquidGlassComponent } from '../../../ui/liquid-glass/liquid-glass.component';
 import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 import { AuthService } from '../../../services/auth.service';
@@ -19,14 +19,14 @@ interface LoginData {
         
         <app-liquid-glass borderRadius="28px" background="rgba(255, 255, 255, 0.22)" [scale]="95">
           <div class="p-4 p-md-5">
-            
-            <!-- Intestazione -->
+
+            <!-- Header -->
             <div class="text-center mb-4">
               <h2 class="h3 fw-bold text-dark mb-1">Welcome back</h2>
               <p class="text-secondary small mb-0">Login to your TerraBeegle account!</p>
             </div>
 
-            <!-- Form reattivo con Signal Forms -->
+            <!-- Reactive form with Signal Forms -->
             <form (submit)="$event.preventDefault(); onSubmit()">
               
               <div class="mb-3">
@@ -53,7 +53,7 @@ interface LoginData {
                 <div class="d-flex justify-content-between align-items-center mb-1">
                   <label for="password" class="form-label fw-semibold small text-dark mb-0">Password</label>
                   <a routerLink="/forgot-password" class="small text-decoration-none glass-link">
-                   Forgot Password?
+                    Forgot Password?
                   </a>
                 </div>
                 <input
@@ -66,12 +66,12 @@ interface LoginData {
                 />
                 @if (loginForm.password().invalid() && loginForm.password().touched()) {
                   <div class="invalid-feedback fw-medium">
-                    Password must be at least 6 characters long.
+                    Password must be at least 8 characters long.
                   </div>
                 }
               </div>
 
-              <!-- Errore credenziali -->
+              <!-- Credentials error -->
               @if (errorMessage()) {
                 <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
                   {{ errorMessage() }}
@@ -85,7 +85,6 @@ interface LoginData {
               >
                 @if (isLoading()) {
                   <app-spinner size="btn" />
-                  <span>Logging in...</span>
                 } @else {
                   <span>Login</span>
                 }
@@ -107,6 +106,11 @@ interface LoginData {
     </div>
   `,
   styles: `
+    :host {
+      display: block;
+      width: 100%;
+    }
+
     .min-vh-75 {
       min-height: 75vh;
     }
@@ -120,6 +124,7 @@ interface LoginData {
       border-radius: 12px;
       padding: 0.65rem 0.9rem;
       transition: all 0.25s ease;
+      box-shadow: none !important;
     }
 
     .glass-input::placeholder {
@@ -129,9 +134,9 @@ interface LoginData {
     .glass-input:focus {
       background: var(--tb-input-bg-focus);
       border-color: var(--tb-accent);
-      box-shadow: 0 0 0 4px var(--tb-accent-glow);
       color: var(--tb-text);
       outline: none;
+      box-shadow: none !important;
     }
 
     .glass-btn {
@@ -139,12 +144,13 @@ interface LoginData {
       border: 1px solid var(--tb-glass-border);
       border-radius: 12px;
       transition: all 0.25s ease;
+      box-shadow: none !important;
     }
 
     .glass-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px var(--tb-btn-gradient-shadow) !important;
       background: var(--tb-btn-gradient-hover);
+      box-shadow: none !important;
     }
 
     .glass-btn:disabled {
@@ -165,7 +171,7 @@ interface LoginData {
 })
 export class LogInUser {
   protected readonly isLoading = signal(false);
-  protected readonly errorMessage = signal<string | null>(null)
+  protected readonly errorMessage = signal<string | null>(null);
   protected readonly authService = inject(AuthService);
   protected readonly router = inject(Router);
 
@@ -175,11 +181,11 @@ export class LogInUser {
   });
 
   protected readonly loginForm = form(this.loginModel, (schema) => {
-    required(schema.identifier, {message: 'Insert Email or Username'});
-    minLength(schema.identifier, 1, {message: 'Insert Email or Username'});
+    required(schema.identifier, { message: 'Insert Email or Username' });
+    minLength(schema.identifier, 1, { message: 'Insert Email or Username' });
 
-    required(schema.password, {message: 'Password is required'});
-    minLength(schema.password, 8, {message: 'Password must be at least 8 characters long'});
+    required(schema.password, { message: 'Password is required' });
+    minLength(schema.password, 8, { message: 'Password must be at least 8 characters long' });
   });
 
   protected onSubmit(): void {
@@ -187,25 +193,63 @@ export class LogInUser {
       return;
     }
     const data = this.loginModel();
-    console.log('Dati di login pronti per il backend .NET:', data);
-    
+
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.authService.login({
-      emailOrUsername: data.identifier,
-      password: data.password
-    }).subscribe({
-      next: (response) => {
-        this.isLoading.set(false);
-        console.log('Login was successful', response);
-        console.log('Dati utente:', response.user);
-        this.router.navigate(['/']);
-      },
-      error: (error) => {
-        this.isLoading.set(false);
-        this.errorMessage.set(error.error?.detail || 'Login failed. Please check your credentials.');
-        console.error('Login error:', error);
-      }
-    });
+
+    this.authService
+      .login({
+        emailOrUsername: data.identifier,
+        password: data.password,
+      })
+      .subscribe({
+        next: (response) => {
+          this.isLoading.set(false);
+
+          // If the backend asks for 2FA:
+          if (response.requires2FA && response.challengeToken) {
+            this.authService.setOtpContext({
+              type: '2fa',
+              challengeToken: response.challengeToken,
+              message: 'A security code has been sent to your email.',
+            });
+            this.router.navigate(['/otp'], {
+              state: {
+                type: '2fa',
+                challengeToken: response.challengeToken,
+                message: 'A security code has been sent to your email.',
+              }
+            });
+            return;
+          }
+
+          // Without 2FA the user is already authenticated
+          this.router.navigate(['/']);
+        },
+        error: (error) => {
+          this.isLoading.set(false);
+
+          // If the email is not verified (403 Forbidden):
+          if (error.status === 403) {
+            this.authService.setOtpContext({
+              type: 'email-verification',
+              emailOrUsername: data.identifier,
+              password: data.password,
+              message: 'Your email is not verified yet. Enter the 8-character code sent to your email.',
+            });
+            this.router.navigate(['/otp'], {
+              state: {
+                type: 'email-verification',
+                emailOrUsername: data.identifier,
+                password: data.password,
+                message: 'Your email is not verified yet. Enter the 8-character code sent to your email.',
+              }
+            });
+            return;
+          }
+
+          this.errorMessage.set(error.error?.detail || error.error || 'Login failed. Please check your credentials.');
+        },
+      });
   }
 }

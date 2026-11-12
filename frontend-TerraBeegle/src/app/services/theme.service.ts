@@ -1,7 +1,8 @@
 import { signal, Injectable, inject, PLATFORM_ID, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Theme } from '../models-services/user.model';
 
-export type Theme = 'light' | 'dark';
+export type { Theme };
 
 @Injectable({
 	providedIn: 'root',
@@ -17,6 +18,7 @@ export class ThemeService {
 			if (isPlatformBrowser(this.platformId)) {
 				document.documentElement.setAttribute('data-bs-theme', theme);
 				localStorage.setItem(this.STORAGE_KEY, theme);
+				this.updateFavicon(theme);
 			}
 		});
 	}
@@ -27,6 +29,23 @@ export class ThemeService {
 	
 	setTheme(theme: Theme): void {
 		this.currentTheme.set(theme);
+	}
+
+	private updateFavicon(theme: Theme): void {
+		const targetHref = theme === 'dark' ? 'Logo-dark.ico' : 'Logo.ico';
+		let favicon = (document.getElementById('app-favicon') as HTMLLinkElement | null)
+			?? document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+
+		if (favicon) {
+			favicon.href = targetHref;
+		} else {
+			favicon = document.createElement('link');
+			favicon.id = 'app-favicon';
+			favicon.rel = 'icon';
+			favicon.type = 'image/x-icon';
+			favicon.href = targetHref;
+			document.head.appendChild(favicon);
+		}
 	}
 
 	private getInitialTheme(): Theme {

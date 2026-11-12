@@ -1,14 +1,15 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, inject, computed, signal, OnDestroy } from '@angular/core';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 import { AuthService } from '../../services/auth.service';
 import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileStatisticsComponent } from './profile-statistics.component';
-// import { ProfileFriendlistComponent } from './profile-friendlist.component';
-import { ProfileSettingsComponent } from './profile-settings.component';
+import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendlist.component';
+import { ProfileSettingsComponent } from './profile-settings/profile-settings.component';
+import { DogAnimation, DogComponent } from '../../ui/dog/dog.component';
 
-// da fare tasto modify profile 
-// grafico a torta per i generidi giochi piu giocati
+// TODO: "modify profile" button
+// pie chart with the most played game genres
 // tre pulsanti 1) settings 3) statistics
 //              |
 //              |- 2) modify profile publics data 
@@ -25,8 +26,9 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
     logoutPopupComponent,
     ProfileDetailsComponent,
     ProfileStatisticsComponent,
-    // ProfileFriendlistComponent,
+    ProfileFriendlistComponent,
     ProfileSettingsComponent,
+    DogComponent,
   ],
   template: `
     <div class="container-fluid px-3 px-md-4 px-xl-5">
@@ -63,7 +65,8 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                 </div>
 
                 <!-- DETAILS | STATISTICS | FRIENDLIST | SETTINGS -->
-                <div class="profile-tabs-nav d-flex align-items-center gap-3 gap-sm-4 pb-2 mb-4 border-bottom border-secondary border-opacity-25">
+                <div class="profile-tabs-layout mb-4">
+                  <div class="profile-tabs-nav d-flex align-items-center gap-3 gap-sm-4 pb-2 border-bottom border-secondary border-opacity-25">
                   <button
                     type="button"
                     class="profile-tab-btn"
@@ -88,14 +91,31 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                   >
                     FRIENDLIST
                   </button>
-                  <button
-                    type="button"
-                    class="profile-tab-btn"
-                    [class.active]="activeTab() === 'settings'"
-                    (click)="setTab('settings')"
-                  >
-                    SETTINGS
-                  </button>
+                    <div class="settings-dog-zone">
+                      <button
+                        type="button"
+                        class="profile-tab-btn"
+                        [class.active]="activeTab() === 'settings'"
+                        (click)="setTab('settings')"
+                      >
+                        SETTINGS
+                      </button>
+                      <div class="dog-track" aria-hidden="true">
+                        <div
+                          class="dog-run"
+                          [class.at-end]="dogAtEnd()"
+                          [class.reversed]="dogDirection() === 'left'"
+                          [class.husky]="user()?.dogCompanion === 'Husky'"
+                        >
+                          <app-dog
+                            [dog]="user()?.dogCompanion ?? 'Beagle'"
+                            [animation]="dogAnimation()"
+                            [size]="84"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Central Content Area -->
@@ -108,7 +128,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                       <app-profile-statistics />
                     }
                     @case ('friendlist') {
-                      <!-- <app-profile-friendlist /> -->
+                      <app-profile-friendlist />
                     }
                     @case ('settings') {
                       <app-profile-settings />
@@ -117,7 +137,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                 </div>
 
                 <!-- Footer -->
-                <div class="d-flex justify-content-end pt-3 mt-4 border-top border-secondary border-opacity-25">
+                <div class="profile-footer pt-3 mt-4 border-top border-secondary border-opacity-25">
                   <button
                     type="button"
                     class="logout-link"
@@ -150,6 +170,10 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       width: 100%;
     }
 
+    :host-context([data-bs-theme="light"]) .profile-page-wrapper {
+      filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.12));
+    }
+
     .tracking-wide {
       letter-spacing: 0.05em;
     }
@@ -170,13 +194,18 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       overflow: hidden;
     }
 
+    :host-context([data-bs-theme="light"]) .avatar-circle {
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+      border: 3px solid #ffffff;
+    }
+
     .avatar-img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    /* Tabs di navigazione */
+    /* Navigation tabs */
     .profile-tabs-nav {
       overflow-x: auto;
       white-space: nowrap;
@@ -185,6 +214,11 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
 
     .profile-tabs-nav::-webkit-scrollbar {
       display: none;
+    }
+
+    :host-context([data-bs-theme="light"]) .profile-tabs-nav,
+    :host-context([data-bs-theme="light"]) .profile-wrapper .border-secondary {
+      border-color: rgba(51, 65, 85, 0.35) !important;
     }
 
     .profile-tab-btn {
@@ -219,6 +253,48 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       border-radius: 3px 3px 0 0;
     }
 
+    .profile-tabs-layout {
+      position: relative;
+    }
+
+    @media (min-width: 576px) {
+      .profile-tabs-nav {
+        overflow: visible;
+      }
+    }
+
+    .settings-dog-zone {
+      position: relative;
+      flex: 1;
+      align-self: stretch;
+    }
+
+    @media (max-width: 575.98px) {
+      .profile-tabs-layout .dog-track {
+        display: none;
+      }
+
+      .profile-tabs-nav {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem !important;
+        overflow-x: visible;
+        white-space: normal;
+      }
+
+      .profile-tab-btn {
+        width: 100%;
+        padding: 0.6rem 0.35rem;
+        text-align: center;
+      }
+
+      .profile-tab-btn.active::after {
+        bottom: 0;
+        left: 15%;
+        right: 15%;
+      }
+    }
+
     .profile-tab-content {
       min-height: 180px;
     }
@@ -236,13 +312,67 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       transition: color 0.2s ease, opacity 0.2s ease;
     }
 
+    .profile-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .dog-track {
+      position: absolute;
+      left: 5rem;
+      right: 0;
+      bottom: -24px;
+      width: auto;
+      height: 84px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .dog-run {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 84px;
+      height: 84px;
+      display: flex;
+      transition: left 6s linear;
+    }
+
+    .dog-run.husky {
+      top: -14px;
+    }
+
+    .dog-run.at-end {
+      left: calc(100% - 84px);
+    }
+
+    .dog-run.reversed {
+      transform: scaleX(-1);
+    }
+
+    .dog-run app-dog {
+      --dog-size: 84px;
+    }
+
+    .profile-footer .logout-link {
+      align-self: flex-end;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dog-run {
+        left: 0;
+        transform: scaleX(1);
+        transition: none;
+      }
+    }
+
     .logout-link:hover {
       color: #b91c1c;
       opacity: 0.85;
     }
   `,
 })
-export class ProfilePageComponent {
+export class ProfilePageComponent implements OnDestroy {
   protected readonly authService = inject(AuthService);
 
   protected readonly user = computed(() => this.authService.currentUser());
@@ -250,6 +380,10 @@ export class ProfilePageComponent {
   protected readonly activeTab = signal<ProfileTab>('details');
 
   protected readonly isLogoutModalOpen = signal(false);
+  protected readonly dogAnimation = signal<DogAnimation>('idle');
+  protected readonly dogAtEnd = signal(false);
+  protected readonly dogDirection = signal<'left' | 'right'>('right');
+  private dogTimer: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly userInitials = computed(() => {
     const u = this.user();
@@ -261,6 +395,39 @@ export class ProfilePageComponent {
 
   protected setTab(tab: ProfileTab): void {
     this.activeTab.set(tab);
+  }
+
+  ngOnInit(): void {
+    this.scheduleDogWalk('end');
+  }
+
+  ngOnDestroy(): void {
+    if (this.dogTimer) {
+      clearTimeout(this.dogTimer);
+    }
+  }
+
+  private scheduleDogWalk(target: 'start' | 'end'): void {
+    this.dogAnimation.set('walk');
+    this.dogAtEnd.set(target === 'end');
+    this.dogTimer = setTimeout(() => this.handleDogEndpoint(target), 6000);
+  }
+
+  private handleDogEndpoint(endpoint: 'start' | 'end'): void {
+    const nextTarget = endpoint === 'end' ? 'start' : 'end';
+
+    this.dogAnimation.set('idle');
+    this.dogTimer = setTimeout(() => {
+      this.dogAnimation.set('sit');
+      this.dogTimer = setTimeout(() => {
+        this.dogDirection.set(nextTarget === 'end' ? 'right' : 'left');
+        this.dogAnimation.set('sit');
+        this.dogTimer = setTimeout(() => {
+          this.dogAnimation.set('idle');
+          this.dogTimer = setTimeout(() => this.scheduleDogWalk(nextTarget), 1000);
+        }, 1000);
+      }, 1000);
+    }, 1000);
   }
 
   protected openLogoutModal(): void {

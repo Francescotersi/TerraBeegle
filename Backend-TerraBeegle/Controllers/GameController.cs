@@ -14,6 +14,7 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/games")]
 public class GameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
+    // Searches RAWG games with filters, sorting and pagination
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {

@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<LoginChallenge> LoginChallenges => Set<LoginChallenge>();
 
+    // Configures tables, columns, keys and relationships
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // USERS
@@ -52,6 +53,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasConversion<string>()
                 .HasMaxLength(10)
                 .HasDefaultValue(UserTheme.Light);
+
+            e.Property(u => u.DogCompanion)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(DogCompanion.Beagle);
 
             e.Property(u => u.CreatedAt)
                 .HasDefaultValueSql("NOW()");
