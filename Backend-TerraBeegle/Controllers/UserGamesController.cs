@@ -13,6 +13,7 @@ using Backend_TerraBeegle.RateLimiting;
 using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Linq.Expressions;
+using static Backend_TerraBeegle.Utils;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -27,7 +28,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] PaginationDTO pagination)
     {
-        var viewerId = Utils.GetCurrentUserId(User);
+        var viewerId = GetCurrentUserId(User);
         if (viewerId is null)
         {
             return Unauthorized();
@@ -60,7 +61,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
                 .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             games,
             totalCount,
             pagination,
@@ -74,7 +75,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
     // [HttpPost("{ApiGameId:int}")]
     // public async Task<IActionResult> AddGameToFavorites(long userId, int ApiGameId)
     // {
-    //     if (!Utils.IsCurrentUser(User, userId))
+    //     if (!IsCurrentUser(User, userId))
     //         return Forbid();
 
     //     Game? game;
@@ -119,7 +120,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
     [HttpDelete("{ApiGameId:int}")]
     public async Task<IActionResult> DeleteGameFromFavorites(long userId, int ApiGameId)
     {
-        if(!Utils.IsCurrentUser(User, userId))
+        if(!IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
@@ -163,7 +164,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] PaginationDTO pagination)
     {
-        var viewerId = Utils.GetCurrentUserId(User);
+        var viewerId = GetCurrentUserId(User);
         if (viewerId is null)
         {
             return Unauthorized();
@@ -195,7 +196,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
                 .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             games,
             totalCount,
             pagination,
@@ -209,7 +210,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
     // [HttpPost("{ApiGameId:int}")]
     // public async Task<IActionResult> AddGameToWishlist(long userId, int ApiGameId)
     // {
-    //     if (!Utils.IsCurrentUser(User, userId))
+    //     if (!IsCurrentUser(User, userId))
     //         return Forbid();
 
     //     Game? game;
@@ -254,7 +255,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
     [HttpDelete("{ApiGameId:int}")]
     public async Task<IActionResult> DeleteGameFromWishlist(long userId, int ApiGameId)
     {
-        if(!Utils.IsCurrentUser(User, userId))
+        if(!IsCurrentUser(User, userId))
             return Forbid();
 
         var user = await db.Users
@@ -286,7 +287,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
         string listName,
         string actionName)
     {
-        var viewerId = Utils.GetCurrentUserId(User);
+        var viewerId = GetCurrentUserId(User);
         if (viewerId is null)
         {
             return Unauthorized();
@@ -391,7 +392,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
                 .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             items,
             totalCount,
             pagination,

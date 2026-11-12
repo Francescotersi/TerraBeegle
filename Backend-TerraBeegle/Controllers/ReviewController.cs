@@ -8,6 +8,7 @@ using Backend_TerraBeegle.Services;
 using Backend_TerraBeegle.Models;
 using Backend_TerraBeegle.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using static Backend_TerraBeegle.Utils;
 
 using Mapster;
 
@@ -42,7 +43,7 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
                 .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             reviews,
             totalCount,
             pagination,
@@ -80,7 +81,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
                 .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             reviews,
             totalCount,
             pagination,
@@ -98,7 +99,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     //         return BadRequest("Rating must be between 1 and 5.");
     //     }
 
-    //     var currentUserId = Utils.GetCurrentUserId(User);
+    //     var currentUserId = GetCurrentUserId(User);
     //     if (currentUserId is null)
     //     {
     //         return Unauthorized("User ID not found in token.");
@@ -157,7 +158,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     [HttpPatch]
     public async Task<ActionResult<ReviewResponseDTO>> UpdateReview(int gameId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
     {
-        var currentUserId = Utils.GetCurrentUserId(User);
+        var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -204,7 +205,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteReview(int gameId, long id)
     {
-        var currentUserId = Utils.GetCurrentUserId(User);
+        var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
         {
             return Unauthorized("User ID not found in token.");

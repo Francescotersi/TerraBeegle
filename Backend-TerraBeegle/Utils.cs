@@ -1,13 +1,10 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 using Backend_TerraBeegle.DTOS;
-using Backend_TerraBeegle.Data;
-using Microsoft.EntityFrameworkCore;
-using Mapster;
 
-namespace Backend_TerraBeegle.Controllers;
+namespace Backend_TerraBeegle;
 
-public static class Utils
+public class Utils
 {
     public static bool IsCurrentUser(ClaimsPrincipal user, long id)
     {
@@ -60,4 +57,6 @@ public static class Utils
 
         return data.ToUnixTimeSeconds();
     }
+
+    
 }

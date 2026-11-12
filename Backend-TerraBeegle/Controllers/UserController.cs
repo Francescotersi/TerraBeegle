@@ -13,6 +13,7 @@ using Npgsql;
 using Mapster;
 using Backend_TerraBeegle.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using static Backend_TerraBeegle.Utils;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -39,7 +40,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             users,
             totalCount,
             pagination,
@@ -57,11 +58,11 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
 
         // Case-insensitive: both sides in lower case ("vlad" finds "Vlad").
-        var term = username.Trim().ToLowerInvariant();
+        var term = username.Trim();
 
         // One filter for both the count and the page, so TotalCount always matches the list.
         // Only users with confirmed emails
-        var query = db.Users.Where(u => u.Username.ToLower().StartsWith(term) && u.EmailVerified);
+        var query = db.Users.Where(u => EF.Functions.ILike(u.Username, $"{term}%") && u.EmailVerified);
 
         // No 404 when nothing is found: an empty list (200) is a normal result for a search
         var totalCount = await query.CountAsync();
@@ -73,7 +74,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
             .ProjectToType<UserPublicResponseDTO>()
             .ToListAsync();
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             users,
             totalCount,
             pagination,
@@ -98,7 +99,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpGet("{username}/profile")]
     public async Task<ActionResult<UserResponseDTO>> GetProfile(string username)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -117,7 +118,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPatch]
     public async Task<ActionResult<UserResponseDTO>> ModifyUser([FromBody] UpdateUserDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -139,7 +140,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
         // Empty ImageProfile is for removing the picture
         if (dto.ImageProfile is not null && !string.IsNullOrWhiteSpace(dto.ImageProfile) 
-            && !Utils.IsHttpUrl(dto.ImageProfile.Trim()))
+            && !IsHttpUrl(dto.ImageProfile.Trim()))
             ModelState.AddModelError(nameof(dto.ImageProfile), "Image profile must be a valid http or https URL.");
 
         if (dto.Theme is not null && !Enum.IsDefined(dto.Theme.Value))
@@ -193,7 +194,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPatch("password")]
     public async Task<ActionResult> ChangePassword(UpdatePasswordDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -219,7 +220,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPatch("email")]
     public async Task<ActionResult> ChangeEmail(UpdateEmailDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -263,7 +264,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [HttpPost("email/confirm")]
     public async Task<ActionResult> ConfirmNewEmail(ConfirmEmailDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -319,7 +320,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     
     private async Task<ActionResult> HandleTwoFactor(TwoFactorDTO twoFactorDTO, bool enable)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -357,7 +358,7 @@ public class UserController(AppDbContext db, IPasswordHasher<User> passwordHashe
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete]
     public async Task<ActionResult> DeleteUser() {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");

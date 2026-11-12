@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
 using Backend_TerraBeegle.Services;
+using static Backend_TerraBeegle.Utils;
 
 using Mapster;
 
@@ -30,10 +31,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             pagination += $"limit {search.PageSize.Value};";
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
-        {
-            var sortby = search.SortBy.Trim().ToLowerInvariant();
-            pagination += $"sort {(sortby == "critic_rating" ? "aggregated_rating" : sortby)} {(search.Ascending ? "asc" : "desc")};";
-        }
+            pagination += $"sort {(search.SortBy == "critic_rating" ? "aggregated_rating" : search.SortBy)} {(search.Ascending ? "asc" : "desc")};";
 
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
@@ -76,10 +74,10 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             query += GetQuery("website.type", search.Stores, search.StoresExact);
 
         if (search.ReleaseYearMin.HasValue)
-            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMin.Value, true), true);
+            query += GetQueryInt("first_release_date", YearToUnixTimestamp(search.ReleaseYearMin.Value, true), true);
 
         if (search.ReleaseYearMax.HasValue)
-            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMax.Value, false), false);
+            query += GetQueryInt("first_release_date", YearToUnixTimestamp(search.ReleaseYearMax.Value, false), false);
 
         if (search.RatingMin.HasValue)
             query += GetQueryInt("rating", search.RatingMin.Value, true);
@@ -145,7 +143,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ProjectToType<GameDetailsDTO>()
             .ToListAsync();
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             games,
             await db.Games.CountAsync(),
             pagination,
