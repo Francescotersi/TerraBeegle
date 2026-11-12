@@ -84,8 +84,8 @@ public record GameSearchDTO
 
     // Name search
     public string? Name { get; init; }
-        public bool SearchExact { get; init; } = false;
-        public bool SearchStartExact { get; init; } = false;
+    public bool SearchExact { get; init; } = false;
+    public bool SearchStartExact { get; init; } = false;
     public bool CaseSensitive { get; init; } = false;
 
     // Platforms
@@ -131,7 +131,8 @@ public record GameSearchDTO
 
     // Minimum number of user votes, so a game rated 100 by 2 people does not top the list
     [Range(0, 1000000)]
-    public int? MinRatingCount { get; init; }
+    public int? MinRatingCount { get; init; } = 25;
+    public int? MinCriticRatingCount { get; init; } = 5;
 
     // PEGI Ratings
     [Range(8, 12, ErrorMessage = "PEGI rating must be between 8 and 12.")]

@@ -60,6 +60,4 @@ public class Utils
 
         return data.ToUnixTimeSeconds();
     }
-
-    
 }
