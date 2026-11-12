@@ -86,7 +86,7 @@ export class FavoritePageComponent implements OnInit {
     this.wishlistFavoritesService.getFavorites().subscribe({
       next: (response) => {
         const mappedGames =
-          response?.results?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
+          response?.items?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
         this.favoriteGames.set(mappedGames);
         this.isLoading.set(false);
       },

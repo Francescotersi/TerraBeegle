@@ -22,6 +22,7 @@ public record UserResponseDTO
     public string? ImageProfile { get; init; }
     public string Username { get; init; } = string.Empty;
     public UserTheme Theme { get; init; }
+    public DogCompanion DogCompanion { get; init; }
 }
 
 public record UpdateUserDTO
@@ -37,6 +38,7 @@ public record UpdateUserDTO
     public string? FamilyName { get; init; }
     public string? ImageProfile { get; init; }
     public UserTheme? Theme { get; init; }
+    public DogCompanion? DogCompanion { get; init; }
 }
 
 public record UpdateEmailDTO

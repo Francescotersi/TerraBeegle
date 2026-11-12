@@ -14,14 +14,16 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/games")]
 public class GameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
-    // Searches RAWG games with filters, sorting and pagination
+    // Searches IGDB games with filters, sorting and pagination
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
         string pagination = "";
 
-        static string GetBrackets(int values, bool all, bool open) => values <= 1 ? "" : all ? (open ? "(" : ")") : (open ? "[" : "]");
+        // Always brackets: "platforms = 167" means "exactly [167]" at IGDB (only PS5 exclusives), "platforms = (167)"
+        // means "contains 167". (...) = at least one of the values, [...] = all of them
+        static string GetBrackets(int values, bool all, bool open) => all ? (open ? "(" : ")") : (open ? "[" : "]");
         static string GetQuery (string field, int[] values, bool all) => $"{field}={GetBrackets(values.Length, all, true)}{string.Join(",", values)}{GetBrackets(values.Length, all, false)} &";
         static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
 
@@ -32,18 +34,29 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             pagination += $"limit {search.PageSize.Value};";
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
-            pagination += $"sort {(search.SortBy == "critic_rating" ? "aggregated_rating" : search.SortBy)} {(search.Ascending ? "asc" : "desc")};";
+        {
+            var sortby = search.SortBy.Trim().ToLowerInvariant();
+            var igdbField = sortby switch
+            {
+                "critic_rating" => "aggregated_rating",
+                "released" => "first_release_date",
+                _ => sortby
+            };
+            pagination += $"sort {igdbField} {(search.Ascending ? "asc" : "desc")};";
+        }
 
         if (!string.IsNullOrWhiteSpace(search.Name))
         {
             var opr = search.CaseSensitive ? '=' : '~';
+            // Escaped, so a " in the name cannot close the string and add other conditions to the IGDB query
+            var name = search.Name.Trim().Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             if (search.SearchExact)
-                query += $"name{opr}\"{search.Name.Trim()}\" &";
+                query += $"name{opr}\"{name}\" &";
             else if (search.SearchStartExact)
-                query += $"name{opr}\"{search.Name.Trim()}*\" &";
+                query += $"name{opr}\"{name}\"* &";
             else
-                query += $"name{opr}*\"{search.Name.Trim()}*\" &";
+                query += $"name{opr}*\"{name}\"* &";
         }
 
         if (search.PlatformsFamily is { Length: > 0 } && search.Platforms is { Length: > 0 }) {
@@ -86,11 +99,17 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.RatingMax.HasValue)
             query += GetQueryInt("rating", search.RatingMax.Value, false);
 
+        if (search.MinRatingCount.HasValue)
+            query += GetQueryInt("rating_count", search.MinRatingCount.Value, true);
+
         if (search.CriticRatingMin.HasValue)
             query += GetQueryInt("aggregated_rating", search.CriticRatingMin.Value, true);
 
         if (search.CriticRatingMax.HasValue)
             query += GetQueryInt("aggregated_rating", search.CriticRatingMax.Value, false);
+
+        if (search.MinCriticRatingCount.HasValue)
+            query += GetQueryInt("aggregated_rating_count", search.MinCriticRatingCount.Value, true);
 
         if (search.GameType is { Length: > 0 })
             query += GetQuery("game_type", search.GameType, false);
@@ -98,7 +117,15 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         if (search.PegiRating is { Length: > 0 })
             query += GetQuery("age_ratings.rating_category", search.PegiRating, false);
 
-        var result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+        GameSearchResponseDTO? result;
+        try
+        {
+            result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
         if (result is null)
         {
@@ -150,6 +177,44 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             pagination,
             page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
+    }
+
+    [HttpGet("coming-soon")]
+    public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetComingSoon([FromQuery] PaginationDTO pagination)
+    {
+        var query = $"first_release_date > {DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" +
+            $"& first_release_date < {DateTimeOffset.UtcNow.AddYears(1).ToUnixTimeSeconds()}";
+        var paginationQuery = $"offset {(pagination.Page - 1) * pagination.PageSize};" +
+            $"limit {pagination.PageSize}; sort first_release_date asc;";
+
+        GameSearchResponseDTO? result;
+        try
+        {
+            result = await ApiService.SearchGamesAsync(query, paginationQuery);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
+
+        if (result is null)
+        {
+            return StatusCode(503,"External API is unavailable.");
+        }
+
+        int page = pagination.Page;
+        int pageSize = pagination.PageSize;
+
+        return Ok(new PagedResponseDTO<GameCardDTO>
+        {
+            Items = [.. result.Results],
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = result.Count,
+            TotalPages = (int)Math.Ceiling((double)result.Count / pageSize),
+            PreviousPageUrl = page > 1 ? PageUrl(page - 1) : null,
+            NextPageUrl = page * pageSize < result.Count ? PageUrl(page + 1) : null,
+        });
     }
 
 	// searching by the IGDB id the same one used for the IGDB request below

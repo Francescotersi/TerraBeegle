@@ -1,0 +1,137 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { NavigationEnd, ParamMap, Params, Router } from '@angular/router';
+import { filter } from 'rxjs';
+import { GameSearchParams } from '../models-services/game.model';
+
+export type CatalogSortBy = 'rating' | 'released' | 'name' | 'critic_rating';
+
+// Everything the catalog can be filtered by; it lives in the URL (/?genres=12&platforms=6&sort=released...)
+export interface CatalogFilters {
+  search: string;
+  genres: number[];
+  platforms: number[];
+  yearMin: number | null;
+  yearMax: number | null;
+  ratingMin: number | null; // user rating out of 10 (IGDB uses 0-100)
+  criticMin: number | null; // critic score 0-100
+  sortBy: CatalogSortBy;
+  ascending: boolean;
+}
+
+const DEFAULT_SORT: CatalogSortBy = 'rating';
+const SORT_OPTIONS: CatalogSortBy[] = ['rating', 'released', 'name', 'critic_rating'];
+export const MIN_YEAR = 1950;
+export const MAX_YEAR = new Date().getFullYear() + 2;
+
+// Reads and writes the catalog filters in the URL; used by the sidebar (writes) and the catalog page (reads)
+@Injectable({ providedIn: 'root' })
+export class CatalogFiltersService {
+  private readonly router = inject(Router);
+
+  // Filters of the current URL, updated after every navigation
+  readonly filters = signal<CatalogFilters>(this.parse(this.router.routerState.snapshot.root.queryParamMap));
+
+  constructor() {
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
+      this.filters.set(this.parse(this.router.routerState.snapshot.root.queryParamMap));
+    });
+  }
+
+  // URL query params -> filters (invalid values are ignored)
+  parse(params: ParamMap): CatalogFilters {
+    const ids = (key: string) =>
+      params.getAll(key).map(Number).filter((id) => Number.isInteger(id) && id > 0);
+    const year = (key: string) => {
+      const value = Number(params.get(key));
+      return Number.isInteger(value) && value >= MIN_YEAR && value <= MAX_YEAR ? value : null;
+    };
+    const range = (key: string, max: number) => {
+      const value = Number(params.get(key));
+      return params.has(key) && Number.isFinite(value) && value > 0 && value <= max ? value : null;
+    };
+    const sort = params.get('sort') as CatalogSortBy | null;
+
+    return {
+      search: params.get('search')?.trim() ?? '',
+      genres: ids('genres'),
+      platforms: ids('platforms'),
+      yearMin: year('yearMin'),
+      yearMax: year('yearMax'),
+      ratingMin: range('rating', 10),
+      criticMin: range('critic', 100),
+      sortBy: sort && SORT_OPTIONS.includes(sort) ? sort : DEFAULT_SORT,
+      ascending: params.get('asc') === 'true',
+    };
+  }
+
+  // True when something narrows the results (the search text and the sorting do not count)
+  hasFilters(filters: CatalogFilters): boolean {
+    return (
+      filters.genres.length > 0 ||
+      filters.platforms.length > 0 ||
+      filters.yearMin !== null ||
+      filters.yearMax !== null ||
+      filters.ratingMin !== null ||
+      filters.criticMin !== null
+    );
+  }
+
+  // Filters -> parameters for GET /api/games
+  toSearchParams(filters: CatalogFilters, page: number, pageSize: number): GameSearchParams {
+    // The years can be typed in the wrong order (2024 -> 2020)
+    const [yearMin, yearMax] =
+      filters.yearMin !== null && filters.yearMax !== null && filters.yearMin > filters.yearMax
+        ? [filters.yearMax, filters.yearMin]
+        : [filters.yearMin, filters.yearMax];
+
+    return {
+      page,
+      pageSize,
+      name: filters.search || undefined,
+      genres: filters.genres.length ? filters.genres : undefined,
+      platforms: filters.platforms.length ? filters.platforms : undefined,
+      releaseYearMin: yearMin ?? undefined,
+      releaseYearMax: yearMax ?? undefined,
+      ratingMin: filters.ratingMin !== null ? filters.ratingMin * 10 : undefined,
+      criticRatingMin: filters.criticMin ?? undefined,
+      sortBy: filters.sortBy,
+      ascending: filters.ascending,
+      // Without a minimum, "top rated" starts with unknown games rated 100 by 2 people.
+      // Home: well-known games only; with filters a lower minimum, so small platforms still have results;
+      // a search by name returns every match
+      minRatingCount: filters.search ? undefined : this.hasFilters(filters) ? 10 : 300,
+    };
+  }
+
+  // Changes some filters and opens the catalog with them (the other filters stay)
+  update(changes: Partial<CatalogFilters>): void {
+    const next = { ...this.filters(), ...changes };
+    this.router.navigate(['/'], { queryParams: this.toQueryParams(next) });
+  }
+
+  // Adds the id if it is not selected, removes it otherwise
+  toggle(key: 'genres' | 'platforms', id: number): void {
+    const current = this.filters()[key];
+    this.update({ [key]: current.includes(id) ? current.filter((value) => value !== id) : [...current, id] });
+  }
+
+  // Removes every filter, keeps the search text and the sorting
+  clear(): void {
+    this.update({ genres: [], platforms: [], yearMin: null, yearMax: null, ratingMin: null, criticMin: null });
+  }
+
+  // Default values are left out, so the URL stays short
+  private toQueryParams(filters: CatalogFilters): Params {
+    return {
+      search: filters.search || null,
+      genres: filters.genres.length ? filters.genres : null,
+      platforms: filters.platforms.length ? filters.platforms : null,
+      yearMin: filters.yearMin,
+      yearMax: filters.yearMax,
+      rating: filters.ratingMin,
+      critic: filters.criticMin,
+      sort: filters.sortBy === DEFAULT_SORT ? null : filters.sortBy,
+      asc: filters.ascending ? true : null,
+    };
+  }
+}

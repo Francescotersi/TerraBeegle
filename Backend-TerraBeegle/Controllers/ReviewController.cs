@@ -178,8 +178,12 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
 
         if (review.UserId != currentUserId.Value)
         {
-            return Forbid("You can only update your own reviews.");
+            // Forbid("...") expects an authentication scheme name, not a message (it gave 500), so StatusCode(403, ...)
+            return StatusCode(StatusCodes.Status403Forbidden, "You can only update your own reviews.");
         }
+
+        // The rating is required and already validated by [Range] on the DTO
+        review.Rating = reviewUpdateDTO.Rating;
 
         if (reviewUpdateDTO.Content != null)
         {
@@ -220,7 +224,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
 
         if (review.UserId != currentUserId.Value)
         {
-            return Forbid("You can only delete your own reviews.");
+            return StatusCode(StatusCodes.Status403Forbidden, "You can only delete your own reviews.");
         }
 
         db.Reviews.Remove(review);
