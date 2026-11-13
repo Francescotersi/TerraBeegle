@@ -75,8 +75,7 @@ public record GameSearchDTO
     [Range(1, 50)]
     public int? PageSize { get; init; } = 24;
 
-    // Sorting
-    [StringLength(12)]
+    // Sorting (no StringLength: the regex already allows only these 4 values, and "critic_rating" has 13 characters)
     [RegularExpression(@"^(?i:name|released|rating|critic_rating)$", 
         ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating', or 'critic_rating'.")]
     public string? SortBy { get; init; }
