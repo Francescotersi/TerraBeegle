@@ -8,6 +8,7 @@ using Backend_TerraBeegle.Enums;
 using System.Linq.Expressions;
 using Backend_TerraBeegle.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using static Backend_TerraBeegle.Utils;
 
 using Npgsql;
 using Mapster;
@@ -38,7 +39,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     // Shared logic: lists friendships of one kind, paginated
     private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships([FromQuery] PaginationDTO pagination, string search)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -50,7 +51,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return NotFound("User not found.");
         }
 
-        Expression<Func<Friendship, bool>>? filter = search.ToLowerInvariant() switch
+        Expression<Func<Friendship, bool>>? filter = search switch
         {
             "friends" => f => (f.User1Id == userId || f.User2Id == userId)
                 && f.Status == FriendshipStatus.Accepted,
@@ -87,7 +88,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             friendships, 
             totalCount, 
             pagination, 
@@ -100,7 +101,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(FriendshipCreateDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -182,7 +183,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(FriendshipUpdateDTO dto)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");
@@ -242,7 +243,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     public async Task<ActionResult> DeleteFriendship(long id)
     {
-        var userId = Utils.GetCurrentUserId(User);
+        var userId = GetCurrentUserId(User);
         if (userId is null)
         {
             return Unauthorized("User ID not found in token.");

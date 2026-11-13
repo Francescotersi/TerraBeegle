@@ -12,9 +12,6 @@ public class User
     public string Username { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
     public UserTheme Theme { get; set; } = UserTheme.Light;       // "light" | "dark"
-    public DogCompanion DogCompanion { get; set; } = DogCompanion.Beagle;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public bool EmailVerified { get; set; }
     public string? EmailVerificationCodeHash { get; set; }
@@ -33,4 +30,7 @@ public class User
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<Game> Favorites { get; set; } = [];
     public ICollection<Game> WishlistItems { get; set; } = [];
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

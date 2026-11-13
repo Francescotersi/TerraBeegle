@@ -13,4 +13,7 @@ public class LoginChallenge
     public string CodeHash { get; set; } = null!;
     public DateTime CodeExpiration { get; set; }
     public int CodeAttempts { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

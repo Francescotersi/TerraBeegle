@@ -11,5 +11,5 @@ public class Review
     public long GameId { get; set; }               // IGDB Id
     public Game Game { get; set; } = null!;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // Update is treated as a new review, so we don't need an UpdatedAt field
 }

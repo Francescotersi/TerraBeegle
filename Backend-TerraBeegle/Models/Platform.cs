@@ -11,11 +11,14 @@ public class Platform
     public string Slug { get; set; } = null!;
     public string Abbreviation { get; set; } = null!;
 
-    public long? LogoId { get; set; }
-    public Image? Logo { get; set; }
+    public long? PlatformLogoId { get; set; }
+    public Image? PlatformLogo { get; set; }
 
     public GamePlatformFamily? PlatformFamilyId { get; set; }
     public PlatformFamily? PlatformFamily { get; set; }
 
     public ICollection<Game> Games { get; set; } = [];
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

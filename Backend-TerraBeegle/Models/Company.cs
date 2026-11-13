@@ -7,8 +7,8 @@ public class Company
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
 
-    public long? LogoId { get; set; }
-    public Image? Logo { get; set; }
+    public long? CompanyLogoId { get; set; }
+    public Image? CompanyLogo { get; set; }
 
     public ICollection<Game> PublishedGames { get; set; } = [];
     public ICollection<Game> DevelopedGames { get; set; } = [];

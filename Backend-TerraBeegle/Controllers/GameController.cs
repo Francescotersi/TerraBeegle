@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
 using Backend_TerraBeegle.DTOS;
 using Backend_TerraBeegle.Services;
+using static Backend_TerraBeegle.Utils;
 
 using Mapster;
 
@@ -13,111 +14,127 @@ namespace Backend_TerraBeegle.Controllers;
 [Route("api/games")]
 public class GameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
+    static string CreateFilter (string field, int[] values, bool all) => $"{field}={(all ? "[" : "(")}{string.Join(",", values)}{(all ? "]" : ")")}";
+    
+    static void AddFilterName(string? name, bool caseSensitive, bool searchExact, bool searchStartExact, List<string> filters)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var opr = caseSensitive ? '=' : '~';
+            name = name.Trim().Replace("\\", "\\\\").Replace("\"", "\\\"");  // Escaped, so a " in the name cannot close the string and add other conditions to the IGDB query
+
+            filters.Add((searchExact, searchStartExact) switch
+            {
+                (true, _) => $"name{opr}\"{name}\" &",
+                (_, true) => $"name{opr}\"{name}\"* &",
+                _ => $"name{opr}*\"{name}\"* &"
+            });
+        }
+    }
+
+    static void AddFilterList(string field, int[]? values, bool all, List<string> filters)
+    {
+        if (values is { Length: > 0 })
+            filters.Add(CreateFilter(field, values, all));
+    }
+
+    static void AddFilterPlatform(int[]? platforms, int[]? platformsFamily, bool platformsExact, bool platformsFamilyExact, List<string> filters)
+    {
+        var platformsString = (platformsFamily, platforms) switch
+        {
+            ({ Length: > 0 }, { Length: > 0 }) => $"({CreateFilter("platforms.platform_family", platformsFamily, platformsFamilyExact)} | {CreateFilter("platforms", platforms, platformsExact)})",
+            (_, { Length: > 0 }) => CreateFilter("platforms", platforms, platformsExact),
+            ({ Length: > 0 }, _) => CreateFilter("platforms.platform_family", platformsFamily, platformsFamilyExact),
+            (_, _) => null
+        };
+
+        if (platformsString is not null)
+            filters.Add(platformsString);        
+    }
+
+    static void AddFilterCompany(string field, int[]? values, bool all, List<string> filters)
+    {
+        if (values is { Length: > 0 })
+            filters.Add($"(involved_companies.{field}=true & {CreateFilter("involved_companies.company", values, all)})");
+    }
+    
+    static void AddFilterRange(string field, decimal? min, decimal? max, List<string> filters, bool convertToUnix = false)
+    {
+        if (min is {} MinVal)
+            filters.Add($"{field}>={(convertToUnix ? YearToUnixTimestamp((int)MinVal, true) : MinVal)}");
+        if (max is {} MaxVal)
+            filters.Add($"{field}<={(convertToUnix ? YearToUnixTimestamp((int)MaxVal, false) : MaxVal)}");
+    }
+
+    static void AddPagination(int page, int pageSize, List<string> paginationQuery)
+    {
+        if (page > 1)
+            paginationQuery.Add($"offset {(page - 1) * pageSize};");
+        
+        if (pageSize != 10)
+            paginationQuery.Add($"limit {pageSize};");
+    }
+
+    // Same URL as the current request (same filters, with our parameter names), only with another page
+    string PageUrl(int page)
+    {
+        var parameters = Request.Query
+            .Where(q => !q.Key.Equals("page", StringComparison.OrdinalIgnoreCase))
+            .Select(q => KeyValuePair.Create(q.Key, (string?)q.Value.ToString()))
+            .Append(KeyValuePair.Create("page", (string?)page.ToString()));
+
+        return QueryHelpers.AddQueryString(Request.Path, parameters);
+    }
+
     // Searches IGDB games with filters, sorting and pagination
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
+    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search, [FromQuery] PaginationDTO pagination)
     {
-        string query = "";
-        string pagination = "";
+        List<string> filters = [];
+        List<string> paginationQuery = [];
 
-        // Always brackets: "platforms = 167" means "exactly [167]" at IGDB (only PS5 exclusives), "platforms = (167)"
-        // means "contains 167". (...) = at least one of the values, [...] = all of them
-        static string GetBrackets(int values, bool all, bool open) => all ? (open ? "(" : ")") : (open ? "[" : "]");
-        static string GetQuery (string field, int[] values, bool all) => $"{field}={GetBrackets(values.Length, all, true)}{string.Join(",", values)}{GetBrackets(values.Length, all, false)} &";
-        static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
+        int page = pagination.Page;
+        int pageSize = pagination.PageSize;
 
-        if (search.Page.HasValue && search.Page.Value != 1)
-            pagination += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 24)};";
-
-        if (search.PageSize.HasValue)
-            pagination += $"limit {search.PageSize.Value};";
+        // (...) = at least one of the values, [...] = all of them
+        AddPagination(page, pageSize, paginationQuery);
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
-            var sortby = search.SortBy.Trim().ToLowerInvariant();
-            // Our names -> IGDB field names
-            var igdbField = sortby switch
+            var sortBy = search.SortBy.Trim().ToLowerInvariant() switch
             {
                 "critic_rating" => "aggregated_rating",
                 "released" => "first_release_date",
-                _ => sortby
+                var s => s
             };
-            pagination += $"sort {igdbField} {(search.Ascending ? "asc" : "desc")};";
+            paginationQuery.Add($"sort {sortBy} {(search.Ascending ? "asc" : "desc")};");
         }
 
-        if (!string.IsNullOrWhiteSpace(search.Name))
-        {
-            var opr = search.CaseSensitive ? '=' : '~';
-            // Escaped, so a " in the name cannot close the string and add other conditions to the IGDB query
-            var name = search.Name.Trim().Replace("\\", "\\\\").Replace("\"", "\\\"");
+        AddFilterName(search.Name, search.CaseSensitive, search.SearchExact, search.SearchStartExact, filters);
 
-            if (search.SearchExact)
-                query += $"name{opr}\"{name}\" &";
-            else if (search.SearchStartExact)
-                query += $"name{opr}\"{name}\"* &";
-            else
-                query += $"name{opr}*\"{name}\"* &";
-        }
+        AddFilterPlatform(search.Platforms, search.PlatformsFamily, search.PlatformsExact, search.PlatformsFamilyExact, filters);
 
-        if (search.PlatformsFamily is { Length: > 0 } && search.Platforms is { Length: > 0 }) {
-            query += $"({GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact)} | {GetQuery("platforms", search.Platforms, search.PlatformsExact)}) &";
-        }
-        else if (search.PlatformsFamily is { Length: > 0 }){
-            query += GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact);
-        }
-        else if (search.Platforms is { Length: > 0 }) {
-            query += GetQuery("platforms", search.Platforms, search.PlatformsExact);
-        }
+        AddFilterList("genres", search.Genres, search.GenresExact, filters);
+        AddFilterList("keywords", search.Keywords, search.KeywordsExact, filters);
+        AddFilterList("themes", search.Themes, search.ThemesExact, filters);
+        AddFilterList("game_type", search.GameType, false, filters);
+        AddFilterList("age_ratings.rating_category", search.PegiRating, false, filters);
 
-        if (search.Genres is { Length: > 0 })
-            query += GetQuery("genres", search.Genres, search.GenresExact);
-        
-        if (search.Keywords is { Length: > 0 })
-            query += GetQuery("keywords", search.Keywords, search.KeywordsExact);
+        AddFilterCompany("developer", search.Developers, search.DevelopersExact, filters);
+        AddFilterCompany("publisher", search.Publishers, search.PublishersExact, filters);
 
-        if (search.Themes is { Length: > 0 })
-            query += GetQuery("themes", search.Themes, search.ThemesExact);
+        AddFilterList("website.type", search.Stores, search.StoresExact, filters);
 
-        if (search.Developers is { Length: > 0 })
-            query += $"(involved_companies.developer=true & {GetQuery("involved_companies.company", search.Developers, search.DevelopersExact)}) &";
-
-        if (search.Publishers is { Length: > 0 })
-            query += $"(involved_companies.publisher=true & {GetQuery("involved_companies.company", search.Publishers, search.PublishersExact)}) &";
-
-        if (search.Stores is { Length: > 0 })
-            query += GetQuery("website.type", search.Stores, search.StoresExact);
-
-        if (search.ReleaseYearMin.HasValue)
-            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMin.Value, true), true);
-
-        if (search.ReleaseYearMax.HasValue)
-            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMax.Value, false), false);
-
-        if (search.RatingMin.HasValue)
-            query += GetQueryInt("rating", search.RatingMin.Value, true);
-        
-        if (search.RatingMax.HasValue)
-            query += GetQueryInt("rating", search.RatingMax.Value, false);
-
-        if (search.MinRatingCount.HasValue)
-            query += GetQueryInt("rating_count", search.MinRatingCount.Value, true);
-
-        if (search.CriticRatingMin.HasValue)
-            query += GetQueryInt("aggregated_rating", search.CriticRatingMin.Value, true);
-
-        if (search.CriticRatingMax.HasValue)
-            query += GetQueryInt("aggregated_rating", search.CriticRatingMax.Value, false);
-
-        if (search.GameType is { Length: > 0 })
-            query += GetQuery("game_type", search.GameType, false);
-
-        if (search.PegiRating is { Length: > 0 })
-            query += GetQuery("age_ratings.rating_category", search.PegiRating, false);
+        AddFilterRange("first_release_date", search.ReleaseYearMin, search.ReleaseYearMax, filters, true);
+        AddFilterRange("rating", search.RatingMin, search.RatingMax, filters, false);
+        AddFilterRange("aggregated_rating", search.CriticRatingMin, search.CriticRatingMax, filters, false);
+        AddFilterRange("rating_count", search.MinRatingCount, null, filters, false);
+        AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount, null, filters, false);
 
         GameSearchResponseDTO? result;
         try
         {
-            result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+            result = await ApiService.SearchGamesAsync(string.Join(" & ", filters), string.Join(" ", paginationQuery));
         }
         catch (HttpRequestException)
         {
@@ -125,12 +142,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         }
 
         if (result is null)
-        {
             return StatusCode(503,"External API is unavailable.");
-        }
-
-        int page = search.Page ?? 1;
-        int pageSize = search.PageSize ?? 24;
 
         return Ok(new PagedResponseDTO<GameCardDTO>
         {
@@ -142,17 +154,6 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             PreviousPageUrl = page > 1 ? PageUrl(page - 1) : null,
             NextPageUrl = page * pageSize < result.Count ? PageUrl(page + 1) : null,
         });
-    }
-
-    // Same URL as the current request (same filters, with our parameter names), only with another page
-    private string PageUrl(int page)
-    {
-        var parameters = Request.Query
-            .Where(q => !q.Key.Equals("page", StringComparison.OrdinalIgnoreCase))
-            .Select(q => KeyValuePair.Create(q.Key, (string?)q.Value.ToString()))
-            .Append(KeyValuePair.Create("page", (string?)page.ToString()));
-
-        return QueryHelpers.AddQueryString(Request.Path, parameters);
     }
 
 	// retrieving all games from the database and projecting them to GameDetailsDTO
@@ -168,12 +169,62 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ProjectToType<GameDetailsDTO>()
             .ToListAsync();
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             games,
             await db.Games.CountAsync(),
             pagination,
             page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
+    }
+
+    [HttpGet("coming-soon")]
+    public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetComingSoon([FromQuery] PaginationDTO pagination, [FromQuery] GameComingSoonSearchDTO search)
+    {
+        List<string> filters = [];
+        List<string> paginationQuery = [];
+
+        int page = pagination.Page;
+        int pageSize = pagination.PageSize;
+        int months = search.Months ?? 6;
+
+        AddFilterRange("first_release_date", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 
+            DateTimeOffset.UtcNow.AddMonths(months).ToUnixTimeSeconds(), filters, false);
+        
+        AddPagination(page, pageSize, paginationQuery);
+        AddFilterName(search.Name, search.CaseSensitive, search.SearchExact, search.SearchStartExact, filters);
+        AddFilterPlatform(search.Platforms, search.PlatformsFamily, search.PlatformsExact, search.PlatformsFamilyExact, filters);
+        
+        AddFilterList("genres", search.Genres, search.GenresExact, filters);
+        AddFilterList("keywords", search.Keywords, search.KeywordsExact, filters);
+        AddFilterList("themes", search.Themes, search.ThemesExact, filters);
+        AddFilterList("game_type", search.GameType, false, filters);
+
+        AddFilterCompany("developer", search.Developers, search.DevelopersExact, filters);
+        AddFilterCompany("publisher", search.Publishers, search.PublishersExact, filters);
+
+        GameSearchResponseDTO? result;
+        try
+        {
+            result = await ApiService.SearchGamesAsync(string.Join("&", filters), string.Join(";", paginationQuery));
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
+
+        if (result is null)
+            return StatusCode(503,"External API is unavailable.");
+
+        return Ok(new PagedResponseDTO<GameCardDTO>
+        {
+            Items = [.. result.Results],
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = result.Count,
+            TotalPages = (int)Math.Ceiling((double)result.Count / pageSize),
+            PreviousPageUrl = page > 1 ? PageUrl(page - 1) : null,
+            NextPageUrl = page * pageSize < result.Count ? PageUrl(page + 1) : null,
+        });
     }
 
 	// searching by the IGDB id the same one used for the IGDB request below
