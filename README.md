@@ -39,13 +39,13 @@ Built for the **Terranova Software – Gaming Explorer** challenge at **42 Flore
 
 TerraBeegle lets users search a large catalog of video games, filter and sort the results, open a detailed
 page for each game and build a personal collection of favorites and a wishlist. On top of the mandatory features,
-it has a complete account system: email verification, optional two-factor authentication, friends, reviews,
-personal statistics and a pixel-art dog companion.
+it has a complete account system: email verification, optional two-factor authentication, friends, reviews and
+personal statistics.
 
-Game data comes from the [IGDB Video Games Database API](https://rawg.io/apidocs). The backend sits between
+Game data comes from the [IGDB Video Games Database API](https://api-docs.igdb.com/). The backend sits between
 the frontend and IGDB, so the API key never reaches the browser.
 
-> **Note:** a migration of the game data source from RAWG to IGDB is in progress on a separate branch.
+> **Note:** a migration of the game data source from IGDB to IGDB is in progress on a separate branch.
 > This document describes the current state of `main`.
 
 ---
@@ -76,7 +76,6 @@ the frontend and IGDB, so the API key never reaches the browser.
 | **Personal statistics** | Dashboard with genre and platform distribution of the user's favorites. |
 | **Friends** | Send, accept, reject and remove friend requests; friends can see each other's lists. |
 | **Reviews** | Users can rate games from 1 to 5 and write a review. |
-| **Dog companion** | Each user picks one of four animated pixel-art dogs (Beagle, Elkhound, Golden Retriever, Husky) shown across the app. |
 
 ---
 
@@ -84,7 +83,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 
 ```
 ┌──────────────────────┐      /api/*       ┌───────────────────────┐      HTTPS      ┌──────────────┐
-│   Angular frontend   │ ────────────────▶ │  ASP.NET Core Web API │ ──────────────▶ │   RAWG API   │
+│   Angular frontend   │ ────────────────▶ │  ASP.NET Core Web API │ ──────────────▶ │   IGDB API   │
 │  (SSR, Bootstrap 5)  │ ◀──────────────── │       (.NET 10)       │ ◀────────────── │              │
 └──────────────────────┘    JSON + JWT     └───────────┬───────────┘                 └──────────────┘
                                                        │ EF Core (Npgsql)
@@ -94,8 +93,8 @@ the frontend and IGDB, so the API key never reaches the browser.
                                               └──────────────────┘                    └──────────────┘
 ```
 
-- **Client–server separation:** the Angular app talks only to our API, never directly to RAWG.
-- **Thin controllers, focused services:** everything about RAWG lives in `RawgService`; email codes, 2FA,
+- **Client–server separation:** the Angular app talks only to our API, never directly to IGDB.
+- **Thin controllers, focused services:** everything about IGDB lives in `IGDBService`; email codes, 2FA,
   JWT generation and cleanup jobs each have their own service behind an interface.
 - **DTOs everywhere:** entities never leave the backend; requests are validated with data annotations,
   responses are mapped with Mapster.
@@ -113,7 +112,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 | **Frontend** | Angular 22 (standalone components, signals, `HttpClient`, SSR), TypeScript 6, Bootstrap 5 |
 | **Database** | PostgreSQL 16 |
 | **Infrastructure** | Docker Compose, `concurrently` for local development |
-| **External services** | RAWG Video Games Database API, SMTP (Gmail App Password) |
+| **External services** | IGDB Video Games Database API, SMTP (Gmail App Password) |
 
 ---
 
@@ -122,7 +121,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) with Docker Compose
-- A free [RAWG API key](https://rawg.io/apidocs)
+- A free [IGDB API key](https://api-docs.igdb.com/)
 - An SMTP account for sending emails (for example Gmail with an
   [App Password](https://support.google.com/accounts/answer/185833))
 
@@ -137,13 +136,13 @@ cp .env.example .env
 | Variable | Description |
 | :--- | :--- |
 | `USER_POSTGRES` / `PASSWORD_POSTGRES` / `DB_NAME` | PostgreSQL credentials and database name. |
-| `RAWG_API_KEY` | Your RAWG API key. |
+| `IGDB_API_KEY` | Your IGDB API key. |
 | `JWT_KEY` | Secret used to sign the tokens, **at least 32 characters**. |
 | `SMTP_HOST` / `SMTP_PORT` | SMTP server, e.g. `smtp.gmail.com` / `587`. |
 | `SMTP_USER` / `SMTP_PASSWORD` | SMTP login (for Gmail, the App Password). |
 | `SMTP_FROM` | Sender address, the same as `SMTP_USER` for Gmail. |
 
-The backend refuses to start if the JWT key, the RAWG key or any SMTP setting is missing, so misconfiguration
+The backend refuses to start if the JWT key, the IGDB key or any SMTP setting is missing, so misconfiguration
 is caught immediately instead of at the first request.
 
 ### 2. Run with Docker
@@ -243,9 +242,9 @@ The current user is always taken from the token, never from the URL, so a user c
 | :--- | :--- | :--- | :--- |
 | `GET` | `/users` | 🔒 | Paginated list of users (public profile only). |
 | `GET` | `/users/search?username=` | 🔒 | Case-insensitive prefix search by username, paginated. |
-| `GET` | `/users/{username}` | 🔓 | Public profile: id, username, image and dog companion. |
+| `GET` | `/users/{username}` | 🔓 | Public profile: id, username, image |
 | `GET` | `/users/{username}/profile` | 🔒 | Full profile of the logged-in user (email, theme, 2FA status, …). |
-| `PATCH` | `/users` | 🔒 ⏱️ | Partial update: name, family name, username, profile image, theme, dog companion. |
+| `PATCH` | `/users` | 🔒 ⏱️ | Partial update: name, family name, username, profile image, theme |
 | `PATCH` | `/users/password` | 🔒 ⏱️ | Changes the password (requires the old one). |
 | `PATCH` | `/users/email` | 🔒 ⏱️ | Starts an email change: a code is sent to the **new** address (requires the password). |
 | `POST` | `/users/email/confirm` | 🔒 ⏱️ | Confirms the new email with the code; only then the email is replaced. |
@@ -259,8 +258,8 @@ Unverified accounts are hidden everywhere: they do not appear in lists, searches
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/games` | 🔓 | Searches the RAWG catalog with filters, sorting and pagination. Returns game cards. |
-| `GET` | `/games/{rawgGameId}` | 🔓 | Game details: from our database if saved, otherwise from RAWG. |
+| `GET` | `/games` | 🔓 | Searches the IGDB catalog with filters, sorting and pagination. Returns game cards. |
+| `GET` | `/games/{gameId}` | 🔓 | Game details: from our database if saved, otherwise from IGDB. |
 | `GET` | `/games/all` | 🔓 | Games saved in our database (paginated). |
 
 <details>
@@ -269,13 +268,13 @@ Unverified accounts are hidden everywhere: they do not appear in lists, searches
 | Parameter | Example | Description |
 | :--- | :--- | :--- |
 | `name` | `witcher` | Full or partial game name. |
-| `genres` | `4,51` | Comma-separated RAWG genre IDs. |
+| `genres` | `4,51` | Comma-separated IGDB genre IDs. |
 | `platforms` / `parentPlatforms` | `187` / `2` | Comma-separated platform IDs. |
 | `releaseDate` | `2015,2020` | Release year range. |
 | `metacritic` | `80,100` | Metacritic score range. |
 | `sortBy` | `rating` | `name`, `released`, `added`, `created`, `updated`, `rating` or `metacritic`. |
 | `ascending` | `false` | Sort direction (default `true`). |
-| `page` / `pageSize` | `2` / `20` | Pagination (`pageSize` max 40, the RAWG limit). |
+| `page` / `pageSize` | `2` / `20` | Pagination (`pageSize` max 40, the IGDB limit). |
 
 </details>
 
@@ -284,11 +283,11 @@ Unverified accounts are hidden everywhere: they do not appear in lists, searches
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/users/{userId}/favorites` | 🔒 | The user's favorites, with filters and sorting. |
-| `POST` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Adds a game to favorites. |
-| `DELETE` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Removes a game from favorites. |
+| `POST` | `/users/{userId}/favorites/{ApiGameId}` | 🔒 ⏱️ | Adds a game to favorites. |
+| `DELETE` | `/users/{userId}/favorites/{ApiGameId}` | 🔒 ⏱️ | Removes a game from favorites. |
 | `GET` | `/users/{userId}/wishlist` | 🔒 | The user's wishlist, with filters and sorting. |
-| `POST` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Adds a game to the wishlist. |
-| `DELETE` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Removes a game from the wishlist. |
+| `POST` | `/users/{userId}/wishlist/{ApiGameId}` | 🔒 ⏱️ | Adds a game to the wishlist. |
+| `DELETE` | `/users/{userId}/wishlist/{ApiGameId}` | 🔒 ⏱️ | Removes a game from the wishlist. |
 
 - **Privacy:** a list can be viewed only by its owner and by accepted friends (otherwise `403`).
   Only the owner can change it.
@@ -338,7 +337,7 @@ crossed requests are impossible.
 | **Two-factor authentication** | Optional. Every login attempt gets its own challenge (random 64-character token + code, both stored hashed). The code lasts 5 minutes, the challenge 15, max 5 attempts, single use, protected against two simultaneous requests. |
 | **Safe account changes** | Changing the email, the password or the 2FA status requires the current password, so a stolen token alone cannot take over the account. The new email is saved only after it is confirmed. |
 | **No user enumeration** | Password reset and code resend return the same answer for any email. Login gives the same error for an unknown user and a wrong password. |
-| **Secrets** | All keys and passwords come from environment variables (`.env`, not committed). The RAWG key stays on the server and is never written to logs or responses. |
+| **Secrets** | All keys and passwords come from environment variables (`.env`, not committed). The IGDB key stays on the server and is never written to logs or responses. |
 | **Race conditions** | Unique constraints in the database plus handling of `UniqueViolation`, so simultaneous requests get `409` instead of `500`. |
 | **CORS** | Only the Angular origin (`localhost:4200`) is allowed. |
 
@@ -394,7 +393,7 @@ Policy names are `const` fields in `RateLimitPolicies`, so a misspelled policy n
 | `404` | Resource not found. |
 | `409` | Conflict (username or email already taken, friendship already exists). |
 | `429` | Rate limit reached. |
-| `503` | RAWG is unreachable. |
+| `503` | IGDB is unreachable. |
 
 - Error messages written by us are returned as plain text.
 - Errors generated by ASP.NET Core (validation errors, empty `401` / `403` / `404`, `500`) are returned as
@@ -418,19 +417,19 @@ Policy names are `const` fields in `RateLimitPolicies`, so a misspelled policy n
 TerraBeegle/
 ├── Backend-TerraBeegle/          ASP.NET Core Web API
 │   ├── Controllers/              Auth, User, Game, UserGames, Friendship, Review
-│   ├── Services/                 RAWG, JWT, email, verification codes, 2FA, cleanup jobs
+│   ├── Services/                 IGDB, JWT, email, verification codes, 2FA, cleanup jobs
 │   ├── RateLimiting/             Policy names and partitioning helpers
 │   ├── Models/                   EF Core entities
 │   ├── DTOS/                     Request / response contracts
 │   ├── Data/                     AppDbContext and model configuration
 │   ├── Migrations/               EF Core migrations
-│   ├── Enums/                    Theme, DogCompanion, FriendshipStatus, RAWG IDs, …
+│   ├── Enums/                    Theme, FriendshipStatus, IGDB IDs, …
 │   └── milestone.md              Development log: issues found, decisions taken and why
 ├── frontend-TerraBeegle/         Angular application
 │   ├── src/app/views/            Pages: catalog, favorites, wishlist, profile, login, register, …
 │   ├── src/app/services/         HTTP services (auth, games, favorites, friends)
-│   ├── src/app/ui/               Shared UI: theme, spinner, liquid glass, dog companion
-│   └── public/                   Static assets (logo, dog sprites)
+│   ├── src/app/ui/               Shared UI: theme, spinner, liquid glass
+│   └── public/                   Static assets (logo)
 ├── docs/                         Challenge specification (EN / IT)
 ├── docker-compose.yml            PostgreSQL + backend + frontend
 └── .env.example                  Environment variables template
@@ -440,6 +439,5 @@ TerraBeegle/
 
 ## Credits
 
-- **Game data:** [RAWG Video Games Database API](https://rawg.io/apidocs).
-- **Dog sprites:** [*DogPack*](https://megamicrobats.itch.io/dogpack) by **[megamicrobats](https://megamicrobats.itch.io/)**. Thank you for the lovely pixel art!
+- **Game data:** [IGDB Video Games Database API](https://api-docs.igdb.com/).
 - Project developed for the **Terranova Challenge** at **42 Florence**.

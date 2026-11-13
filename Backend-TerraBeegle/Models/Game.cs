@@ -15,8 +15,9 @@ public class Game
     public GameType? GameType { get; set; }
     public PegiRating? PegiRating { get; set; }
     public ICollection<PegiDescription> PegiDescriptions { get; set; } = null!;
-   
+
     public DateOnly? ReleaseDate { get; set; }
+    public ICollection<ReleaseDate>? ReleaseDates { get; set; }
     public int? GameStatus { get; set; }
 
     public decimal? Rating { get; set; }
@@ -48,6 +49,9 @@ public class Game
     public ICollection<Genre> Genres { get; set; } = null!;
     public ICollection<Theme> Themes { get; set; } = null!;
     public ICollection<Keyword> Keywords { get; set; } = null!;
+    public ICollection<GameMode> GameModes { get; set; } = null!;
+    public ICollection<Perspective> Perspectives { get; set; } = null!;
+    public ICollection<LanguageSupport> LanguageSupports { get; set; } = null!;
 
     public Website? OfficialWebsite { get; set; }
     public ICollection<Website>? Websites { get; set; }
