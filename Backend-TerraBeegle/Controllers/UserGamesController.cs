@@ -9,6 +9,7 @@ using Npgsql;
 using Backend_TerraBeegle.RateLimiting;
 using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
+using static Backend_TerraBeegle.Utils;
 
 namespace Backend_TerraBeegle.Controllers;
 
