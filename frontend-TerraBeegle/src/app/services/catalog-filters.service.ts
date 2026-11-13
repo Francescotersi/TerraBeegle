@@ -104,16 +104,22 @@ export class CatalogFiltersService {
       platforms: filters.platforms.length ? filters.platforms : undefined,
       releaseYearMin: yearMin ?? undefined,
       releaseYearMax: yearMax ?? undefined,
-      ratingMin: filters.ratingMin !== null ? Math.round(filters.ratingMin * 10) : undefined,
-      ratingMax: filters.ratingMax !== null ? Math.round(filters.ratingMax * 10) : undefined,
+      // Out of 10, like the backend expects (it converts to the IGDB 0-100 scale itself)
+      ratingMin: filters.ratingMin ?? undefined,
+      ratingMax: filters.ratingMax ?? undefined,
       criticRatingMin: filters.criticMin ?? undefined,
       criticRatingMax: filters.criticMax ?? undefined,
       sortBy: filters.sortBy,
       ascending: filters.ascending,
       // Without a minimum, "top rated" starts with unknown games rated 100 by 2 people.
       // Home: well-known games only; with filters a lower minimum, so small platforms still have results;
-      // a search by name returns every match
-      minRatingCount: filters.search ? undefined : this.hasFilters(filters) ? 10 : 300,
+      // a search by name returns every match (0 = no minimum; the backend default would be 25)
+      minRatingCount: filters.search ? 0 : this.hasFilters(filters) ? 10 : 300,
+      // Critic reviews only matter when sorting / filtering by critics; otherwise games without them would disappear
+      minCriticRatingCount:
+        !filters.search && (filters.sortBy === 'critic_rating' || filters.criticMin !== null || filters.criticMax !== null)
+          ? 5
+          : 0,
     };
   }
 

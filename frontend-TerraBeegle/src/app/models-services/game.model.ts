@@ -56,6 +56,7 @@ export interface GameSearchParams {
   criticRatingMin?: number;
   criticRatingMax?: number;
   minRatingCount?: number;
+  minCriticRatingCount?: number;
 }
 
 export interface GameCompanyItem {
