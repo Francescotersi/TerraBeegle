@@ -8,6 +8,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
     private const int MaxAttempts = 5;
 
+    // Creates a new code, stores its hash and returns the code
     public string SetNewCode(User user)
     {
         string code = SecureCode.Generate();
@@ -20,6 +21,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
     }
 
     // Only changes the user; the caller saves the changes (like SetNewCode)
+    // Checks the code: valid, invalid, expired or too many attempts
     public CodeVerificationResult VerifyCode(User user, string code)
     {
         if (user.EmailVerificationCodeHash is null || user.EmailVerificationCodeExpiration < DateTime.UtcNow)
@@ -42,6 +44,7 @@ public class EmailVerificationService(IEmailService emailService) : IEmailVerifi
         return CodeVerificationResult.Valid;
     }
 
+    // Emails the code with the text for its purpose
     public async Task SendCodeAsync(string email, string code, EmailCodePurpose purpose)
     {
         // Only the subject, the first paragraph and the "did not request" line change;

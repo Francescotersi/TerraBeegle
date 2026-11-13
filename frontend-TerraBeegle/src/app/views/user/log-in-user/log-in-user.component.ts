@@ -20,13 +20,13 @@ interface LoginData {
         <app-liquid-glass borderRadius="28px" background="rgba(255, 255, 255, 0.22)" [scale]="95">
           <div class="p-4 p-md-5">
 
-            <!-- Intestazione -->
+            <!-- Header -->
             <div class="text-center mb-4">
               <h2 class="h3 fw-bold text-dark mb-1">Welcome back</h2>
               <p class="text-secondary small mb-0">Login to your TerraBeegle account!</p>
             </div>
 
-            <!-- Form reattivo con Signal Forms -->
+            <!-- Reactive form with Signal Forms -->
             <form (submit)="$event.preventDefault(); onSubmit()">
               
               <div class="mb-3">
@@ -71,7 +71,7 @@ interface LoginData {
                 }
               </div>
 
-              <!-- Errore credenziali -->
+              <!-- Credentials error -->
               @if (errorMessage()) {
                 <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
                   {{ errorMessage() }}
@@ -206,7 +206,7 @@ export class LogInUser {
         next: (response) => {
           this.isLoading.set(false);
 
-          // Se il backend richiede 2FA:
+          // If the backend asks for 2FA:
           if (response.requires2FA && response.challengeToken) {
             this.authService.setOtpContext({
               type: '2fa',
@@ -223,13 +223,13 @@ export class LogInUser {
             return;
           }
 
-          // Se non richiede 2FA, l'utente è già autenticato
+          // Without 2FA the user is already authenticated
           this.router.navigate(['/']);
         },
         error: (error) => {
           this.isLoading.set(false);
 
-          // Se l'email non è verificata (403 Forbidden):
+          // If the email is not verified (403 Forbidden):
           if (error.status === 403) {
             this.authService.setOtpContext({
               type: 'email-verification',

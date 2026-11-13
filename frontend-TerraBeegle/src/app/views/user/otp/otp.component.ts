@@ -18,7 +18,7 @@ import { OtpContext } from '../../../models-services/user.model';
         <app-liquid-glass borderRadius="28px" background="rgba(255, 255, 255, 0.22)" [scale]="95">
           <div class="p-4 p-md-5">
 
-            <!-- Intestazione dinamica -->
+            <!-- Dynamic header -->
             <div class="text-center mb-4">
               <h2 class="h3 fw-bold text-dark mb-1">
                 {{ is2FA() ? 'Two-Factor Authentication' : 'Verify Your Email' }}
@@ -32,14 +32,14 @@ import { OtpContext } from '../../../models-services/user.model';
               </p>
             </div>
 
-            <!-- Messaggi di errore -->
+            <!-- Error messages -->
             @if (errorMessage()) {
               <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
                 {{ errorMessage() }}
               </div>
             }
 
-            <!-- Fallback credenziali se perse su refresh per email-verification -->
+            <!-- Credentials fallback, if they are lost on refresh during email verification -->
             @if (!is2FA() && (!emailOrUsername() || !password())) {
               <div class="mb-3">
                 <label for="identifier" class="form-label fw-semibold small text-dark">Email or Username</label>
@@ -82,7 +82,7 @@ import { OtpContext } from '../../../models-services/user.model';
               />
             </div>
 
-            <!-- Bottone di Verifica -->
+            <!-- Verify button -->
             <button
               type="button"
               class="btn btn-primary w-100 py-2 fw-semibold glass-btn d-flex align-items-center justify-content-center gap-2 mb-3"
@@ -96,7 +96,7 @@ import { OtpContext } from '../../../models-services/user.model';
               }
             </button>
 
-            <!-- Azioni secondarie (Resend e Back) -->
+            <!-- Secondary actions (Resend and Back) -->
             <div class="d-flex justify-content-between align-items-center mt-3">
               <button
                 type="button"
@@ -280,7 +280,7 @@ export class OtpComponent implements OnInit {
       next: (res) => {
         this.isLoading.set(false);
         this.authService.clearOtpContext();
-        this.alertService.showAlert('Account verified and logged in successfully!');
+        this.alertService.showSuccess('Account verified and logged in successfully!');
         this.router.navigate(['/']);
       },
       error: (err) => {

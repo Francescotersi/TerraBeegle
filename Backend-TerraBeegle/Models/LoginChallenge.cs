@@ -8,10 +8,9 @@ public class LoginChallenge
     public User User { get; set; } = null!;
 
     public string TokenHash { get; set; } = null!;
+    public DateTime TokenExpiration { get; set; }
+    
     public string CodeHash { get; set; } = null!;
-
     public DateTime CodeExpiration { get; set; }
     public int CodeAttempts { get; set; }
-
-    public DateTime TokenExpiration { get; set; }
 }

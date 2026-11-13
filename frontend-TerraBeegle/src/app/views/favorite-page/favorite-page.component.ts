@@ -40,7 +40,7 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <span class="small fw-medium">
-            API non disponibile: visualizzazione dei giochi preferiti di esempio.
+            API unavailable: showing sample favorite games.
           </span>
         </div>
       }
@@ -86,7 +86,7 @@ export class FavoritePageComponent implements OnInit {
     this.wishlistFavoritesService.getFavorites().subscribe({
       next: (response) => {
         const mappedGames =
-          response?.results?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
+          response?.items?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
         this.favoriteGames.set(mappedGames);
         this.isLoading.set(false);
       },

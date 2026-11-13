@@ -20,24 +20,25 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
     ITokenService tokenService, IEmailVerificationService emailVerificationService, 
     ITwoFactorService twoFactorService, ILogger<AuthController> logger) : ControllerBase
 {
+    // Creates an account and emails a verification code
     [EnableRateLimiting(RateLimitPolicies.Register)]
     [HttpPost("register")]
     public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
-        dto.Email = dto.Email.Trim().ToLowerInvariant();
-        dto.Username = dto.Username.Trim();
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var username = dto.Username.Trim();
 
-        bool EmailExists = await db.Users.AnyAsync(u => u.Email == dto.Email);
-        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == dto.Username);
+        bool EmailExists = await db.Users.AnyAsync(u => u.Email == email);
+        bool UsernameExists = await db.Users.AnyAsync(u => u.Username == username);
 
         if(EmailExists)
             return Conflict("Email already exists.");
         if(UsernameExists)
             return Conflict("Username already exists.");
 
-        dto.Name = dto.Name.Trim();
-        dto.FamilyName = dto.FamilyName.Trim();
+        var name = dto.Name.Trim();
+        var familyName = dto.FamilyName.Trim();
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();
@@ -71,6 +72,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return CreatedAtAction(nameof(UserController.GetByUsername), "User", new { username = user.Username }, user.Adapt<UserResponseDTO>());
     }
     
+    // Logs in; returns a JWT, or a 2FA challenge if 2FA is on
     [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
@@ -79,10 +81,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
-        if (user is null)
-            return Unauthorized("Invalid credentials.");
-
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+        if (user is null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized("Invalid credentials.");
         
         // The code is checked only after the password, so only the owner of the account can use up its attempts
@@ -115,8 +114,15 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         }
         
         var (challenge, challengeToken, code) = twoFactorService.CreateChallenge(user);
-        db.LoginChallenges.Add(challenge);
+
+        if (user.LoginChallenge is null)
+        {
+            db.LoginChallenges.Add(challenge);
+        }
+        user.LoginChallenge = challenge;
+
         await db.SaveChangesAsync();
+
         try
         {
 	        await twoFactorService.SendCodeAsync(user.Email, code);
@@ -128,6 +134,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Requires2FA = true, ChallengeToken = challengeToken });
     }
 
+    // Finishes a 2FA login with the emailed code and returns a JWT
     [EnableRateLimiting(RateLimitPolicies.LoginTwoFactor)]
     [HttpPost("login/2fa")]
     public async Task<ActionResult<AuthResponseDTO>> LoginTwoFactor(TwoFactorLoginDTO dto)
@@ -172,6 +179,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok(new AuthResponseDTO { Token = token, User = challenge.User.Adapt<UserResponseDTO>() });
     }
 
+    // Sends a new 2FA code for an active login challenge
     [EnableRateLimiting(RateLimitPolicies.LoginTwoFactorResend)]
     [HttpPost("login/2fa/resend")]
     public async Task<IActionResult> ResendTwoFactorCode(TwoFactorResendDTO dto)
@@ -206,6 +214,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         return Ok("A new code has been sent to your email.");
     }
 
+	// Sends a new email verification code
 	[EnableRateLimiting(RateLimitPolicies.ResendEmail)]
 	[HttpPost("resend-email")]
 	public async Task<IActionResult> ResendEmail(SendEmailDTO dto)
@@ -235,6 +244,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
+	// Emails a password reset code
 	[EnableRateLimiting(RateLimitPolicies.ForgotPasswordRequest)]
 	[HttpPost("forgot-password-request")]
 	public async Task<IActionResult> ForgotPasswordRequest(SendEmailDTO dto)
@@ -265,6 +275,7 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 		return Ok(message);
 	}
 
+    // Resets the password using the emailed code
     [EnableRateLimiting(RateLimitPolicies.ForgotPassword)]
     [HttpPatch("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)
@@ -273,8 +284,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
 
+        // 400 like a wrong code: an error status (not 200), and the same answer whether the account exists or not
         if(user is null || !user.ForgotPasswordRequested)
-            return Ok("Invalid Credentials.");
+            return BadRequest("Invalid code.");
 
         var result = emailVerificationService.VerifyCode(user, dto.Code);
 

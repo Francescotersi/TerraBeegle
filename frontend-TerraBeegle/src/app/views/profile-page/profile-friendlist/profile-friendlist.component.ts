@@ -17,7 +17,7 @@ type SubTab = 'friends' | 'received' | 'sent';
   template: `
     <div class="friends-container d-flex flex-column gap-3">
 
-      <!-- Add Friend Box con Search Bar a sinistra e Testo a destra -->
+      <!-- Add Friend box: search bar on the left, text on the right -->
       <app-profile-friend-search (requestSent)="onRequestSent($event)" />
 
       <!-- Navigation Tabs -->
@@ -289,7 +289,7 @@ export class ProfileFriendlistComponent implements OnInit {
         const items = res.items || [];
         if (this.previousReceivedCount !== -1 && items.length > this.previousReceivedCount) {
           const diff = items.length - this.previousReceivedCount;
-          this.alertService.showAlert(
+          this.alertService.showSuccess(
             diff === 1
               ? 'New friend request received!'
               : `${diff} new friend requests received!`
@@ -320,7 +320,7 @@ export class ProfileFriendlistComponent implements OnInit {
   onAccept(f: FriendshipResponseDTO): void {
     this.friendsService.acceptRequest(f).subscribe({
       next: () => {
-        this.alertService.showAlert(`Friend request from @${f.user.username} accepted!`);
+        this.alertService.showSuccess(`Friend request from @${f.user.username} accepted!`);
         this.received.update((items) => items.filter((item) => item.id !== f.id));
         this.previousReceivedCount = this.received().length;
         this.refreshQuietly();
@@ -332,7 +332,7 @@ export class ProfileFriendlistComponent implements OnInit {
   onReject(f: FriendshipResponseDTO): void {
     this.friendsService.rejectRequest(f).subscribe({
       next: () => {
-        this.alertService.showAlert('Friend request declined.');
+        this.alertService.showSuccess('Friend request declined.');
         this.received.update((items) => items.filter((item) => item.id !== f.id));
         this.previousReceivedCount = this.received().length;
         this.refreshQuietly();
@@ -344,7 +344,7 @@ export class ProfileFriendlistComponent implements OnInit {
   onDelete(id: number, successMessage: string): void {
     this.friendsService.deleteFriendship(id).subscribe({
       next: () => {
-        this.alertService.showAlert(successMessage);
+        this.alertService.showSuccess(successMessage);
         this.friends.update((items) => items.filter((item) => item.id !== id));
         this.sent.update((items) => items.filter((item) => item.id !== id));
         this.refreshQuietly();

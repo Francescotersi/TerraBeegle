@@ -28,7 +28,7 @@ import { FriendshipResponseDTO } from '../../../models-services/friendship.model
         </div>
       </div>
 
-      <!-- Azioni contestuali -->
+      <!-- Contextual actions -->
       <div class="d-flex align-items-center gap-2">
         @switch (type()) {
           @case ('friend') {

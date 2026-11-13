@@ -20,6 +20,7 @@ public static class RateLimitOptionExtensions
         return sub is null ? ByIp(context) : "user:" + sub;
     }
 
+    // Registers a fixed-window rate limit policy in one line
     public static void AddFixedWindowPolicy(this RateLimiterOptions options, string policyName, int permitLimit, TimeSpan window, Func<HttpContext, string> partitionKey)
     {
         options.AddPolicy(policyName, context =>

@@ -8,8 +8,8 @@ import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendl
 import { ProfileSettingsComponent } from './profile-settings/profile-settings.component';
 import { DogAnimation, DogComponent } from '../../ui/dog/dog.component';
 
-// da fare tasto modify profile 
-// grafico a torta per i generidi giochi piu giocati
+// TODO: "modify profile" button
+// pie chart with the most played game genres
 // tre pulsanti 1) settings 3) statistics
 //              |
 //              |- 2) modify profile publics data 
@@ -205,7 +205,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
       object-fit: cover;
     }
 
-    /* Tabs di navigazione */
+    /* Navigation tabs */
     .profile-tabs-nav {
       overflow-x: auto;
       white-space: nowrap;

@@ -1,47 +1,58 @@
+using Backend_TerraBeegle.Enums;
+
 namespace Backend_TerraBeegle.Models;
 
 public class Game
 {
     public long Id { get; set; }
-    public int RawgGameId { get; set; }                // RAWG Id
+    public long ApiGameId { get; set; }                // API Id
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
-    public string Description { get; set; } = null!;
     public bool IsPlaceholder { get; set; } = false; // If true, this game is a placeholder for a game that is not yet in the database. It will be replaced by the real game when it is added to the database.
-    public string? BackgroundImage { get; set; }
+
+    public string? Summary { get; set; }
+    public string? Storyline { get; set; }
+    public GameType? GameType { get; set; }
+    public PegiRating? PegiRating { get; set; }
+    public string? PegiRatingDescription { get; set; }
+   
     public DateOnly? ReleaseDate { get; set; }
-    public bool Tba { get; set; }
+    public int? GameStatus { get; set; }
     public string? Website { get; set; }
 
     public decimal? Rating { get; set; }
-    public long? RatingCount { get; set; }
-    public int? Rating5count { get; set; }
-    public int? Rating4count { get; set; }
-    public int? Rating3count { get; set; }
-    public int? Rating2count { get; set; }
-    public int? Rating1count { get; set; }
-    public int? Metacritic { get; set; }
+    public int? AggregatedRating { get; set; }
 
-    public string? NameOriginal { get; set; }
-    public string? Developer { get; set; }
-    public string? Publisher { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<RawgObject> DLCs { get; set; } = [];
-    public ICollection<RawgObject> ParentGames { get; set; } = [];
-    public ICollection<RawgObject> Series { get; set; } = [];
+    public Image? Cover { get; set; }
+    public ICollection<Image>? Artworks { get; set; }
+    public ICollection<Image>? Screenshots { get; set; }
 
-    public ICollection<Genre> Genres { get; set; } = [];
-    // public ICollection<Tags> Stores { get; set; } = [];
-    // public ICollection<Store> Stores { get; set; } = [];
-    // public ICollection<Developer> Developers { get; set; } = [];
-    // public ICollection<Publisher> Publishers { get; set; } = [];
+    public Game? ParentGame { get; set; }
+    public ICollection<Game>? Bundles { get; set; }
+    public ICollection<Game>? DLCs { get; set; }
+    public ICollection<Game>? Expansions { get; set; }
+    public ICollection<Game>? Remakes { get; set; }
+    public ICollection<Game>? Remasters { get; set; }
+    public ICollection<Game>? Series { get; set; }
+    public ICollection<Game>? Franchises { get; set; }
 
-    public ICollection<Platform> Platforms { get; set; } = [];
-    public ICollection<ParentPlatform> ParentPlatforms { get; set; } = [];
+    public ICollection<Genre> Genres { get; set; } = null!;
+    public ICollection<Theme> Themes { get; set; } = null!;
+    public ICollection<Keyword> Keywords { get; set; } = null!;
+    public ICollection<Video>? Videos { get; set; }
 
-    public ICollection<Review> Reviews { get; set; } = [];
-    public ICollection<User> FavoritedByUsers { get; set; } = [];
-    public ICollection<User> WishlistedByUsers { get; set; } = [];
+    public Website? OfficialWebsite { get; set; }
+    public ICollection<Website>? Websites { get; set; }
+    public ICollection<Website>? Stores { get; set; }
+    public ICollection<Company>? Developers { get; set; }
+    public ICollection<Company>? Publishers { get; set; }
+
+    public ICollection<Platform>? Platforms { get; set; }
+    public ICollection<Review>? Reviews { get; set; }
+
+    public ICollection<User> FavoritedByUsers { get; set; } = null!;
+    public ICollection<User> WishlistedByUsers { get; set; } = null!;
 }

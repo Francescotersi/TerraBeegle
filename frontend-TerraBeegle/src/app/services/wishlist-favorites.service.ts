@@ -41,22 +41,22 @@ export class WishlistFavoritesService {
     return this.http.get<GameSearchResponse>(baseUrl, { params });
   }
 
-  addGame(type: GameCollectionType, rawgGameId: number, userId?: number): Observable<void> {
+  addGame(type: GameCollectionType, apiGameId: number, userId?: number): Observable<void> {
     const baseUrl = this.getBaseUrl(type, userId);
     if (!baseUrl) {
       this.alertService.showAlert(`Please log in to add games to your ${type}.`);
       return throwError(() => new Error('User ID is required to add game to collection.'));
     }
-    return this.http.post<void>(`${baseUrl}/${rawgGameId}`, {});
+    return this.http.post<void>(`${baseUrl}/${apiGameId}`, {});
   }
 
-  removeGame(type: GameCollectionType, rawgGameId: number, userId?: number): Observable<void> {
+  removeGame(type: GameCollectionType, apiGameId: number, userId?: number): Observable<void> {
     const baseUrl = this.getBaseUrl(type, userId);
     if (!baseUrl) {
       this.alertService.showAlert(`Please log in to remove games from your ${type}.`);
       return throwError(() => new Error('User ID is required to remove game from collection.'));
     }
-    return this.http.delete<void>(`${baseUrl}/${rawgGameId}`);
+    return this.http.delete<void>(`${baseUrl}/${apiGameId}`);
   }
 
 
@@ -64,43 +64,43 @@ export class WishlistFavoritesService {
     return this.getGames('favorites', page, pageSize);
   }
 
-  addFavorite(rawgGameId: number) {
-    return this.addGame('favorites', rawgGameId);
+  addFavorite(apiGameId: number) {
+    return this.addGame('favorites', apiGameId);
   }
 
-  removeFavorite(rawgGameId: number) {
-    return this.removeGame('favorites', rawgGameId);
+  removeFavorite(apiGameId: number) {
+    return this.removeGame('favorites', apiGameId);
   }
 
   getWishlist(page?: number, pageSize?: number) {
     return this.getGames('wishlist', page, pageSize);
   }
 
-  addWishlist(rawgGameId: number) {
-    return this.addGame('wishlist', rawgGameId);
+  addWishlist(apiGameId: number) {
+    return this.addGame('wishlist', apiGameId);
   }
 
-  removeWishlist(rawgGameId: number) {
-    return this.removeGame('wishlist', rawgGameId);
+  removeWishlist(apiGameId: number) {
+    return this.removeGame('wishlist', apiGameId);
   }
 
   toGridProps(game: GameCardDTO): GridComponentProps {
     return {
-      rawgGameId: game.rawgGameId,
+      rawgGameId: game.apiGameId,
       name: game.name,
       description: '',
       released: game.releaseDate ?? '',
-      tba: game.tba ?? false,
+      tba: false,
       website: '',
-      rating: game.rating ?? 0,
-      metacritic: 0,
+      rating: game.rating != null ? Math.round(game.rating) / 10 : 0,
+      metacritic: game.criticRating ?? 0,
       coverImage:
-        game.backgroundImage ||
-        MOCK_GAME_COVERS[game.rawgGameId] ||
+        game.cover ||
+        MOCK_GAME_COVERS[game.apiGameId] ||
         'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/292030/capsule_616x353.jpg',
       developer: '',
       publisher: '',
-      platforms: game.platforms?.map((p) => p.rawgPlatformId) ?? [],
+      platforms: game.platforms?.map((p) => p.apiPlatformId) ?? [],
       tags: [],
       genres: game.genres?.map((g) => g.name) ?? [],
     };

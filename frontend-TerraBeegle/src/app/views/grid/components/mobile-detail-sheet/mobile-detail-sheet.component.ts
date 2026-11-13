@@ -31,7 +31,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
                 type="button"
                 class="mobile-sheet-close flex-shrink-0"
                 (click)="closed.emit($event)"
-                aria-label="Chiudi dettagli"
+                aria-label="Close details"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -73,7 +73,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
             }
 
             <p class="mobile-sheet-desc mb-0">
-              {{ mobileGame.description || ('Scopri ' + mobileGame.name + ', sviluppato da ' + (mobileGame.developer || mobileGame.publisher || 'TerraBeegle Studio') + '.') }}
+              {{ mobileGame.description || ('Discover ' + mobileGame.name + ', developed by ' + (mobileGame.developer || mobileGame.publisher || 'TerraBeegle Studio') + '.') }}
             </p>
           </div>
         </div>
@@ -144,6 +144,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
               class="btn-action-circle btn-more mobile-btn-scale"
               type="button"
               title="Game details"
+              (click)="detailsClick.emit(mobileGame.rawgGameId)"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -153,10 +154,11 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
           </div>
         </div>
 
-        <!-- Barra inferiore: -->
+        <!-- Bottom bar: -->
         <button
           type="button"
           class="mobile-sheet-footer d-flex align-items-center justify-content-between w-100 px-3 py-2"
+          (click)="detailsClick.emit(mobileGame.rawgGameId)"
         >
           <div class="d-flex align-items-center gap-2">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -195,7 +197,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
       color: var(--tb-text);
       overflow: hidden;
 
-      /* Stato chiuso: nascosto in basso sotto il bordo inferiore dello schermo */
+      /* Closed state: hidden below the bottom edge of the screen */
       transform: translateY(105%);
       visibility: hidden;
       pointer-events: none;
@@ -211,7 +213,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
         inset 0 1px 1px rgba(46, 217, 231, 0.25);
     }
 
-    /* Stato aperto: sale dal basso verso l'alto e resta ancorato allo schermo */
+    /* Open state: slides up from the bottom and stays anchored to the screen */
     .mobile-detail-sheet.show {
       transform: translateY(0);
       visibility: visible;
@@ -277,7 +279,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
       overflow: hidden;
     }
 
-    /* Pulsanti azione nella Bottom Sheet Mobile: ingranditi e senza box-shadow */
+    /* Action buttons in the mobile bottom sheet: bigger and without box-shadow */
     .mobile-detail-sheet .btn-action-circle,
     .mobile-detail-sheet .heart-container {
       width: 44px;
@@ -345,6 +347,8 @@ export class MobileDetailSheetComponent {
   readonly isOpen = input<boolean>(false);
 
   readonly closed = output<Event>();
+
+  readonly detailsClick = output<number>();
 
   protected readonly actions = inject(GridGameActionsService);
   protected readonly getReleaseYear = getReleaseYear;

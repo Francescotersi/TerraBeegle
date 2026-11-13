@@ -83,7 +83,7 @@ interface UserModel {
                   type="email"
                   id="email"
                   class="form-control glass-input"
-                  placeholder="mario.rossi@esempio.com"
+                  placeholder="john.smith@example.com"
                   [formField]="registerForm.email"
                   [class.is-invalid]="registerForm.email().invalid() && registerForm.email().touched()"
                 />
@@ -128,7 +128,7 @@ interface UserModel {
                 }
               </div>
 
-              <!-- Errore dal backend -->
+              <!-- Error from the backend -->
               @if (errorMessage()) {
                 <div class="alert alert-danger py-2 px-3 small mb-3 text-center fw-medium border-0 shadow-sm" style="border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #dc2626;">
                   {{ errorMessage() }}

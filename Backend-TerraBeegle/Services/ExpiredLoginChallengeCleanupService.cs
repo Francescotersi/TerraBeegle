@@ -5,10 +5,11 @@ namespace Backend_TerraBeegle.Services;
 
 // Deletes the 2FA logins that were never finished (the user closed the page, the code never arrived...).
 // A used or failed challenge is already deleted by AuthController; only the abandoned ones stay in the table
-public class  ExpiredLoginChallengeCleanupService(
+public class ExpiredLoginChallengeCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<ExpiredLoginChallengeCleanupService> logger) : BackgroundService
 {
+    // Runs the cleanup every hour while the app is running
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
@@ -25,6 +26,7 @@ public class  ExpiredLoginChallengeCleanupService(
         }
     }
 
+    // Deletes expired 2FA login challenges
     private async Task DeleteExpiredChallengesAsync(CancellationToken stoppingToken)
     {
         // A new scope, because the BackgroundService is a singleton and AppDbContext is scoped

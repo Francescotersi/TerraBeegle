@@ -1,9 +1,16 @@
-import { Component, signal, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { Component, signal, computed, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
 import { SpinnerComponent } from '../../ui/spinner/spinner.component';
 import { MOCK_GAMES } from '../../mocks/games.mock';
 import { GameService } from '../../services/game.service';
+import { AlertService } from '../../services/alert.service';
+import { CatalogFilters, CatalogFiltersService } from '../../services/catalog-filters.service';
+
+// Games per request; the grid also shows 24 more on each "Show More"
+const PAGE_SIZE = 24;
 
 @Component({
   imports: [GridComponent, SpinnerComponent],
@@ -40,14 +47,17 @@ import { GameService } from '../../services/game.service';
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <span class="small fw-medium">
-            API non disponibile: visualizzazione dei giochi mock di esempio.
+            API unavailable: showing sample games.
           </span>
         </div>
       }
       <app-grid-component
-        title="Games Catalog"
+        [title]="title()"
         [games]="catalogGames()"
-        emptyMessage="No games found in the catalog."
+        [canLoadMore]="!isUsingMock() && currentPage() < totalPages()"
+        [isLoadingMore]="isLoadingMore()"
+        (loadMore)="loadNextPage()"
+        [emptyMessage]="emptyMessage()"
       >
       </app-grid-component>
     }
@@ -55,19 +65,45 @@ import { GameService } from '../../services/game.service';
 })
 export class CatalogPage implements OnInit {
   private readonly gameService = inject(GameService);
+  private readonly filtersService = inject(CatalogFiltersService);
+  private readonly alertService = inject(AlertService);
   private readonly platformId = inject(PLATFORM_ID);
 
   readonly catalogGames = signal<GridComponentProps[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
   readonly isUsingMock = signal<boolean>(false);
+  // Search text + filters from the URL (header search and sidebar)
+  readonly filters = signal<CatalogFilters>(this.filtersService.filters());
+  readonly searchTerm = computed(() => this.filters().search);
+  private readonly isFiltered = computed(() => this.filtersService.hasFilters(this.filters()));
+
+  readonly title = computed(() => {
+    if (this.searchTerm()) return `Results for “${this.searchTerm()}”`;
+    return this.isFiltered() ? 'Filtered games' : 'Games Catalog';
+  });
+
+  readonly emptyMessage = computed(() => {
+    if (this.searchTerm()) return `No games found for “${this.searchTerm()}”.`;
+    return this.isFiltered() ? 'No games match these filters.' : 'No games found in the catalog.';
+  });
+  readonly currentPage = signal(1);
+  readonly totalPages = signal(1);
+  readonly isLoadingMore = signal(false);
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
-    this.loadCatalogGames();
+    // The header search and the sidebar filters are in the URL, so the results survive a refresh and Back
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.filters.set(this.filtersService.parse(params));
+      this.loadCatalogGames();
+    });
   }
 
   loadCatalogGames(page: number = 1): void {
-    // Durante il prerendering server-side (SSR), carica direttamente i mock per evitare chiamate HTTP relative non gestite
+    // During server-side prerendering (SSR) load the mocks directly, relative HTTP calls are not handled there
     if (!isPlatformBrowser(this.platformId)) {
       this.catalogGames.set(MOCK_GAMES);
       this.isLoading.set(false);
@@ -79,12 +115,18 @@ export class CatalogPage implements OnInit {
     this.isUsingMock.set(false);
 
     this.gameService
-      .getGames({ page, pageSize: 25, sortBy: 'rating', ascending: false })
+      // PAGE_SIZE = the grid step (24), so each "Show More" shows exactly one new page
+      .getGames(this.filtersService.toSearchParams(this.filters(), page, PAGE_SIZE))
       .subscribe({
         next: (response) => {
-          if (response?.results && response.results.length > 0) {
-            const mappedGames = response.results.map((g) => this.gameService.toGridProps(g));
+          this.currentPage.set(response?.page ?? 1);
+          this.totalPages.set(response?.totalPages ?? 1);
+          if (response?.items && response.items.length > 0) {
+            const mappedGames = response.items.map((g) => this.gameService.toGridProps(g));
             this.catalogGames.set(mappedGames);
+          } else if (this.searchTerm() || this.isFiltered()) {
+            // A search or filters without results is a normal answer: show the message, not the mocks
+            this.catalogGames.set([]);
           } else {
             console.warn('API returned empty results, loading mock games catalog.');
             this.catalogGames.set(MOCK_GAMES);
@@ -97,6 +139,34 @@ export class CatalogPage implements OnInit {
           this.catalogGames.set(MOCK_GAMES);
           this.isUsingMock.set(true);
           this.isLoading.set(false);
+        },
+      });
+  }
+
+  // "Show More" after the downloaded games: the next page is added at the end of the list
+  loadNextPage(): void {
+    if (this.isLoadingMore() || this.currentPage() >= this.totalPages()) {
+      return;
+    }
+
+    this.isLoadingMore.set(true);
+    const nextPage = this.currentPage() + 1;
+
+    this.gameService
+      .getGames(this.filtersService.toSearchParams(this.filters(), nextPage, PAGE_SIZE))
+      .subscribe({
+        next: (response) => {
+          const newGames = (response?.items ?? []).map((g) => this.gameService.toGridProps(g));
+          // IGDB can return a game again on the next page; keep each id once (the grid tracks by id)
+          const known = new Set(this.catalogGames().map((game) => game.rawgGameId));
+          this.catalogGames.update((games) => [...games, ...newGames.filter((game) => !known.has(game.rawgGameId))]);
+          this.currentPage.set(nextPage);
+          this.totalPages.set(response?.totalPages ?? this.totalPages());
+          this.isLoadingMore.set(false);
+        },
+        error: () => {
+          this.isLoadingMore.set(false);
+          this.alertService.showAlert('Could not load more games. Please try again.');
         },
       });
   }

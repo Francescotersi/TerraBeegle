@@ -1,4 +1,4 @@
-import { Component, signal, computed, input, inject, OnInit, HostListener, PLATFORM_ID } from '@angular/core';
+import { Component, signal, computed, input, output, inject, OnInit, HostListener, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { GridComponentProps } from './grid.model';
@@ -52,6 +52,7 @@ export type { GridComponentProps } from './grid.model';
                 (hoverStart)="onMouseEnter(game.rawgGameId)"
                 (hoverEnd)="onMouseLeave()"
                 (cardClick)="onCardClick(game, idx, $event)"
+                (detailsClick)="openDetails(game.rawgGameId)"
               />
             </div>
           }
@@ -62,9 +63,10 @@ export type { GridComponentProps } from './grid.model';
             <button
               class="btn btn-show-more px-4 py-2 fw-semibold shadow-sm"
               type="button"
+              [disabled]="isLoadingMore()"
               (click)="showMore()"
             >
-              Show More
+              {{ isLoadingMore() ? 'Loading...' : 'Show More' }}
             </button>
           </div>
         }
@@ -74,6 +76,7 @@ export type { GridComponentProps } from './grid.model';
         [game]="selectedMobileGame()"
         [isOpen]="isMobileSheetOpen()"
         (closed)="closeMobileSheet($event)"
+        (detailsClick)="openDetails($event)"
       />
     </div>
   `,
@@ -114,13 +117,17 @@ export class GridComponent implements OnInit {
   readonly title = input<string>("Beegle's Games Catalog");
   readonly games = input<GridComponentProps[]>([]);
   readonly emptyMessage = input<string>('No games found.');
+  // Server paging (catalog): the parent has more pages and loads the next one on loadMore
+  readonly canLoadMore = input<boolean>(false);
+  readonly isLoadingMore = input<boolean>(false);
+  readonly loadMore = output<void>();
 
   protected readonly mobileDismissIndexOffset = 1;
 
   protected readonly hoveredGameId = signal<number | null>(null);
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Stato per la Detail Card Mobile
+  // State of the mobile detail card
   protected readonly selectedMobileGame = signal<GridComponentProps | null>(null);
   protected readonly isMobileSheetOpen = signal<boolean>(false);
   private openedCardIndex = 0;
@@ -136,11 +143,15 @@ export class GridComponent implements OnInit {
   });
 
   protected readonly hasMoreGames = computed(() => {
-    return this.visibleCount() < this.games().length;
+    return this.visibleCount() < this.games().length || this.canLoadMore();
   });
 
+  // Shows the next 24 games; when they are not downloaded yet, asks the parent for the next page
   protected showMore(): void {
     this.visibleCount.update((count) => count + this.step);
+    if (this.visibleCount() > this.games().length && this.canLoadMore()) {
+      this.loadMore.emit();
+    }
   }
 
   // -----------------------
@@ -167,7 +178,13 @@ export class GridComponent implements OnInit {
   }
 
   protected onCardClick(game: GridComponentProps, index: number, event: MouseEvent): void {
-    if (!isPlatformBrowser(this.platformId) || window.innerWidth >= 992) {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    // Desktop: the card opens the details page; mobile: it opens the bottom sheet first
+    if (window.innerWidth >= 992) {
+      this.openDetails(game.rawgGameId);
       return;
     }
 
@@ -180,6 +197,12 @@ export class GridComponent implements OnInit {
     if (colEl && colEl.offsetHeight > 0) {
       this.singleCardScrollStep = colEl.offsetHeight + 12;
     }
+  }
+
+  // Opens /game/{id}
+  protected openDetails(gameId: number): void {
+    this.isMobileSheetOpen.set(false);
+    this.router.navigate(['/game', gameId]);
   }
 
   protected closeMobileSheet(event?: Event): void {

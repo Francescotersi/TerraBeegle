@@ -21,16 +21,16 @@ export class GridGameActionsService {
     if (isPlatformBrowser(this.platformId) && this.authService.isLoggedIn()) {
       this.wishlistService.getWishlist(1, 100).subscribe({
         next: (res) => {
-          if (res?.results) {
-            this.wishlistedIds.set(new Set(res.results.map((g) => g.rawgGameId)));
+          if (res?.items) {
+            this.wishlistedIds.set(new Set(res.items.map((g) => g.apiGameId)));
           }
         },
         error: () => {},
       });
       this.wishlistService.getFavorites(1, 100).subscribe({
         next: (res) => {
-          if (res?.results) {
-            this.favoritedIds.set(new Set(res.results.map((g) => g.rawgGameId)));
+          if (res?.items) {
+            this.favoritedIds.set(new Set(res.items.map((g) => g.apiGameId)));
           }
         },
         error: () => {},

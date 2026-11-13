@@ -69,7 +69,7 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  // ritorna il token JWT dello user loggato
+  // Returns the JWT of the logged-in user
   getToken(): string | null {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(TOKEN_KEY);

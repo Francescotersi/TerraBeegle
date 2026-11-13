@@ -11,103 +11,118 @@ namespace Backend_TerraBeegle.Controllers;
 
 [ApiController]
 [Route("api/games")]
-public class GameController(AppDbContext db, IRawgService rawgService) : ControllerBase
+public class GameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
+    // Searches IGDB games with filters, sorting and pagination
     [HttpGet]
     public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> Search([FromQuery] GameSearchDTO search)
     {
         string query = "";
+        string pagination = "";
 
-        if (!string.IsNullOrWhiteSpace(search.Name))
-            query += $"search={search.Name.Trim()}";
+        // Always brackets: "platforms = 167" means "exactly [167]" at IGDB (only PS5 exclusives), "platforms = (167)"
+        // means "contains 167". (...) = at least one of the values, [...] = all of them
+        static string GetBrackets(int values, bool all, bool open) => all ? (open ? "(" : ")") : (open ? "[" : "]");
+        static string GetQuery (string field, int[] values, bool all) => $"{field}={GetBrackets(values.Length, all, true)}{string.Join(",", values)}{GetBrackets(values.Length, all, false)} &";
+        static string GetQueryInt(string field, long value, bool min) => $"{field}{(min ? ">=" : "<=")}{value} &";
 
         if (search.Page.HasValue && search.Page.Value != 1)
-            query += $"&page={search.Page.Value}";
+            pagination += $"offset {(search.Page.Value - 1) * (search.PageSize ?? 24)};";
 
-        if (search.PageSize.HasValue && search.PageSize.Value != 20)
-            query += $"&page_size={search.PageSize.Value}";
-
-        if (search.SearchPrecise)
-            query += "&search_precise=true";
-
-        if (search.SearchExact)
-            query += "&search_exact=true";
+        if (search.PageSize.HasValue)
+            pagination += $"limit {search.PageSize.Value};";
 
         if (!string.IsNullOrWhiteSpace(search.SortBy))
         {
-            search.SortBy = search.SortBy.Trim().ToLowerInvariant();
-            query += $"&ordering={(search.Ascending ? search.SortBy : $"-{search.SortBy}")}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(search.ParentPlatforms))
-            query += $"&parent_platforms={search.ParentPlatforms.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Platforms))
-            query += $"&platforms={search.Platforms.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Stores))
-            query += $"&stores={search.Stores.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Developers))
-            query += $"&developers={search.Developers.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Publishers))
-            query += $"&publishers={search.Publishers.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Creators))
-            query += $"&creators={search.Creators.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Genres))
-            query += $"&genres={search.Genres.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.Tags))
-            query += $"&tags={search.Tags.Trim()}";
-
-        if (!string.IsNullOrWhiteSpace(search.ReleaseDate))
-        {
-            string[] dateParts = search.ReleaseDate.Split(',');
-
-            if (dateParts.Length == 2 && !string.IsNullOrWhiteSpace(dateParts[0]) && !string.IsNullOrWhiteSpace(dateParts[1]) 
-                && dateParts[0].Trim().Length == 4 && dateParts[1].Trim().Length == 4)
+            var sortby = search.SortBy.Trim().ToLowerInvariant();
+            // Our names -> IGDB field names
+            var igdbField = sortby switch
             {
-                string startDate = $"{dateParts[0].Trim()}-01-01";
-                string endDate = $"{dateParts[1].Trim()}-12-31";
-                query += $"&dates={startDate},{endDate}";
-            }
+                "critic_rating" => "aggregated_rating",
+                "released" => "first_release_date",
+                _ => sortby
+            };
+            pagination += $"sort {igdbField} {(search.Ascending ? "asc" : "desc")};";
         }
 
-        if (!string.IsNullOrWhiteSpace(search.Updated))
+        if (!string.IsNullOrWhiteSpace(search.Name))
         {
-            string[] dateParts = search.Updated.Split(',');
+            var opr = search.CaseSensitive ? '=' : '~';
+            // Escaped, so a " in the name cannot close the string and add other conditions to the IGDB query
+            var name = search.Name.Trim().Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-            if (dateParts.Length == 2 && !string.IsNullOrWhiteSpace(dateParts[0]) && !string.IsNullOrWhiteSpace(dateParts[1]) 
-                && dateParts[0].Trim().Length == 4 && dateParts[1].Trim().Length == 4)
-            {
-                string startDate = $"{dateParts[0].Trim()}-01-01";
-                string endDate = $"{dateParts[1].Trim()}-12-31";
-                query += $"&updated={startDate},{endDate}";
-            }
+            if (search.SearchExact)
+                query += $"name{opr}\"{name}\" &";
+            else if (search.SearchStartExact)
+                query += $"name{opr}\"{name}\"* &";
+            else
+                query += $"name{opr}*\"{name}\"* &";
         }
 
-        if (search.PlatformsCount.HasValue)
-            query += $"&platforms_count={search.PlatformsCount.Value}";
+        if (search.PlatformsFamily is { Length: > 0 } && search.Platforms is { Length: > 0 }) {
+            query += $"({GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact)} | {GetQuery("platforms", search.Platforms, search.PlatformsExact)}) &";
+        }
+        else if (search.PlatformsFamily is { Length: > 0 }){
+            query += GetQuery("platforms.platform_family", search.PlatformsFamily, search.PlatformsFamilyExact);
+        }
+        else if (search.Platforms is { Length: > 0 }) {
+            query += GetQuery("platforms", search.Platforms, search.PlatformsExact);
+        }
 
-        if (!string.IsNullOrWhiteSpace(search.Metacritic))
-            query += $"&metacritic={search.Metacritic.Trim()}";
+        if (search.Genres is { Length: > 0 })
+            query += GetQuery("genres", search.Genres, search.GenresExact);
+        
+        if (search.Keywords is { Length: > 0 })
+            query += GetQuery("keywords", search.Keywords, search.KeywordsExact);
 
-        if (search.ExcludeAdditions.HasValue && search.ExcludeAdditions.Value)
-            query += "&exclude_additions=true";
+        if (search.Themes is { Length: > 0 })
+            query += GetQuery("themes", search.Themes, search.ThemesExact);
 
-        if (search.ExcludeParents.HasValue && search.ExcludeParents.Value)
-            query += "&exclude_parents=true";
+        if (search.Developers is { Length: > 0 })
+            query += $"(involved_companies.developer=true & {GetQuery("involved_companies.company", search.Developers, search.DevelopersExact)}) &";
 
-        if (search.ExcludeGameSeries.HasValue && search.ExcludeGameSeries.Value)
-            query += "&exclude_game_series=true";
+        if (search.Publishers is { Length: > 0 })
+            query += $"(involved_companies.publisher=true & {GetQuery("involved_companies.company", search.Publishers, search.PublishersExact)}) &";
 
-        if (!string.IsNullOrWhiteSpace(search.ExcludeStores))
-            query += $"&exclude_stores={search.ExcludeStores.Trim()}";
+        if (search.Stores is { Length: > 0 })
+            query += GetQuery("website.type", search.Stores, search.StoresExact);
 
-        var result = await rawgService.SearchGamesAsync(query.TrimStart('&'));
+        if (search.ReleaseYearMin.HasValue)
+            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMin.Value, true), true);
+
+        if (search.ReleaseYearMax.HasValue)
+            query += GetQueryInt("first_release_date", Utils.YearToUnixTimestamp(search.ReleaseYearMax.Value, false), false);
+
+        if (search.RatingMin.HasValue)
+            query += GetQueryInt("rating", search.RatingMin.Value, true);
+        
+        if (search.RatingMax.HasValue)
+            query += GetQueryInt("rating", search.RatingMax.Value, false);
+
+        if (search.MinRatingCount.HasValue)
+            query += GetQueryInt("rating_count", search.MinRatingCount.Value, true);
+
+        if (search.CriticRatingMin.HasValue)
+            query += GetQueryInt("aggregated_rating", search.CriticRatingMin.Value, true);
+
+        if (search.CriticRatingMax.HasValue)
+            query += GetQueryInt("aggregated_rating", search.CriticRatingMax.Value, false);
+
+        if (search.GameType is { Length: > 0 })
+            query += GetQuery("game_type", search.GameType, false);
+
+        if (search.PegiRating is { Length: > 0 })
+            query += GetQuery("age_ratings.rating_category", search.PegiRating, false);
+
+        GameSearchResponseDTO? result;
+        try
+        {
+            result = await ApiService.SearchGamesAsync(query.TrimEnd('&',' '), pagination);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
         if (result is null)
         {
@@ -115,7 +130,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
         }
 
         int page = search.Page ?? 1;
-        int pageSize = search.PageSize ?? 20;
+        int pageSize = search.PageSize ?? 24;
 
         return Ok(new PagedResponseDTO<GameCardDTO>
         {
@@ -140,16 +155,17 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
         return QueryHelpers.AddQueryString(Request.Path, parameters);
     }
 
-	// retrieving all games from the database and projecting them to GameResponseDTO
+	// retrieving all games from the database and projecting them to GameDetailsDTO
     [HttpGet("all")]
-    public async Task<ActionResult<PagedResponseDTO<GameResponseDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
+    public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
     {
         var games = await db.Games
             .Where(g => !g.IsPlaceholder || IncludePlaceholders) // Only return games that are not placeholders, unless 'IncludePlaceholders' is true
             .OrderBy(g => g.Name) // Ordering is required, otherwise Postgres can return the rows in a different order on each page
+            .ThenBy(g => g.Slug) // Secondary ordering by slug to ensure consistent ordering for games with the same name
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ProjectToType<GameResponseDTO>()
+            .ProjectToType<GameDetailsDTO>()
             .ToListAsync();
 
         return Ok(Utils.CreatePagedResponse(
@@ -160,15 +176,15 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
         ));
     }
 
-	// searching by the RAWG id the same one used for the RAWG request below
-    [HttpGet("{rawgGameId:int}")]
-    public async Task<ActionResult<GameResponseDTO>> GetById(int rawgGameId)
+	// searching by the IGDB id the same one used for the IGDB request below
+    [HttpGet("{igdbGameId:long}")]
+    public async Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId)
     {
-        // The service looks for the game in the database first, then at RAWG (one lookup, see point 52)
-        GameResponseDTO? game;
+        // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
+        GameDetailsDTO? game;
         try
         {
-            game = await rawgService.GetGameAsync(rawgGameId);
+            game = await ApiService.GetGameAsync(igdbGameId);
         }
         catch (HttpRequestException)
         {
@@ -176,7 +192,7 @@ public class GameController(AppDbContext db, IRawgService rawgService) : Control
         }
 
         if (game is null)
-            return NotFound($"Game with RAWG ID {rawgGameId} not found.");
+            return NotFound($"Game with IGDB ID {igdbGameId} not found.");
 
         return Ok(game);
     }

@@ -7,6 +7,7 @@ public class UnverifiedUserCleanupService(
     IServiceScopeFactory scopeFactory, 
     ILogger<UnverifiedUserCleanupService> logger) : BackgroundService
 {
+    // Runs the cleanup every hour while the app is running
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
@@ -24,6 +25,7 @@ public class UnverifiedUserCleanupService(
         }
     }
     
+    // Deletes accounts not verified within 2 days
     private async Task DeleteUnverifiedUsersAsync(CancellationToken stoppingToken)
     {
         using var scope = scopeFactory.CreateScope();

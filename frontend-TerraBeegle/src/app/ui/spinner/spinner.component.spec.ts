@@ -33,12 +33,12 @@ describe('SpinnerComponent', () => {
   });
 
   it('should support custom text caption', () => {
-    fixture.componentRef.setInput('text', 'Attendi per favore...');
+    fixture.componentRef.setInput('text', 'Please wait...');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const caption = compiled.querySelector('.spinner-caption');
-    expect(caption?.textContent?.trim()).toBe('Attendi per favore...');
+    expect(caption?.textContent?.trim()).toBe('Please wait...');
   });
 
   it('should scale dimension according to size preset', () => {

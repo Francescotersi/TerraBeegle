@@ -12,6 +12,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.RateLimiting;
+using IGDB;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -133,27 +134,46 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IRawgService, RawgService>();
+// builder.Services.AddScoped<IRawgService, RawgService>();
+builder.Services.AddScoped<IIGDBService, IGDBService>();
+// Cache for the genres / platforms lists (FiltersController)
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddHostedService<UnverifiedUserCleanupService>();
 builder.Services.AddHostedService<ExpiredLoginChallengeCleanupService>();
 
-// IHttpClientFactory for the HTTP calls to RAWG
-builder.Services.AddHttpClient("RawgAPI", client =>
+// // IHttpClientFactory for the HTTP calls to RAWG
+// builder.Services.AddHttpClient("RawgAPI", client =>
+// {
+//     client.BaseAddress = new Uri("https://api.rawg.io/api/");
+//     client.DefaultRequestHeaders.Add("Accept", "application/json");
+// });
+
+builder.Services.AddSingleton(sp =>
 {
-    client.BaseAddress = new Uri("https://api.rawg.io/api/");
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    var configuration = sp.GetRequiredService<IConfiguration>();
+
+    var clientId = configuration["EnvironmentVariables:IGDB_CLIENT_ID"];
+    var clientSecret = configuration["EnvironmentVariables:IGDB_CLIENT_SECRET"];
+
+    if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+    {
+        Console.Error.WriteLine("EnvironmentVariables:IGDB_CLIENT_ID or IGDB_CLIENT_SECRET is missing. Set them to your IGDB API credentials.");
+        Environment.Exit(1);;
+    }
+
+    return IGDBClient.CreateWithDefaults(clientId, clientSecret);
 });
 
-var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
+// var ApiKey = builder.Configuration["EnvironmentVariables:RAWG_API_KEY"];
 
-if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
-{
-    Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
-    Environment.Exit(1);
-}
+// if (!EF.IsDesignTime && string.IsNullOrWhiteSpace(ApiKey))
+// {
+//     Console.Error.WriteLine("EnvironmentVariables:RAWG_API_KEY is missing. Set it to your RAWG API key.");
+//     Environment.Exit(1);
+// }
 
 // without the SMTP settings the verification emails cannot be sent
 string[] smtpSettings = ["Smtp:Host", "Smtp:Port", "Smtp:User", "Smtp:Password", "Smtp:From"];
@@ -177,13 +197,13 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.Migrate();
-        app.Logger.LogInformation("Database PostgreSQL verificato e pronto.");
+        app.Logger.LogInformation("PostgreSQL database migrated and ready.");
     }
     // Only "Postgres is not reachable" is tolerated; any other error (e.g. PendingModelChangesException
     // when a model was changed without a migration) stops the app so it is noticed immediately
     catch (Npgsql.NpgsqlException ex) when (ex is not Npgsql.PostgresException)
     {
-        app.Logger.LogWarning(ex, "Impossibile connettersi a PostgreSQL all'avvio. Verifica che il server sia attivo.");
+        app.Logger.LogWarning(ex, "Could not connect to PostgreSQL at startup. Check that the server is running.");
     }
 }
 

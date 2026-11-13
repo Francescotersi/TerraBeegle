@@ -63,7 +63,7 @@ let nextLiquidGlassId = 0;
         </svg>
       }
 
-      <!-- Riflesso bordo superiore ed effetto luce satinata -->
+      <!-- Top edge reflection and satin light effect -->
       <div class="glass-specular"></div>
 
       <!-- Contenuto inserito -->

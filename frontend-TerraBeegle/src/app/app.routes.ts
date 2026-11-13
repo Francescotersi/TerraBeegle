@@ -9,6 +9,7 @@ import { FavoritePageComponent } from './views/favorite-page/favorite-page.compo
 import { CatalogPage } from './views/catalog-page/catalog-page.component';
 import { WishlistPageComponent } from './views/wishlist-page/wishlist-page.component';
 import { ForgotPasswordComponent } from './views/user/forgot-password/forgot-password.component';
+import { GameDetailsPage } from './views/game-details-page/game-details-page.component';
 
 export const routes: Routes = [
     {
@@ -18,6 +19,10 @@ export const routes: Routes = [
             {
                 path: '',
                 component: CatalogPage,
+            },
+            {
+                path: 'game/:id',
+                component: GameDetailsPage,
             },
             {
                 path: 'favorites',
