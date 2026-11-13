@@ -904,3 +904,27 @@ sau detalii, verifică `/favorites` și `/wishlist`, reîncarcă pagina, apoi sc
 - `GET /api/themes` din IGDB, cache 24h; filtrul `themes` trimis către căutarea catalogului.
 - Build backend și frontend trecute; teste pentru grafice, filtre și selecția din sidebar.
   Verificat IGDB real: 22 teme; Fantasy (17) → 1067 rezultate cu minimum 50 de voturi la momentul testării.
+
+## După merge-ul din 13.11.2026 (`frontend-ftersill` → `frontend-vturlas`)
+
+- [x] **66. Build-ul Docker picat + filtrele dădeau mock după refactorizarea `GameController`**
+  Colegul a mutat DTO-urile de căutare în `DTOS/GameSearchDTO.cs` (commit `a3df6a4`), dar la merge copiile vechi au
+  rămas și în `GameDTO.cs` → `CS0101` (două clase cu același nume), `dotnet publish` eșua. Testat pe 13.11 cu backend-ul
+  pornit local și IGDB-ul real.
+  - [x] copiile `GameSearchDTO` / `GameSearchResponseDTO` / `UserGameSearchDTO` scoase din `GameDTO.cs`
+  - [x] `[StringLength(12)]` pe `SortBy`: `critic_rating` are 13 caractere → 400 → mock. Scos (regex-ul limitează deja)
+  - [x] `[Compare(nameof(RatingMin))]` pe `RatingMax` (și la critici, ani): `Compare` cere valori **egale** (ca la
+        „confirm password”), deci doar `ratingMin=8` dădea 400. Înlocuit cu `IValidatableObject.Validate`: max ≥ min,
+        verificat doar când sunt trimise amândouă
+  - [x] `AddFilterName` punea ` &` la final, iar filtrele se leagă apoi cu `" & "` → `name~*"x"* & & ...` → 503 la orice
+        căutare după nume
+  - [x] `RatingMin` / `RatingMax` sunt acum din 10 (`[Range(0, 10)]`), dar IGDB are 0–100 → controller-ul înmulțește cu 10;
+        frontend-ul trimite valoarea din 10
+  - [x] `MinRatingCount = 25` / `MinCriticRatingCount = 5` implicite se aplicau și la căutarea după nume → jocurile fără
+        recenzii de la critici nu puteau fi găsite. Acum `0` = fără minim; căutarea și sugestiile trimit 0, iar minimul
+        de critici se trimite doar la sortare / filtrare după critici
+  - [x] `coming-soon` lega filtrele cu `"&"` și paginarea cu `";"` (→ `;;`) → aceleași separatoare ca la `Search`
+  - [ ] `GetComingSoon` declară `PagedResponseDTO<GameDetailsDTO>`, dar întoarce `GameCardDTO` (Swagger arată alt format)
+  - [ ] de discutat: `Exact = true` (implicit) trimite acum `[...]` = **toate** valorile. Cu 2 platforme bifate (PC + Switch)
+        apar doar jocurile care sunt pe amândouă; pentru platforme e de obicei de așteptat „oricare” (`platformsExact=false`)
+

@@ -2,10 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public record GameSearchDTO
+public record GameSearchDTO : IValidatableObject
 {
-    // Sorting
-    [StringLength(12)]
+    // Sorting (no StringLength: the regex already allows only these 4 values, and "critic_rating" has 13 characters)
     [RegularExpression(@"^(name|released|rating|critic_rating)$", 
         ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating', or 'critic_rating'.")]
     public string? SortBy { get; init; }
@@ -54,27 +53,39 @@ public record GameSearchDTO
     public int? ReleaseYearMin { get; init; }
     public int? ReleaseYearMax { get; init; }
 
-    // Ratings
+    // Ratings: user rating out of 10 (the controller converts it to the IGDB 0-100 scale), critic score out of 100
     [Range(0, 10)]
     public decimal? RatingMin { get; init; }
     [Range(0, 10)]
-    [Compare(nameof(RatingMin), ErrorMessage = "RatingMax must be greater than or equal to RatingMin.")]
     public decimal? RatingMax { get; init; }
 
     [Range(0, 100)]
     public int? CriticRatingMin { get; init; }
     [Range(0, 100)]
-    [Compare(nameof(CriticRatingMin), ErrorMessage = "CriticRatingMax must be greater than or equal to CriticRatingMin.")]
     public int? CriticRatingMax { get; init; }
 
-    // Minimum number of user votes, so a game rated 100 by 2 people does not top the list
+    // Minimum number of votes, so a game rated 100 by 2 people does not top the list; 0 = no minimum
+    // (a search by name sends 0, otherwise games without critic reviews could never be found)
     [Range(0, 1000000)]
     public int? MinRatingCount { get; init; } = 25;
+    [Range(0, 1000000)]
     public int? MinCriticRatingCount { get; init; } = 5;
 
     // PEGI Ratings
     [Range(8, 12, ErrorMessage = "PEGI rating must be between 8 and 12.")]
     public int[]? PegiRating { get; init; }
+
+    // Max >= min, checked only when both are sent. [Compare] cannot do this: it requires the two values to be EQUAL,
+    // so sending only RatingMin = 8 gave 400 (8 != null)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (RatingMin > RatingMax)
+            yield return new ValidationResult("RatingMax must be greater than or equal to RatingMin.", [nameof(RatingMax)]);
+        if (CriticRatingMin > CriticRatingMax)
+            yield return new ValidationResult("CriticRatingMax must be greater than or equal to CriticRatingMin.", [nameof(CriticRatingMax)]);
+        if (ReleaseYearMin > ReleaseYearMax)
+            yield return new ValidationResult("ReleaseYearMax must be greater than or equal to ReleaseYearMin.", [nameof(ReleaseYearMax)]);
+    }
 }
 
 public record GameComingSoonSearchDTO
@@ -124,7 +135,7 @@ public record GameSearchResponseDTO
     public IEnumerable<GameCardDTO> Results { get; init; } = [];
 }
 
-public record UserGameSearchDTO
+public record UserGameSearchDTO : IValidatableObject
 {
     [MaxLength(100)]
     public string? Name { get; init; }
@@ -135,24 +146,32 @@ public record UserGameSearchDTO
     public int? MinYear { get; init; }
 
     [Range(1950, 2100)]
-    [Compare(nameof(MinYear), ErrorMessage = "MaxYear must be greater than or equal to MinYear.")]
     public int? MaxYear { get; init; }
     public int? GameType { get; init; }
 
     [Range(0.0, 10.0)]
     public decimal? MinRating { get; init; }
     [Range(0.0, 10.0)]
-    [Compare(nameof(MinRating), ErrorMessage = "MaxRating must be greater than or equal to MinRating.")]
     public decimal? MaxRating { get; init; }
 
     [Range(0, 100)]
     public int? MinCriticRating { get; init; }
     [Range(0, 100)]
-    [Compare(nameof(MinCriticRating), ErrorMessage = "MaxCriticRating must be greater than or equal to MinCriticRating.")]
     public int? MaxCriticRating { get; init; }
 
     [RegularExpression(@"^(name|released|rating|critic_rating)$", 
         ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating' or 'critic_rating'.")]
     public string? SortBy { get; init; }
     public bool Ascending { get; init; } = true;
+
+    // Max >= min, checked only when both are sent (see GameSearchDTO.Validate)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (MinYear > MaxYear)
+            yield return new ValidationResult("MaxYear must be greater than or equal to MinYear.", [nameof(MaxYear)]);
+        if (MinRating > MaxRating)
+            yield return new ValidationResult("MaxRating must be greater than or equal to MinRating.", [nameof(MaxRating)]);
+        if (MinCriticRating > MaxCriticRating)
+            yield return new ValidationResult("MaxCriticRating must be greater than or equal to MinCriticRating.", [nameof(MaxCriticRating)]);
+    }
 }
