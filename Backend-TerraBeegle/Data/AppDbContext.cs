@@ -14,7 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<PlatformFamily> PlatformFamilies => Set<PlatformFamily>();
     public DbSet<Theme> Themes => Set<Theme>();
-    // public DbSet<Keyword> Keywords => Set<Keyword>();
+    public DbSet<Keyword> Keywords => Set<Keyword>();
     public DbSet<Image> Images => Set<Image>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<LoginChallenge> LoginChallenges => Set<LoginChallenge>();
@@ -54,11 +54,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasConversion<string>()
                 .HasMaxLength(10)
                 .HasDefaultValue(UserTheme.Light);
-
-            e.Property(u => u.DogCompanion)
-                .HasConversion<string>()
-                .HasMaxLength(20)
-                .HasDefaultValue(DogCompanion.Beagle);
 
             e.Property(u => u.CreatedAt)
                 .HasDefaultValueSql("NOW()");
@@ -165,8 +160,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Ignore(g => g.OfficialWebsite);
             e.Ignore(g => g.Websites);
             e.Ignore(g => g.Stores);
-            e.Ignore(g => g.Videos);
-            e.Ignore(g => g.Keywords);
 
             e.HasOne(g => g.Cover)
                 .WithOne(i => i.Game)
@@ -174,24 +167,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.SetNull);
 
             e.HasMany(g => g.Artworks)
-                .WithMany()
+                .WithMany(i => i.GamesAsArtwork)
                 .UsingEntity(j => j.ToTable("game_artworks"));
 
             e.HasMany(g => g.Screenshots)
-                .WithMany()
+                .WithMany(i => i.GamesAsScreenshot)
                 .UsingEntity(j => j.ToTable("game_screenshots"));
             
             e.HasOne(g => g.ParentGame)
-                .WithMany()
+                .WithMany(g => g.GamesAsParent)
                 .HasForeignKey("ParentGameId")
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            e.HasOne(g => g.VersionParent)
+                .WithMany(g => g.GamesAsVersionParent)
+                .HasForeignKey("VersionParentId")
                 .OnDelete(DeleteBehavior.Restrict);
 
             e.HasMany(g => g.DLCs)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("game_dlcs"));
 
-            e.HasMany(g => g.Series)
+            e.HasMany(g => g.ExpandedGames)
                 .WithMany()
+                .UsingEntity(j => j.ToTable("game_expanded_games"));
+
+            e.HasMany(g => g.Expansions)
+                .WithMany()
+                .UsingEntity(j => j.ToTable("game_expansions"));
+
+            e.HasMany(g => g.Series)
+                .WithMany(s => s.Games)
                 .UsingEntity(j => j.ToTable("game_series"));
 
             e.HasMany(g => g.Genres)
@@ -248,19 +254,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(p => p.Id).ValueGeneratedOnAdd();
 
-            e.Property(p => p.ApiPlatformId)
-                .IsRequired();
-
-            e.Property(p => p.Name)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            e.Property(p => p.Slug)
-                .IsRequired()
-                .HasMaxLength(100);
+            e.Property(p => p.ApiPlatformId).IsRequired();
+            e.Property(p => p.Name).IsRequired().HasMaxLength(100);
+            e.Property(p => p.Slug).IsRequired().HasMaxLength(100);
 
             e.HasIndex(p => p.Name);
-
             e.HasIndex(p => p.ApiPlatformId).IsUnique();
             e.HasIndex(p => p.Slug).IsUnique();
 
@@ -283,19 +281,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Genre>(e =>
         {
             e.Property(g => g.Id).ValueGeneratedOnAdd();
-
-            e.Property(g => g.ApiGenreId)
-                .IsRequired();
-
-            e.Property(g => g.Name)
-                .IsRequired()
-                .HasMaxLength(100);
-            e.Property(g => g.Slug)
-                .IsRequired()
-                .HasMaxLength(100);
+            e.Property(g => g.ApiGenreId).IsRequired();
+            e.Property(g => g.Name).IsRequired().HasMaxLength(100);
+            e.Property(g => g.Slug).IsRequired().HasMaxLength(100);
 
             e.HasIndex(g => g.Name);
-
             e.HasIndex(g => g.ApiGenreId).IsUnique();
             e.HasIndex(g => g.Slug).IsUnique();
 
@@ -304,6 +294,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .UsingEntity(j => j.ToTable("game_genres"));
         });
 
+        // KEYWORDS
+        modelBuilder.Entity<Keyword>(e =>
+        {
+            e.Property(k => k.Id).ValueGeneratedOnAdd();
+            e.Property(k => k.ApiKeywordId).IsRequired();
+            e.Property(k => k.Name).IsRequired().HasMaxLength(100);
+            e.Property(k => k.Slug).IsRequired().HasMaxLength(100);
+            
+            e.HasIndex(k => k.Name);
+            e.HasIndex(k => k.ApiKeywordId).IsUnique();
+            e.HasIndex(k => k.Slug).IsUnique();
+
+            e.HasMany(k => k.Games)
+                .WithMany(g => g.Keywords)
+                .UsingEntity(j => j.ToTable("game_keywords"));
+        });
 
         // THEMES
         modelBuilder.Entity<Theme>(e =>
@@ -323,6 +329,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .UsingEntity(j => j.ToTable("game_themes"));
         });
 
+        // PLATFORM FAMILIES
         modelBuilder.Entity<PlatformFamily>(e =>
         {
             e.Property(p => p.Id).ValueGeneratedOnAdd();
@@ -334,14 +341,58 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.HasIndex(p => p.ApiPlatformFamilyId).IsUnique();
             e.HasIndex(p => p.Slug).IsUnique();
+
+            e.HasMany(p => p.Platforms)
+                .WithOne(p => p.PlatformFamily)
+                .HasForeignKey(p => p.PlatformFamilyId)
+                .HasPrincipalKey(pf => pf.ApiPlatformFamilyId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // IMAGES
         modelBuilder.Entity<Image>(e =>
         {
             e.Property(i => i.Id).ValueGeneratedOnAdd();
             e.Property(i => i.ApiImageId).IsRequired().HasMaxLength(500);
             
             e.HasIndex(i => i.ApiImageId).IsUnique();
+
+            e.HasOne(i => i.Game)
+                .WithOne(g => g.Cover)
+                .HasForeignKey<Game>("CoverId")
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            e.HasOne(i => i.Company)
+                .WithOne(c => c.CompanyLogo)
+                .HasForeignKey<Company>("CompanyLogoId")
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            e.HasOne(i => i.Platform)
+                .WithOne(p => p.PlatformLogo)
+                .HasForeignKey<Platform>("PlatformLogoId")
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            e.HasMany(i => i.GamesAsArtwork)
+                .WithMany(g => g.Artworks)
+                .UsingEntity(j => j.ToTable("game_artworks"));
+
+            e.HasMany(i => i.GamesAsScreenshot)
+                .WithMany(g => g.Screenshots)
+                .UsingEntity(j => j.ToTable("game_screenshots"));
+        });
+
+        // VIDEOS
+        modelBuilder.Entity<Video>(e =>
+        {
+            e.Property(v => v.Id).ValueGeneratedOnAdd();
+            e.Property(v => v.ApiVideoId).IsRequired().HasMaxLength(500);
+            e.Property(v => v.Name).IsRequired().HasMaxLength(255);
+
+            e.HasIndex(v => v.ApiVideoId).IsUnique();
+            e.HasOne(v => v.Game)
+                .WithMany(g => g.Videos)
+                .HasForeignKey(v => v.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // COMPANIES
