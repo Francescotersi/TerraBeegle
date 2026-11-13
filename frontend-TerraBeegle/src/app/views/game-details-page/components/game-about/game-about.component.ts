@@ -1,7 +1,14 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GameDetailsDTO } from '../../../../models-services/game.model';
 import { LiquidGlassComponent } from '../../../../ui/liquid-glass/liquid-glass.component';
 import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
+
+interface EmbeddableVideo {
+  name: string;
+  videoUrl: string;
+  embedUrl: SafeResourceUrl | null;
+}
 
 // "About" (summary + storyline) and the trailers of the game
 @Component({
@@ -28,13 +35,32 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
         </section>
       </app-liquid-glass>
 
-      @if (g.videos?.length) {
+      @if (videos().length) {
         <app-liquid-glass borderRadius="20px" blur="3px" [scale]="85" background="var(--tb-glass-bg)">
           <section class="p-3 p-md-4">
             <h2 class="section-title">Videos</h2>
-            <div class="d-flex flex-wrap gap-2">
-              @for (video of g.videos; track video.videoUrl) {
-                <a class="link-chip" [href]="video.videoUrl" target="_blank" rel="noopener noreferrer">▶ {{ video.name || 'Trailer' }}</a>
+            <div class="row g-3">
+              @for (video of videos(); track video.videoUrl) {
+                <div [class]="videos().length === 1 ? 'col-12' : 'col-12 col-md-6'">
+                  @if (video.embedUrl) {
+                    <div class="video-card">
+                      <div class="ratio ratio-16x9 video-frame">
+                        <iframe
+                          [src]="video.embedUrl"
+                          [title]="video.name"
+                          loading="lazy"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowfullscreen
+                        ></iframe>
+                      </div>
+                      <p class="video-title mb-0 mt-2">{{ video.name }}</p>
+                    </div>
+                  } @else {
+                    <a class="link-chip" [href]="video.videoUrl" target="_blank" rel="noopener noreferrer">
+                      ▶ {{ video.name }}
+                    </a>
+                  }
+                </div>
               }
             </div>
           </section>
@@ -54,9 +80,53 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
       line-height: 1.65;
       white-space: pre-line;
     }
+    .video-frame {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--tb-glass-border);
+      background: #000;
+    }
+    .video-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--tb-text);
+    }
   `,
   ],
 })
 export class GameAboutComponent {
   readonly game = input.required<GameDetailsDTO>();
+  private readonly sanitizer = inject(DomSanitizer);
+
+  protected readonly videos = computed<EmbeddableVideo[]>(() =>
+    (this.game().videos ?? []).map((video) => {
+      const id = this.extractYouTubeId(video.videoUrl);
+      return {
+        name: video.name || 'Trailer',
+        videoUrl: video.videoUrl,
+        embedUrl: id
+          ? this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube.com/embed/${id}`)
+          : null,
+      };
+    })
+  );
+
+  private extractYouTubeId(url: string): string | null {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('youtu.be')) {
+        return parsed.pathname.slice(1) || null;
+      }
+      if (parsed.hostname.includes('youtube.com')) {
+        return (
+          parsed.searchParams.get('v') ??
+          parsed.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/)?.[1] ??
+          null
+        );
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
 }
