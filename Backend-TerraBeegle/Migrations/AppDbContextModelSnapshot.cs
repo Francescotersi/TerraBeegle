@@ -150,8 +150,8 @@ namespace Backend_TerraBeegle.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal?>("Rating")
-                        .HasPrecision(4, 2)
-                        .HasColumnType("numeric(4,2)");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<DateOnly?>("ReleaseDate")
                         .HasColumnType("date");

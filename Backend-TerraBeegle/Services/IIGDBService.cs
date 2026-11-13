@@ -7,5 +7,5 @@ public interface IIGDBService
 {
     Task<GameSearchResponseDTO?> SearchGamesAsync(string query, string pagination);
     Task<GameDetailsDTO?> GetGameAsync(long igdbGameId);
-    // Task<Game?> GetOrCreateGameAsync(long igdbGameId);
+    Task<Game?> GetOrCreateGameAsync(long igdbGameId);
 }

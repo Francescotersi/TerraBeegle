@@ -22,7 +22,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !req.url.startsWith('/api/auth/login')) {
+      const collectionOwner = /^\/api\/users\/(\d+)\/(favorites|wishlist)(?:\/\d+)?$/.exec(req.url);
+      const missingSessionUser = error.status === 404
+        && error.error === 'User not found.'
+        && collectionOwner !== null
+        && Number(collectionOwner[1]) === authService.currentUser()?.id;
+
+      if (missingSessionUser) {
+        authService.logout();
+        alertService.showAlert('Your account is no longer available. Please log in again or create a new account.');
+      } else if (error.status === 401 && !req.url.startsWith('/api/auth/login')) {
         authService.logout();
         alertService.showAlert('Please log in to perform this action.');
       }

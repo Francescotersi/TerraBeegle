@@ -30,7 +30,6 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
     GameInfoComponent,
   ],
   // One instance for the page and its sections (the hero buttons); the similar games grid has its own
-  providers: [GridGameActionsService],
   template: `
     <div class="details-page pt-2 pt-md-4">
       <a routerLink="/" class="back-link d-inline-flex align-items-center gap-1 mb-3">

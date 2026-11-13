@@ -1,8 +1,8 @@
-import { Component, signal, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, signal, OnInit, inject, PLATFORM_ID, DestroyRef } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
 import { SpinnerComponent } from '../../ui/spinner/spinner.component';
-import { MOCK_WISHLIST_GAMES } from '../../mocks/games.mock';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
 
 @Component({
@@ -17,36 +17,15 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
     } @else if (errorMessage()) {
       <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">
         {{ errorMessage() }}
+        <button type="button" class="btn btn-outline-danger d-block mx-auto mt-3" (click)="loadWishlist()">Try again</button>
       </div>
     } @else {
-      @if (isUsingMock()) {
-        <div
-          class="alert alert-warning py-2 px-3 mx-auto my-3 text-center d-flex align-items-center justify-content-center gap-2"
-          style="max-width: 620px; border-radius: 10px;"
-          role="status"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span class="small fw-medium">
-            API unavailable: showing sample wishlist games.
-          </span>
-        </div>
-      }
       <app-grid-component
         title="Wishlist"
         [games]="wishlistGames()"
+        [canLoadMore]="hasMore()"
+        [isLoadingMore]="isLoadingMore()"
+        (loadMore)="loadMore()"
         emptyMessage="Your wishlist is empty. Add games you want to play later!"
       >
       </app-grid-component>
@@ -66,34 +45,49 @@ export class WishlistPageComponent implements OnInit {
   readonly wishlistGames = signal<GridComponentProps[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
-  readonly isUsingMock = signal<boolean>(false);
+  private readonly destroyRef = inject(DestroyRef);
+  private page = 1;
+  readonly hasMore = signal(false);
+  readonly isLoadingMore = signal(false);
+
+  loadMore(): void {
+    if (this.hasMore() && !this.isLoadingMore()) this.fetchPage(this.page + 1);
+  }
 
   ngOnInit(): void {
     this.loadWishlist();
+    this.wishlistFavoritesService.changes.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(type => {
+      if (type === 'wishlist') this.loadWishlist();
+    });
   }
 
   loadWishlist(): void {
     if (!isPlatformBrowser(this.platformId)) {
-      this.wishlistGames.set(MOCK_WISHLIST_GAMES);
       this.isLoading.set(false);
       return;
     }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.isUsingMock.set(false);
+    this.fetchPage(1);
+  }
 
-    this.wishlistFavoritesService.getWishlist().subscribe({
+  private fetchPage(page: number): void {
+    this.isLoadingMore.set(page > 1);
+
+    this.wishlistFavoritesService.getWishlist(page, 24).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         const mappedGames =
           response?.items?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];
-        this.wishlistGames.set(mappedGames);
+        this.wishlistGames.update(games => page === 1 ? mappedGames : [...games, ...mappedGames]);
+        this.page = page;
+        this.hasMore.set(page < response.totalPages);
+        this.isLoadingMore.set(false);
         this.isLoading.set(false);
       },
-      error: (err) => {
-        console.warn('Backend API unavailable. Loading mock wishlist instead:', err);
-        this.wishlistGames.set(MOCK_WISHLIST_GAMES);
-        this.isUsingMock.set(true);
+      error: () => {
+        this.errorMessage.set('Could not load your wishlist. Please try again.');
+        this.isLoadingMore.set(false);
         this.isLoading.set(false);
       },
     });

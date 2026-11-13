@@ -826,8 +826,9 @@ pornit local, legat de Postgres-ul din Docker, și cu IGDB-ul real.
         unul, `[...]` = toate. Testat: PS5 → 1487, RPG + PS5 + 2020–2024 + rating ≥ 8 → 104 (Elden Ring, BG3...)
 
 - [ ] **63. Ce a rămas după migrarea la IGDB**
-  - [ ] `GetOrCreateGameAsync` e comentat → `POST` la favorite / wishlist și `POST` la review-uri sunt comentate în
-        controllere (butoanele din frontend dau eroare). De rescris pentru IGDB (lucrează colegul)
+  - [x] `GetOrCreateGameAsync` rescris pentru IGDB; `POST` la favorite / wishlist restaurate (12.11).
+        Importă datele pentru carduri și refolosește genurile, platformele, temele și imaginile existente.
+  - [ ] `POST` la review-uri este încă comentat; nu face parte din implementarea favorites / wishlist
   - [ ] migrația mare după ce colegul termină modelele; migrația necomisă `FixGameAndPlatformRelationships` există
         deja (`has-pending-model-changes` → fără schimbări pe 11.11)
   - [ ] `GetFavorites` / `GetWishlist` au pierdut filtrele (`UserGameSearchDTO`) la merge: acum doar paginare.
@@ -862,3 +863,44 @@ pornit local, legat de Postgres-ul din Docker, și cu IGDB-ul real.
         Starea e în URL (`/?genres=12&platforms=167&yearMin=2020&rating=8&sort=released`), citită și scrisă de
         `CatalogFiltersService`; se combină cu căutarea din header și cu „Show More”. Tags / Publishers (date de
         exemplu) scoase
+
+
+## Favorites / Wishlist funcționale (12.11.2026)
+
+- [x] Adăugare / ștergere / listare prin API, cu ID-ul IGDB; adăugările repetate întorc 204.
+- [x] Importuri concurente fără duplicate; jocurile și taxonomiile sunt refolosite între liste și utilizatori.
+- [x] Cardurile salvate au coperta IGDB, rating-ul criticilor, genurile și platformele corecte.
+- [x] Rating IGDB 100 acceptat prin migrația `SupportIgdbCollectionRatings` (`numeric(5,2)`).
+- [x] Frontend: starea butoanelor comună între catalog și detalii, actualizată doar după succesul API-ului.
+- [x] Datele de exemplu și succesul fals la erori eliminate din liste; mesaj de eroare și buton de reîncercare.
+- [x] Liste paginate cu „Show More”; starea butoanelor citește toate paginile, maximum 50 de jocuri / request.
+- [x] Testat cu PostgreSQL temporar și IGDB real: proprietar / prieten acceptat → 200; alt user / Pending → 403;
+      fără token → 401; user / joc inexistent → 404; scriere în lista altui user → 403; salvări simultane → 204;
+      ștergere, independența listelor, paginarea și rating 100. Datele existente ale proiectului nu au fost modificate.
+- [x] Build backend + frontend și teste frontend dedicate pentru liste, butoane și încărcarea paginată.
+
+Testare manuală: repornește backend-ul și frontend-ul cu modificările noi (în Docker: rebuild la backend / frontend).
+Migrațiile se aplică automat la pornirea backend-ului, cu PostgreSQL pornit. Autentifică-te, adaugă un joc din catalog
+sau detalii, verifică `/favorites` și `/wishlist`, reîncarcă pagina, apoi scoate jocul și verifică din nou listele.
+
+
+### Diagnostic frontend după repornire (12.11.2026)
+
+- Baza activă avea 0 conturi; o sesiune rămasă în localStorage poate afișa utilizatorul ca autentificat,
+  deși `POST favorites / wishlist` răspunde 404 `User not found.`.
+- Interceptorul elimină acum sesiunea pentru acest răspuns în listele utilizatorului curent și afișează
+  mesajul pentru autentificare / creare cont; mesajul nu mai este suprascris de eroarea generică a butoanelor.
+  Un joc inexistent sau lista altui utilizator nu deloghează utilizatorul curent.
+- Verificat prin proxy-ul frontend de la portul 4200: cont temporar existent → 204 în ambele liste;
+  cont inexistent cu token valid → 404 `User not found.`; 12 jocuri din catalog → adăugare 204.
+  Conturile temporare de diagnostic au fost șterse.
+
+
+### Statistics și Themes (12.11.2026)
+
+- Toate cele patru grafice folosesc formatul donut cu legendă: Genres, Playing style, Platforms, Themes.
+- Themes folosește metadatele reale din favorite; categorii mici grupate în Other, cu suma segmentelor 100%.
+- Sidebar: Themes cu selecție multiplă, căutare, număr de filtre active, resetare și păstrare în URL.
+- `GET /api/themes` din IGDB, cache 24h; filtrul `themes` trimis către căutarea catalogului.
+- Build backend și frontend trecute; teste pentru grafice, filtre și selecția din sidebar.
+  Verificat IGDB real: 22 teme; Fantasy (17) → 1067 rezultate cu minimum 50 de voturi la momentul testării.
