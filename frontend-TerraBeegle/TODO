@@ -1,0 +1,19 @@
+Cambiare slug del gioco che sta nell URL, adesso ci sta l`id del db meglio mettercio lo slug effettivo del gioco o direttamente il nome
+
+Nella detail page del gioco per il PEGI aggiungerci le immagini originali  prese da questo URL https://www.igdb.com/icons/rating_icons/pegi/pegi_{numero}.png da qua dell api "pegiRating": "18" , e nella stessa parte aggiungere anche il tipo di violenza, discriminazione o altri simile senpre di pegi da questo URL https://www.igdb.com/icons/rating_icons/pegi/pegi_{string-lowered}.png prendere la parte da mettere nell`url da qua "pegiRatingDescription": [
+    "Violence",
+    "Bad Language",
+    "Sex"
+  ], fare un toLower sulla stringa ricevuta e sostituire gli spazi con '-'
+
+Nella detail page del gioco al posto die bottoni con il redirect per il video mettere i video effettivi
+
+nella detail page del gioco mettere il logo del della platform della stesse dimensione della scritta al posto del nome della console effettiva se possibile
+
+nella detail page del gioco per gli screenshot fare una carouselle cosi da rendere il tutto piu ordinato, le dimensioni delle immagini lasciale cosi come sono adesso e fare la stessa cosa anche per i giochi simili
+
+nel grid component cambiare la forma delel game card cosi da non tagliare la copertina del gioco, passare da 16/9 a 9/16 o simile ma non rendere ingobrante la nuova gamecard
+
+nella sidebar per il release year fare un piccolo menu a tendina per le annate che vanno dall'anno di uscita del primo videogioco all'anno attuale
+
+nella sidebar quando si cercano i generi o le platform fare in modo che si apra solamente il menu a tendina con dei risultati effettivi, quelli che non ne hanno sono da lasciare chiusi e aggiungi un piccolo bordo ad ognuno degli item contenuti dentro ai menu 
