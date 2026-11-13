@@ -1,5 +1,4 @@
 export type Theme = 'light' | 'dark';
-export type DogCompanion = 'Beagle' | 'Elkhound' | 'GoldenRetriever' | 'Husky';
 
 export interface User {
   id: number;
@@ -11,14 +10,12 @@ export interface User {
   twoFactorEnabled?: boolean;
   imageProfile?: string | null;
   theme?: Theme;
-  dogCompanion?: DogCompanion;
 }
 
 export interface UserPublicResponseDTO {
   id: number;
   username: string;
   imageProfile?: string | null;
-  dogCompanion?: DogCompanion;
 }
 
 export interface RegisterPayload {
@@ -74,7 +71,6 @@ export interface UpdateUserPayload{
   username?: string;
   imageProfile?: string | null;
   theme?: Theme;
-  dogCompanion?: DogCompanion;
 }
 
 export interface UpdateEmailPayload {

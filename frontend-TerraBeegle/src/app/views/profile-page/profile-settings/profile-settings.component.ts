@@ -111,19 +111,6 @@ import { ProfilePasswordSettingsComponent } from './profile-password-settings.co
             />
           </div>
 
-          <div class="profile-field">
-            <label for="profile-companion" class="form-label small fw-semibold text-body">Dog companion</label>
-            <select
-              id="profile-companion"
-              class="form-select settings-input"
-              [(ngModel)]="dogCompanion"
-              name="dogCompanion"
-            >
-              @for (companion of dogCompanions; track companion.value) {
-                <option [ngValue]="companion.value">{{ companion.label }}</option>
-              }
-            </select>
-          </div>
             </div>
 
             <button
@@ -228,14 +215,7 @@ export class ProfileSettingsComponent {
   familyName = '';
   username = '';
   imageProfile = '';
-  dogCompanion = this.user()?.dogCompanion ?? 'Beagle';
   confirmPassword = '';
-  readonly dogCompanions = [
-    { value: 'Beagle', label: 'Beagle' },
-    { value: 'Elkhound', label: 'Elkhound' },
-    { value: 'GoldenRetriever', label: 'Golden Retriever' },
-    { value: 'Husky', label: 'Husky' },
-  ] as const;
 
   toggleProfileForm(): void {
     this.isProfileFormOpen.update((isOpen) => !isOpen);
@@ -246,9 +226,8 @@ export class ProfileSettingsComponent {
     const familyName = this.familyName.trim();
     const username = this.username.trim();
     const imageProfile = this.imageProfile.trim();
-    const dogCompanion = this.dogCompanion;
 
-    if (!name && !familyName && !username && !imageProfile && dogCompanion === this.user()?.dogCompanion) {
+    if (!name && !familyName && !username && !imageProfile) {
       this.alertService.showAlert('No changes to save.');
       return;
     }
@@ -264,13 +243,11 @@ export class ProfileSettingsComponent {
       familyName?: string;
       username?: string;
       imageProfile?: string | null;
-      dogCompanion?: typeof dogCompanion;
     } = {};
     if (name) payload.name = name;
     if (familyName) payload.familyName = familyName;
     if (username) payload.username = username;
     if (imageProfile) payload.imageProfile = imageProfile;
-    if (dogCompanion !== this.user()?.dogCompanion) payload.dogCompanion = dogCompanion;
 
     this.isProfileLoading.set(true);
     this.authService.updateUser(payload).subscribe({
@@ -281,7 +258,6 @@ export class ProfileSettingsComponent {
         this.familyName = '';
         this.username = '';
         this.imageProfile = '';
-        this.dogCompanion = this.user()?.dogCompanion ?? 'Beagle';
         this.alertService.showSuccess('Profile updated successfully.');
       },
       error: (error) => {

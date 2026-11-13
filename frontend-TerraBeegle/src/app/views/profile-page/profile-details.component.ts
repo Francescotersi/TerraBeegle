@@ -1,11 +1,10 @@
 import { Component, input } from '@angular/core';
 import { User } from '../../models-services/user.model';
-import { DogComponent } from '../../ui/dog/dog.component';
 
 @Component({
   selector: 'app-profile-details',
   standalone: true,
-  imports: [DogComponent],
+  imports: [],
   template: `
     <div class="row g-3">
       <div class="col-12 col-sm-6">
@@ -30,15 +29,6 @@ import { DogComponent } from '../../ui/dog/dog.component';
         <div class="info-card p-3 rounded-3">
           <span class="info-label text-body-secondary small text-uppercase fw-semibold d-block mb-1">Last Name</span>
           <span class="info-value fw-bold text-body">{{ user()?.familyName || '—' }}</span>
-        </div>
-      </div>
-      <div class="col-12 col-sm-6">
-        <div class="info-card p-3 rounded-3 d-flex align-items-center gap-3">
-          <app-dog [dog]="user()?.dogCompanion ?? 'Beagle'" animation="sit" [size]="64" />
-          <div>
-            <span class="info-label text-body-secondary small text-uppercase fw-semibold d-block mb-1">Dog companion</span>
-            <span class="info-value fw-bold text-body">{{ companionLabel() }}</span>
-          </div>
         </div>
       </div>
     </div>
@@ -73,11 +63,4 @@ import { DogComponent } from '../../ui/dog/dog.component';
 })
 export class ProfileDetailsComponent {
   readonly user = input<User | null>(null);
-
-  companionLabel(): string {
-    return this.user()?.dogCompanion === 'GoldenRetriever'
-      ? 'Golden Retriever'
-      : this.user()?.dogCompanion ?? 'Beagle';
-  }
-
 }
