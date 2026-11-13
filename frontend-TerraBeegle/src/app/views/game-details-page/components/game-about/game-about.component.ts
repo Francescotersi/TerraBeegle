@@ -1,7 +1,8 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, viewChild } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GameDetailsDTO } from '../../../../models-services/game.model';
 import { LiquidGlassComponent } from '../../../../ui/liquid-glass/liquid-glass.component';
+import { createCarouselScroll } from '../../../../ui/carousel/carousel-scroll';
 import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
 
 interface EmbeddableVideo {
@@ -39,29 +40,55 @@ interface EmbeddableVideo {
         <app-liquid-glass borderRadius="20px" blur="3px" [scale]="85" background="var(--tb-glass-bg)">
           <section class="p-3 p-md-4">
             <h2 class="section-title">Videos</h2>
-            <div class="row g-3">
-              @for (video of videos(); track video.videoUrl) {
-                <div [class]="videos().length === 1 ? 'col-12' : 'col-12 col-md-6'">
-                  @if (video.embedUrl) {
-                    <div class="video-card">
-                      <div class="ratio ratio-16x9 video-frame">
-                        <iframe
-                          [src]="video.embedUrl"
-                          [title]="video.name"
-                          loading="lazy"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowfullscreen
-                        ></iframe>
+            <div class="carousel-wrapper">
+              <button
+                type="button"
+                class="carousel-btn prev"
+                [class.is-hidden]="!videoCarousel.canPrev()"
+                [inert]="!videoCarousel.canPrev()"
+                aria-label="Previous videos"
+                (click)="videoCarousel.scroll(-1)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <div #videoTrack class="carousel-track" (scroll)="videoCarousel.onScroll()">
+                @for (video of videos(); track video.videoUrl) {
+                  <div class="video-slide" [class.single]="videos().length === 1">
+                    @if (video.embedUrl) {
+                      <div class="video-card">
+                        <div class="ratio ratio-16x9 video-frame">
+                          <iframe
+                            [src]="video.embedUrl"
+                            [title]="video.name"
+                            loading="lazy"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                          ></iframe>
+                        </div>
+                        <p class="video-title mb-0 mt-2">{{ video.name }}</p>
                       </div>
-                      <p class="video-title mb-0 mt-2">{{ video.name }}</p>
-                    </div>
-                  } @else {
-                    <a class="link-chip" [href]="video.videoUrl" target="_blank" rel="noopener noreferrer">
-                      ▶ {{ video.name }}
-                    </a>
-                  }
-                </div>
-              }
+                    } @else {
+                      <a class="link-chip" [href]="video.videoUrl" target="_blank" rel="noopener noreferrer">
+                        ▶ {{ video.name }}
+                      </a>
+                    }
+                  </div>
+                }
+              </div>
+              <button
+                type="button"
+                class="carousel-btn next"
+                [class.is-hidden]="!videoCarousel.canNext()"
+                [inert]="!videoCarousel.canNext()"
+                aria-label="Next videos"
+                (click)="videoCarousel.scroll(1)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
             </div>
           </section>
         </app-liquid-glass>
@@ -91,12 +118,22 @@ interface EmbeddableVideo {
       font-weight: 600;
       color: var(--tb-text);
     }
+    .video-slide {
+      flex: 0 0 100%;
+      scroll-snap-align: start;
+    }
+    @media (min-width: 768px) {
+      .video-slide:not(.single) {
+        flex: 0 0 calc(50% - 6px);
+      }
+    }
   `,
   ],
 })
 export class GameAboutComponent {
   readonly game = input.required<GameDetailsDTO>();
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly videoTrack = viewChild<ElementRef<HTMLElement>>('videoTrack');
 
   protected readonly videos = computed<EmbeddableVideo[]>(() =>
     (this.game().videos ?? []).map((video) => {
@@ -110,6 +147,8 @@ export class GameAboutComponent {
       };
     })
   );
+
+  protected readonly videoCarousel = createCarouselScroll(this.videoTrack, 300, this.videos);
 
   private extractYouTubeId(url: string): string | null {
     try {

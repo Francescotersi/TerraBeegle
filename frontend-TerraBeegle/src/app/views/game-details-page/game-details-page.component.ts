@@ -67,7 +67,7 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
 
         @if (similarGames().length > 0) {
           <div class="mt-3">
-            <app-grid-component title="Similar games" [games]="similarGames()" />
+            <app-grid-component title="Similar games" [games]="similarGames()" layout="carousel" />
           </div>
         }
       }

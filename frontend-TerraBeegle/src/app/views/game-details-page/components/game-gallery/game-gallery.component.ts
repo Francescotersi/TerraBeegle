@@ -1,5 +1,6 @@
-import { Component, HostListener, computed, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, input, signal, viewChild } from '@angular/core';
 import { LiquidGlassComponent } from '../../../../ui/liquid-glass/liquid-glass.component';
+import { createCarouselScroll } from '../../../../ui/carousel/carousel-scroll';
 import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
 
 // Screenshot grid; a click opens the image full size, a click or Escape closes it
@@ -12,12 +13,38 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
       <app-liquid-glass borderRadius="20px" blur="3px" [scale]="85" background="var(--tb-glass-bg)">
         <section class="p-3 p-md-4">
           <h2 class="section-title">Screenshots</h2>
-          <div class="gallery">
-            @for (image of images(); track image; let i = $index) {
-              <button type="button" class="gallery-item" (click)="open(i)" [attr.aria-label]="'Open image ' + (i + 1)">
-                <img [src]="image" [alt]="gameName() + ' screenshot ' + (i + 1)" loading="lazy" width="320" height="180" />
-              </button>
-            }
+          <div class="carousel-wrapper">
+            <button
+              type="button"
+              class="carousel-btn prev"
+              [class.is-hidden]="!carousel.canPrev()"
+              [inert]="!carousel.canPrev()"
+              aria-label="Previous screenshots"
+              (click)="carousel.scroll(-1)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div #track class="carousel-track" (scroll)="carousel.onScroll()">
+              @for (image of images(); track image; let i = $index) {
+                <button type="button" class="gallery-item" (click)="open(i)" [attr.aria-label]="'Open image ' + (i + 1)">
+                  <img [src]="image" [alt]="gameName() + ' screenshot ' + (i + 1)" loading="lazy" width="320" height="180" />
+                </button>
+              }
+            </div>
+            <button
+              type="button"
+              class="carousel-btn next"
+              [class.is-hidden]="!carousel.canNext()"
+              [inert]="!carousel.canNext()"
+              aria-label="Next screenshots"
+              (click)="carousel.scroll(1)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
           </div>
         </section>
       </app-liquid-glass>
@@ -38,12 +65,9 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
   styles: [
     GAME_DETAILS_STYLES,
     `
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 10px;
-    }
     .gallery-item {
+      flex: 0 0 210px;
+      scroll-snap-align: start;
       padding: 0;
       border: 1px solid var(--tb-glass-border);
       border-radius: 12px;
@@ -108,6 +132,8 @@ export class GameGalleryComponent {
   readonly images = input<string[]>([]);
   readonly gameName = input<string>('');
 
+  private readonly track = viewChild<ElementRef<HTMLElement>>('track');
+  protected readonly carousel = createCarouselScroll(this.track, 220, this.images);
   private readonly selectedIndex = signal<number | null>(null);
 
   protected readonly selectedImage = computed(() => {
