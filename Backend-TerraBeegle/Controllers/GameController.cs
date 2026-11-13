@@ -25,9 +25,10 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
 
             filters.Add((searchExact, searchStartExact) switch
             {
-                (true, _) => $"name{opr}\"{name}\" &",
-                (_, true) => $"name{opr}\"{name}\"* &",
-                _ => $"name{opr}*\"{name}\"* &"
+                // No " &" at the end: the conditions are joined with " & " later (it gave "name~*"x"* & & ..." -> 503)
+                (true, _) => $"name{opr}\"{name}\"",
+                (_, true) => $"name{opr}\"{name}\"*",
+                _ => $"name{opr}*\"{name}\"*"
             });
         }
     }
@@ -126,10 +127,12 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         AddFilterList("website.type", search.Stores, search.StoresExact, filters);
 
         AddFilterRange("first_release_date", search.ReleaseYearMin, search.ReleaseYearMax, filters, true);
-        AddFilterRange("rating", search.RatingMin, search.RatingMax, filters, false);
+        // The user rating comes out of 10, IGDB stores it out of 100
+        AddFilterRange("rating", search.RatingMin * 10, search.RatingMax * 10, filters, false);
         AddFilterRange("aggregated_rating", search.CriticRatingMin, search.CriticRatingMax, filters, false);
-        AddFilterRange("rating_count", search.MinRatingCount, null, filters, false);
-        AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount, null, filters, false);
+        // 0 = no minimum (a search by name must find games without votes or critic reviews too)
+        AddFilterRange("rating_count", search.MinRatingCount > 0 ? search.MinRatingCount : null, null, filters, false);
+        AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount > 0 ? search.MinCriticRatingCount : null, null, filters, false);
 
         GameSearchResponseDTO? result;
         try
@@ -205,7 +208,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         GameSearchResponseDTO? result;
         try
         {
-            result = await ApiService.SearchGamesAsync(string.Join("&", filters), string.Join(";", paginationQuery));
+            result = await ApiService.SearchGamesAsync(string.Join(" & ", filters), string.Join(" ", paginationQuery));
         }
         catch (HttpRequestException)
         {

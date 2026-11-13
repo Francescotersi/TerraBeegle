@@ -99,4 +99,70 @@ export const GAME_DETAILS_STYLES = `
       color: var(--tb-accent);
       transform: translateY(-2px);
     }
+
+    .carousel-wrapper {
+      position: relative;
+    }
+    .carousel-track {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      padding: 2px 0;
+    }
+    .carousel-track::-webkit-scrollbar {
+      display: none;
+    }
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 1;
+      transition:
+        opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+    }
+    .carousel-btn svg {
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .carousel-btn:hover {
+      background: rgba(15, 23, 42, 0.94);
+      border-color: var(--tb-accent);
+    }
+    .carousel-btn.prev:hover svg {
+      transform: translateX(-2px);
+    }
+    .carousel-btn.next:hover svg {
+      transform: translateX(2px);
+    }
+    .carousel-btn:active {
+      transform: translateY(-50%) scale(0.94);
+    }
+    .carousel-btn.is-hidden {
+      opacity: 0;
+      transform: translateY(-50%) scale(0.86);
+      pointer-events: none;
+    }
+    .carousel-btn.prev {
+      left: 8px;
+    }
+    .carousel-btn.next {
+      right: 8px;
+    }
 `;

@@ -826,8 +826,9 @@ pornit local, legat de Postgres-ul din Docker, și cu IGDB-ul real.
         unul, `[...]` = toate. Testat: PS5 → 1487, RPG + PS5 + 2020–2024 + rating ≥ 8 → 104 (Elden Ring, BG3...)
 
 - [ ] **63. Ce a rămas după migrarea la IGDB**
-  - [ ] `GetOrCreateGameAsync` e comentat → `POST` la favorite / wishlist și `POST` la review-uri sunt comentate în
-        controllere (butoanele din frontend dau eroare). De rescris pentru IGDB (lucrează colegul)
+  - [x] `GetOrCreateGameAsync` rescris pentru IGDB; `POST` la favorite / wishlist restaurate (12.11).
+        Importă datele pentru carduri și refolosește genurile, platformele, temele și imaginile existente.
+  - [ ] `POST` la review-uri este încă comentat; nu face parte din implementarea favorites / wishlist
   - [ ] migrația mare după ce colegul termină modelele; migrația necomisă `FixGameAndPlatformRelationships` există
         deja (`has-pending-model-changes` → fără schimbări pe 11.11)
   - [ ] `GetFavorites` / `GetWishlist` au pierdut filtrele (`UserGameSearchDTO`) la merge: acum doar paginare.
@@ -862,3 +863,68 @@ pornit local, legat de Postgres-ul din Docker, și cu IGDB-ul real.
         Starea e în URL (`/?genres=12&platforms=167&yearMin=2020&rating=8&sort=released`), citită și scrisă de
         `CatalogFiltersService`; se combină cu căutarea din header și cu „Show More”. Tags / Publishers (date de
         exemplu) scoase
+
+
+## Favorites / Wishlist funcționale (12.11.2026)
+
+- [x] Adăugare / ștergere / listare prin API, cu ID-ul IGDB; adăugările repetate întorc 204.
+- [x] Importuri concurente fără duplicate; jocurile și taxonomiile sunt refolosite între liste și utilizatori.
+- [x] Cardurile salvate au coperta IGDB, rating-ul criticilor, genurile și platformele corecte.
+- [x] Rating IGDB 100 acceptat prin migrația `SupportIgdbCollectionRatings` (`numeric(5,2)`).
+- [x] Frontend: starea butoanelor comună între catalog și detalii, actualizată doar după succesul API-ului.
+- [x] Datele de exemplu și succesul fals la erori eliminate din liste; mesaj de eroare și buton de reîncercare.
+- [x] Liste paginate cu „Show More”; starea butoanelor citește toate paginile, maximum 50 de jocuri / request.
+- [x] Testat cu PostgreSQL temporar și IGDB real: proprietar / prieten acceptat → 200; alt user / Pending → 403;
+      fără token → 401; user / joc inexistent → 404; scriere în lista altui user → 403; salvări simultane → 204;
+      ștergere, independența listelor, paginarea și rating 100. Datele existente ale proiectului nu au fost modificate.
+- [x] Build backend + frontend și teste frontend dedicate pentru liste, butoane și încărcarea paginată.
+
+Testare manuală: repornește backend-ul și frontend-ul cu modificările noi (în Docker: rebuild la backend / frontend).
+Migrațiile se aplică automat la pornirea backend-ului, cu PostgreSQL pornit. Autentifică-te, adaugă un joc din catalog
+sau detalii, verifică `/favorites` și `/wishlist`, reîncarcă pagina, apoi scoate jocul și verifică din nou listele.
+
+
+### Diagnostic frontend după repornire (12.11.2026)
+
+- Baza activă avea 0 conturi; o sesiune rămasă în localStorage poate afișa utilizatorul ca autentificat,
+  deși `POST favorites / wishlist` răspunde 404 `User not found.`.
+- Interceptorul elimină acum sesiunea pentru acest răspuns în listele utilizatorului curent și afișează
+  mesajul pentru autentificare / creare cont; mesajul nu mai este suprascris de eroarea generică a butoanelor.
+  Un joc inexistent sau lista altui utilizator nu deloghează utilizatorul curent.
+- Verificat prin proxy-ul frontend de la portul 4200: cont temporar existent → 204 în ambele liste;
+  cont inexistent cu token valid → 404 `User not found.`; 12 jocuri din catalog → adăugare 204.
+  Conturile temporare de diagnostic au fost șterse.
+
+
+### Statistics și Themes (12.11.2026)
+
+- Toate cele patru grafice folosesc formatul donut cu legendă: Genres, Playing style, Platforms, Themes.
+- Themes folosește metadatele reale din favorite; categorii mici grupate în Other, cu suma segmentelor 100%.
+- Sidebar: Themes cu selecție multiplă, căutare, număr de filtre active, resetare și păstrare în URL.
+- `GET /api/themes` din IGDB, cache 24h; filtrul `themes` trimis către căutarea catalogului.
+- Build backend și frontend trecute; teste pentru grafice, filtre și selecția din sidebar.
+  Verificat IGDB real: 22 teme; Fantasy (17) → 1067 rezultate cu minimum 50 de voturi la momentul testării.
+
+## După merge-ul din 13.11.2026 (`frontend-ftersill` → `frontend-vturlas`)
+
+- [x] **66. Build-ul Docker picat + filtrele dădeau mock după refactorizarea `GameController`**
+  Colegul a mutat DTO-urile de căutare în `DTOS/GameSearchDTO.cs` (commit `a3df6a4`), dar la merge copiile vechi au
+  rămas și în `GameDTO.cs` → `CS0101` (două clase cu același nume), `dotnet publish` eșua. Testat pe 13.11 cu backend-ul
+  pornit local și IGDB-ul real.
+  - [x] copiile `GameSearchDTO` / `GameSearchResponseDTO` / `UserGameSearchDTO` scoase din `GameDTO.cs`
+  - [x] `[StringLength(12)]` pe `SortBy`: `critic_rating` are 13 caractere → 400 → mock. Scos (regex-ul limitează deja)
+  - [x] `[Compare(nameof(RatingMin))]` pe `RatingMax` (și la critici, ani): `Compare` cere valori **egale** (ca la
+        „confirm password”), deci doar `ratingMin=8` dădea 400. Înlocuit cu `IValidatableObject.Validate`: max ≥ min,
+        verificat doar când sunt trimise amândouă
+  - [x] `AddFilterName` punea ` &` la final, iar filtrele se leagă apoi cu `" & "` → `name~*"x"* & & ...` → 503 la orice
+        căutare după nume
+  - [x] `RatingMin` / `RatingMax` sunt acum din 10 (`[Range(0, 10)]`), dar IGDB are 0–100 → controller-ul înmulțește cu 10;
+        frontend-ul trimite valoarea din 10
+  - [x] `MinRatingCount = 25` / `MinCriticRatingCount = 5` implicite se aplicau și la căutarea după nume → jocurile fără
+        recenzii de la critici nu puteau fi găsite. Acum `0` = fără minim; căutarea și sugestiile trimit 0, iar minimul
+        de critici se trimite doar la sortare / filtrare după critici
+  - [x] `coming-soon` lega filtrele cu `"&"` și paginarea cu `";"` (→ `;;`) → aceleași separatoare ca la `Search`
+  - [ ] `GetComingSoon` declară `PagedResponseDTO<GameDetailsDTO>`, dar întoarce `GameCardDTO` (Swagger arată alt format)
+  - [ ] de discutat: `Exact = true` (implicit) trimite acum `[...]` = **toate** valorile. Cu 2 platforme bifate (PC + Switch)
+        apar doar jocurile care sunt pe amândouă; pentru platforme e de obicei de așteptat „oricare” (`platformsExact=false`)
+

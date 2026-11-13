@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Backend_TerraBeegle.DTOS;
 
 public record GameCardDTO

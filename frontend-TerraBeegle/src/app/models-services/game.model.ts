@@ -46,6 +46,7 @@ export interface GameSearchParams {
   sortBy?: 'name' | 'released' | 'rating' | 'critic_rating';
   ascending?: boolean;
   genres?: number[];
+  themes?: number[];
   platforms?: number[];
   platformsFamily?: number[];
   releaseYearMin?: number;
@@ -55,6 +56,7 @@ export interface GameSearchParams {
   criticRatingMin?: number;
   criticRatingMax?: number;
   minRatingCount?: number;
+  minCriticRatingCount?: number;
 }
 
 export interface GameCompanyItem {

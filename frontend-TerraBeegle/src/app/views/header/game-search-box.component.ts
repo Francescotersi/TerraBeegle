@@ -311,7 +311,15 @@ export class GameSearchBoxComponent implements OnInit {
           value.length < MIN_LENGTH
             ? of([])
             : this.gameService
-                .getGames({ name: value, pageSize: MAX_SUGGESTIONS, sortBy: 'rating', ascending: false })
+                .getGames({
+                  name: value,
+                  pageSize: MAX_SUGGESTIONS,
+                  sortBy: 'rating',
+                  ascending: false,
+                  // No minimum of votes / critic reviews: every game with that name can be suggested
+                  minRatingCount: 0,
+                  minCriticRatingCount: 0,
+                })
                 .pipe(
                   map((response) => response.items ?? []),
                   catchError(() => of([]))

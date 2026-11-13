@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, Subject, throwError, expand, reduce, EMPTY } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AlertService } from './alert.service';
 import { GameCardDTO, GameSearchResponse, GameCollectionType } from '../models-services/game.model';
@@ -13,6 +13,15 @@ export type { GameCollectionType };
   providedIn: 'root',
 })
 export class WishlistFavoritesService {
+  readonly changes = new Subject<GameCollectionType>();
+
+  getAllGames(type: GameCollectionType): Observable<GameCardDTO[]> {
+    return this.getGames(type, 1, 50).pipe(
+      expand(page => page.page < page.totalPages ? this.getGames(type, page.page + 1, 50) : EMPTY),
+      reduce((games, page) => [...games, ...page.items], [] as GameCardDTO[])
+    );
+  }
+
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);

@@ -25,6 +25,12 @@ export class GameService {
   private readonly baseUrl = '/api/games';
 
   // Downloaded once per visit: the lists for the filters almost never change
+  private readonly themes$ = this.http.get<GameGenreItem[]>('/api/themes').pipe(shareReplay(1));
+
+  getThemes(): Observable<GameGenreItem[]> {
+    return this.themes$;
+  }
+
   private readonly genres$ = this.http.get<GameGenreItem[]>('/api/genres').pipe(shareReplay(1));
   private readonly platforms$ = this.http.get<GameGenreItem[]>('/api/platforms').pipe(shareReplay(1));
 
