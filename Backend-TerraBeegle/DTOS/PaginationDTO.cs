@@ -7,7 +7,7 @@ public record PaginationDTO
     [Range(1, 10000)]
     public int Page { get; init; } = 1;
     
-    [Range(1, 50)]
+    [Range(1, 500)]
     public int PageSize { get; init; } = 24;
 }
 
