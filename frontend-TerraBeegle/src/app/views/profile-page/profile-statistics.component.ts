@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { GameCardDTO, GameSearchResponse } from '../../models-services/game.model';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
@@ -31,80 +31,37 @@ interface FavoritesPage {
       </div>
     } @else {
       <div class="statistics-grid">
-        <section class="stat-card">
-          <div class="stat-card-heading">
-            <div>
-              <h2 class="stat-title">Favorite genres</h2>
-              <p class="stat-subtitle">The genres represented in your favorites.</p>
-            </div>
-            <span class="stat-total">{{ favoriteCount() }} games</span>
-          </div>
-          <div class="chart-layout">
-            <div class="donut-chart" [style.background]="genreChartBackground()">
-              <span>{{ genreItems().length }}</span>
-              <small>genres</small>
-            </div>
-            <div class="legend">
-              @for (item of genreItems(); track item.label) {
-                <div class="legend-row">
-                  <span class="legend-label">
-                    <i class="legend-dot" [style.background]="item.color"></i>{{ item.label }}
-                  </span>
-                  <strong>{{ item.count }}</strong>
-                </div>
-              }
-            </div>
-          </div>
-        </section>
-
-        <section class="stat-card">
-          <div class="stat-card-heading">
-            <div>
-              <h2 class="stat-title">Playing style</h2>
-              <p class="stat-subtitle">Singleplayer or multiplayer favorites.</p>
-            </div>
-          </div>
-          <div class="chart-layout">
-            <div class="donut-chart" [style.background]="modeChartBackground()">
-              <span>{{ favoriteCount() }}</span>
-              <small>games</small>
-            </div>
-            <div class="legend">
-              @for (item of modeItems(); track item.label) {
-                <div class="legend-row">
-                  <span class="legend-label">
-                    <i class="legend-dot" [style.background]="item.color"></i>{{ item.label }}
-                  </span>
-                  <strong>{{ item.count }}</strong>
-                </div>
-              }
-            </div>
-          </div>
-          <p class="metadata-note">Based on the multiplayer metadata available for each game.</p>
-        </section>
-
-        <section class="stat-card stat-card-wide">
-          <div class="stat-card-heading">
-            <div>
-              <h2 class="stat-title">Favorite platforms</h2>
-              <p class="stat-subtitle">The platforms represented in your favorites.</p>
-            </div>
-          </div>
-          <div class="bar-list">
-            @for (item of platformItems(); track item.label) {
-              <div class="bar-row">
-                <div class="bar-label">
-                  <span>{{ item.label }}</span>
-                  <strong>{{ item.count }}</strong>
-                </div>
-                <div class="bar-track">
-                  <span class="bar-fill" [style.width.%]="item.percentage"
-                    [style.background]="item.color"></span>
-                </div>
+        @for (chart of charts(); track chart.title) {
+          <section class="stat-card">
+            <div class="stat-card-heading">
+              <div>
+                <h2 class="stat-title">{{ chart.title }}</h2>
+                <p class="stat-subtitle">{{ chart.subtitle }}</p>
               </div>
-            }
-          </div>
-        </section>
+              <span class="stat-total">{{ favoriteCount() }} games</span>
+            </div>
+            <div class="chart-layout">
+              <div class="donut-chart" [style.background]="chart.background" role="img"
+                [attr.aria-label]="chart.title + ': ' + chart.total + ' ' + chart.unit">
+                <span>{{ chart.total }}</span>
+                <small>{{ chart.unit }}</small>
+              </div>
+              <div class="legend">
+                @for (item of chart.items; track item.label) {
+                  <div class="legend-row">
+                    <span class="legend-label" [title]="item.label">
+                      <i class="legend-dot" [style.background]="item.color"></i>{{ item.label }}
+                    </span>
+                    <strong>{{ item.count }}</strong>
+                  </div>
+                } @empty {
+                  <p class="metadata-note">No {{ chart.unit }} data available.</p>
+                }
+              </div>
+            </div>
+            @if (chart.note) { <p class="metadata-note">{{ chart.note }}</p> }
+          </section>
+        }
       </div>
     }
   `,
@@ -119,12 +76,11 @@ interface FavoritesPage {
       background: var(--tb-glass-inner-bg, var(--tb-glass-bg));
       box-shadow: 0 4px 14px var(--tb-glass-shadow);
     }
-    .stat-card-wide { grid-column: 1 / -1; }
     .stat-card-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1.25rem; }
     .stat-title { margin: 0; color: var(--tb-text); font-size: 1.05rem; font-weight: 700; }
     .stat-subtitle { margin: .25rem 0 0; color: var(--tb-text-muted); font-size: .82rem; }
     .stat-total { color: var(--tb-accent); font-size: .8rem; font-weight: 700; white-space: nowrap; }
-    .chart-layout { display: flex; align-items: center; gap: 1.25rem; min-width: 0; }
+    .chart-layout { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; min-width: 0; }
     .donut-chart {
       width: 132px;
       height: 132px;
@@ -149,24 +105,19 @@ interface FavoritesPage {
     .donut-chart span, .donut-chart small { z-index: 1; }
     .donut-chart small { color: var(--tb-text-muted); font-size: .7rem; font-weight: 600; }
     .legend { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: .55rem; }
-    .legend-row, .legend-label, .bar-label { display: flex; align-items: center; }
+    .legend-row, .legend-label { display: flex; align-items: center; }
     .legend-row { justify-content: space-between; gap: .75rem; color: var(--tb-text); font-size: .85rem; }
     .legend-label { min-width: 0; gap: .45rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .legend-dot { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; }
     .metadata-note { margin: 1rem 0 0; color: var(--tb-text-muted); font-size: .7rem; }
-    .bar-list { display: flex; flex-direction: column; gap: .85rem; }
-    .bar-label { justify-content: space-between; margin-bottom: .3rem; color: var(--tb-text); font-size: .85rem; }
-    .bar-track { height: 9px; overflow: hidden; border-radius: 999px; background: var(--tb-accent-subtle); }
-    .bar-fill { display: block; height: 100%; min-width: 4px; border-radius: inherit; }
     .statistics-state { padding: 2rem 1rem; text-align: center; }
     @media (max-width: 767.98px) {
       .statistics-grid { grid-template-columns: 1fr; }
-      .stat-card-wide { grid-column: auto; }
     }
     @media (min-width: 2000px) {
       .stat-card { padding: 1.5rem; }
       .stat-title { font-size: 1.3rem; }
-      .stat-subtitle, .legend-row, .bar-label { font-size: 1.05rem; }
+      .stat-subtitle, .legend-row { font-size: 1.05rem; }
     }
   `,
 })
@@ -181,6 +132,21 @@ export class ProfileStatisticsComponent {
   readonly genreItems = signal<StatisticItem[]>([]);
   readonly modeItems = signal<StatisticItem[]>([]);
   readonly platformItems = signal<StatisticItem[]>([]);
+  readonly themeItems = signal<StatisticItem[]>([]);
+  readonly charts = computed(() => [
+    { title: 'Favorite genres', subtitle: 'The genres represented in your favorites.',
+      items: this.genreItems(), unit: 'genres', total: this.genreTotal(), note: '' },
+    { title: 'Playing style', subtitle: 'Estimated singleplayer or multiplayer favorites.',
+      items: this.modeItems(), unit: 'games', total: this.favoriteCount(),
+      note: 'Playing style is estimated from genres.' },
+    { title: 'Favorite platforms', subtitle: 'The platforms represented in your favorites.',
+      items: this.platformItems(), unit: 'platforms', total: this.platformTotal(), note: '' },
+    { title: 'Favorite themes', subtitle: 'The themes represented in your favorites.',
+      items: this.themeItems(), unit: 'themes', total: this.themeTotal(), note: '' },
+  ].map(chart => ({ ...chart, background: this.toChartBackground(chart.items) })));
+  private readonly genreTotal = signal(0);
+  private readonly platformTotal = signal(0);
+  private readonly themeTotal = signal(0);
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -238,6 +204,12 @@ export class ProfileStatisticsComponent {
 
   private buildStatistics(games: GameCardDTO[]): void {
     this.favoriteCount.set(games.length);
+    this.genreTotal.set(new Set(games.flatMap(game => (game.genres ?? []).map(item => item.name))).size);
+    this.platformTotal.set(new Set(games.flatMap(game => (game.platforms ?? []).map(item => item.name))).size);
+    this.themeTotal.set(new Set(games.flatMap(game => (game.themes ?? []).map(item => item.name))).size);
+    this.themeItems.set(this.createItems(this.countValues(games.flatMap(game =>
+      [...new Set((game.themes ?? []).map(theme => theme.name))]
+    )), ['#fbbf24', '#34d399', '#a78bfa', '#f472b6', '#38bdf8']));
     this.genreItems.set(this.createItems(this.countValues(games.flatMap((game) =>
       (game.genres ?? []).map((genre) => genre.name)
     )), ['#f472b6', '#a78bfa', '#38bdf8', '#34d399', '#fb7185']));
@@ -263,15 +235,15 @@ export class ProfileStatisticsComponent {
 
   private createItems(counts: Map<string, number>, colors: string[]): StatisticItem[] {
     const total = [...counts.values()].reduce((sum, count) => sum + count, 0);
-    return [...counts.entries()]
-      .sort(([, first], [, second]) => second - first)
-      .slice(0, 8)
-      .map(([label, count], index) => this.createItem(
-        label,
-        count,
-        colors[index % colors.length],
-        total
-      ));
+    const entries = [...counts.entries()].sort(([, first], [, second]) => second - first);
+    const visible = entries.length > 8 ? entries.slice(0, 7) : entries;
+    const items = visible.map(([label, count], index) =>
+      this.createItem(label, count, colors[index % colors.length], total));
+    if (entries.length > 8) {
+      const remaining = entries.slice(7).reduce((sum, [, count]) => sum + count, 0);
+      items.push(this.createItem('Other', remaining, '#94a3b8', total));
+    }
+    return items;
   }
 
   private createItem(label: string, count: number, color: string, total: number): StatisticItem {

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,8 +18,8 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
           <input
             type="search"
             class="form-control sidebar-search"
-            placeholder="Search genres or platforms..."
-            aria-label="Search genres or platforms"
+            placeholder="Search genres, themes or platforms..."
+            aria-label="Search genres, themes or platforms"
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
           />
@@ -110,6 +110,47 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
         </div>
       </div>
 
+      <!-- Themes -->
+      <div class="category-group mb-2">
+        <button
+          class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
+          type="button"
+          (click)="toggleSection('themes')"
+          [attr.aria-expanded]="isSectionOpen('themes')"
+        >
+          <span class="fw-bold small text-uppercase">
+            Themes
+            @if (filters().themes.length) {
+              <span class="count-badge">{{ filters().themes.length }}</span>
+            }
+          </span>
+          <span class="chevron" [class.open]="isSectionOpen('themes')">▾</span>
+        </button>
+        <div class="collapse" [class.show]="isSectionOpen('themes')">
+          <ul class="category-list list-unstyled mb-0 py-1">
+            @for (theme of filteredThemes(); track theme.id) {
+              <li class="category-item">
+                <button
+                  type="button"
+                  class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2 border-0"
+                  [class.active]="filters().themes.includes(theme.id)"
+                  [attr.aria-pressed]="filters().themes.includes(theme.id)"
+                  (click)="filtersService.toggle('themes', theme.id)"
+                >
+                  <span class="text-start">{{ theme.name }}</span>
+                  @if (filters().themes.includes(theme.id)) {
+                    <span aria-hidden="true">✓</span>
+                  }
+                </button>
+              </li>
+            }
+            @if (filteredThemes().length === 0) {
+              <li class="text-muted small px-3 py-1">{{ listsError() ? 'Could not load the themes.' : 'No themes found' }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+
       <!-- Platforms -->
       <div class="category-group mb-2">
         <button
@@ -179,40 +220,50 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
         </div>
       </div>
 
-      <!-- Minimum user rating (out of 10) -->
-      <div class="category-group mb-3">
-        <span class="filter-label">User rating</span>
-        <div class="d-flex flex-wrap gap-1">
-          @for (option of ratingOptions; track option.label) {
-            <button
-              type="button"
-              class="filter-chip"
-              [class.active]="filters().ratingMin === option.value"
-              [attr.aria-pressed]="filters().ratingMin === option.value"
-              (click)="filtersService.update({ ratingMin: option.value })"
-            >
-              {{ option.label }}
-            </button>
-          }
+      <div class="category-group mb-3" role="group" aria-label="User rating range">
+        <div class="filter-label d-flex justify-content-between align-items-center">
+          <span>User rating</span>
+          <span class="rating-value">{{ ratingDraft() }} – {{ ratingMaxDraft() }}</span>
         </div>
+        <div class="dual-slider" [style.--range-start]="(ratingDraft() * 10) + '%'"
+          [style.--range-end]="(ratingMaxDraft() * 10) + '%'">
+          <div class="dual-slider-track" aria-hidden="true"></div>
+          <input type="range" class="rating-slider range-min" min="0" max="10" step="0.1"
+            aria-label="Minimum user rating" [value]="ratingDraft()"
+            [style.z-index]="ratingDraft() > 5 ? 3 : 1"
+            [attr.aria-valuemax]="ratingMaxDraft()"
+            (input)="onScoreInput('rating', true, $event)"
+            (change)="applyScoreRange('rating')" />
+          <input type="range" class="rating-slider range-max" min="0" max="10" step="0.1"
+            aria-label="Maximum user rating" [value]="ratingMaxDraft()"
+            [attr.aria-valuemin]="ratingDraft()"
+            (input)="onScoreInput('rating', false, $event)"
+            (change)="applyScoreRange('rating')" />
+        </div>
+        <div class="rating-limits" aria-hidden="true"><span>0</span><span>10</span></div>
       </div>
 
-      <!-- Minimum critic score (out of 100) -->
-      <div class="category-group mb-2">
-        <span class="filter-label">Critic score</span>
-        <div class="d-flex flex-wrap gap-1">
-          @for (option of criticOptions; track option.label) {
-            <button
-              type="button"
-              class="filter-chip"
-              [class.active]="filters().criticMin === option.value"
-              [attr.aria-pressed]="filters().criticMin === option.value"
-              (click)="filtersService.update({ criticMin: option.value })"
-            >
-              {{ option.label }}
-            </button>
-          }
+      <div class="category-group mb-2" role="group" aria-label="Critic score range">
+        <div class="filter-label d-flex justify-content-between align-items-center">
+          <span>Critic score</span>
+          <span class="rating-value">{{ criticDraft() }} – {{ criticMaxDraft() }}</span>
         </div>
+        <div class="dual-slider" [style.--range-start]="(criticDraft() * 1) + '%'"
+          [style.--range-end]="(criticMaxDraft() * 1) + '%'">
+          <div class="dual-slider-track" aria-hidden="true"></div>
+          <input type="range" class="rating-slider range-min" min="0" max="100" step="1"
+            aria-label="Minimum critic score" [value]="criticDraft()"
+            [style.z-index]="criticDraft() > 50 ? 3 : 1"
+            [attr.aria-valuemax]="criticMaxDraft()"
+            (input)="onScoreInput('critic', true, $event)"
+            (change)="applyScoreRange('critic')" />
+          <input type="range" class="rating-slider range-max" min="0" max="100" step="1"
+            aria-label="Maximum critic score" [value]="criticMaxDraft()"
+            [attr.aria-valuemin]="criticDraft()"
+            (input)="onScoreInput('critic', false, $event)"
+            (change)="applyScoreRange('critic')" />
+        </div>
+        <div class="rating-limits" aria-hidden="true"><span>0</span><span>100</span></div>
       </div>
     </ng-template>
 
@@ -321,7 +372,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
   `,
   styleUrl: './sidebar.component.css',
 })
-// Catalog filters (advanced search): sorting, genres, platforms, release year and ratings, saved in the URL
+// Catalog filters (advanced search): sorting, genres, themes, platforms, release year and ratings, saved in the URL
 export class SidebarComponent implements OnInit {
   protected readonly filtersService = inject(CatalogFiltersService);
   private readonly gameService = inject(GameService);
@@ -331,6 +382,7 @@ export class SidebarComponent implements OnInit {
   protected readonly filters = this.filtersService.filters;
   protected readonly searchQuery = signal('');
   protected readonly isMobileDrawerOpen = signal(false);
+  protected readonly themes = signal<GameGenreItem[]>([]);
   protected readonly genres = signal<GameGenreItem[]>([]);
   protected readonly platforms = signal<GameGenreItem[]>([]);
   protected readonly listsError = signal(false);
@@ -344,23 +396,24 @@ export class SidebarComponent implements OnInit {
     { value: 'released', label: 'Release date' },
     { value: 'name', label: 'Name' },
   ];
-  protected readonly ratingOptions = [
-    { value: null, label: 'Any' },
-    { value: 6, label: '6+' },
-    { value: 7, label: '7+' },
-    { value: 8, label: '8+' },
-    { value: 9, label: '9+' },
-  ];
-  protected readonly criticOptions = [
-    { value: null, label: 'Any' },
-    { value: 60, label: '60+' },
-    { value: 70, label: '70+' },
-    { value: 80, label: '80+' },
-    { value: 90, label: '90+' },
-  ];
+  protected readonly ratingDraft = signal(this.filters().ratingMin ?? 0);
+  protected readonly ratingMaxDraft = signal(this.filters().ratingMax ?? 10);
+  protected readonly criticMaxDraft = signal(this.filters().criticMax ?? 100);
+  protected readonly criticDraft = signal(this.filters().criticMin ?? 0);
+
+  constructor() {
+    effect(() => {
+      const filters = this.filters();
+      this.ratingDraft.set(filters.ratingMin ?? 0);
+      this.criticDraft.set(filters.criticMin ?? 0);
+      this.ratingMaxDraft.set(filters.ratingMax ?? 10);
+      this.criticMaxDraft.set(filters.criticMax ?? 100);
+    });
+  }
 
   protected readonly openSections = signal<Record<string, boolean>>({
     genres: false,
+    themes: false,
     platforms: false,
   });
 
@@ -369,13 +422,15 @@ export class SidebarComponent implements OnInit {
     const f = this.filters();
     return (
       f.genres.length +
+      f.themes.length +
       f.platforms.length +
       (f.yearMin !== null || f.yearMax !== null ? 1 : 0) +
-      (f.ratingMin !== null ? 1 : 0) +
-      (f.criticMin !== null ? 1 : 0)
+      (f.ratingMin !== null || f.ratingMax !== null ? 1 : 0) +
+      (f.criticMin !== null || f.criticMax !== null ? 1 : 0)
     );
   });
 
+  protected readonly filteredThemes = computed(() => this.byName(this.themes()));
   protected readonly filteredGenres = computed(() => this.byName(this.genres()));
   protected readonly filteredPlatforms = computed(() => this.byName(this.platforms()));
 
@@ -385,15 +440,37 @@ export class SidebarComponent implements OnInit {
       return;
     }
 
-    forkJoin([this.gameService.getGenres(), this.gameService.getPlatforms()])
+    forkJoin([this.gameService.getGenres(), this.gameService.getPlatforms(), this.gameService.getThemes()])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ([genres, platforms]) => {
+        next: ([genres, platforms, themes]) => {
           this.genres.set(genres);
+          this.themes.set(themes);
           this.platforms.set(platforms);
         },
         error: () => this.listsError.set(true),
       });
+  }
+
+  protected onScoreInput(score: 'rating' | 'critic', isMinimum: boolean, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const minimum = score === 'rating' ? this.ratingDraft : this.criticDraft;
+    const maximum = score === 'rating' ? this.ratingMaxDraft : this.criticMaxDraft;
+    const value = isMinimum
+      ? Math.min(input.valueAsNumber, maximum())
+      : Math.max(input.valueAsNumber, minimum());
+    (isMinimum ? minimum : maximum).set(value);
+    input.value = String(value);
+  }
+
+  protected applyScoreRange(score: 'rating' | 'critic'): void {
+    if (score === 'rating') {
+      this.filtersService.update({ ratingMin: this.ratingDraft() || null,
+        ratingMax: this.ratingMaxDraft() === 10 ? null : this.ratingMaxDraft() });
+    } else {
+      this.filtersService.update({ criticMin: this.criticDraft() || null,
+        criticMax: this.criticMaxDraft() === 100 ? null : this.criticMaxDraft() });
+    }
   }
 
   protected openMobileDrawer(): void {
@@ -436,7 +513,7 @@ export class SidebarComponent implements OnInit {
     return !!this.openSections()[sectionKey];
   }
 
-  // The text of "Search genres or platforms..." filters both lists
+  // The text of "Search genres, themes or platforms..." filters all three lists
   private byName(items: GameGenreItem[]): GameGenreItem[] {
     const query = this.searchQuery().toLowerCase().trim();
     return query ? items.filter((item) => item.name.toLowerCase().includes(query)) : items;

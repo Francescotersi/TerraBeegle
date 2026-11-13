@@ -148,7 +148,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasColumnType("date");
 
             e.Property(g => g.Rating)
-                .HasPrecision(4, 2);
+                .HasPrecision(5, 2);
 
             e.Property(g => g.CreatedAt).HasDefaultValueSql("NOW()");
             e.Property(g => g.UpdatedAt).HasDefaultValueSql("NOW()");

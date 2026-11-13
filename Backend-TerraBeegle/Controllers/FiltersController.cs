@@ -5,7 +5,7 @@ using IGDB;
 
 namespace Backend_TerraBeegle.Controllers;
 
-// Lists for the advanced search filters (sidebar): genres and platforms from IGDB, cached for 24 hours
+// Lists for the advanced search filters (sidebar): genres, themes and platforms from IGDB, cached for 24 hours
 [ApiController]
 [Route("api")]
 public class FiltersController(IGDBClient igdb, IMemoryCache cache, ILogger<FiltersController> logger) : ControllerBase
@@ -19,13 +19,18 @@ public class FiltersController(IGDBClient igdb, IMemoryCache cache, ILogger<Filt
         GetListAsync<IGDB.Models.Genre>("filters:genres", IGDBClient.Endpoints.Genres,
             g => new ApiObjectDTO { Id = g.Id ?? 0, Name = g.Name, Slug = g.Slug });
 
+    [HttpGet("themes")]
+    public Task<ActionResult<List<ApiObjectDTO>>> GetThemes() =>
+        GetListAsync<IGDB.Models.Theme>("filters:themes", IGDBClient.Endpoints.Themes,
+            t => new ApiObjectDTO { Id = t.Id ?? 0, Name = t.Name, Slug = t.Slug });
+
     // All IGDB platforms, sorted by name
     [HttpGet("platforms")]
     public Task<ActionResult<List<ApiObjectDTO>>> GetPlatforms() =>
         GetListAsync<IGDB.Models.Platform>("filters:platforms", IGDBClient.Endpoints.Platforms,
             p => new ApiObjectDTO { Id = p.Id ?? 0, Name = p.Name, Slug = p.Slug });
 
-    // Shared by both lists: from the cache, otherwise from IGDB (500 = the IGDB maximum per request)
+    // Shared by the filter lists: from the cache, otherwise from IGDB (500 = the IGDB maximum per request)
     private async Task<ActionResult<List<ApiObjectDTO>>> GetListAsync<T>(string cacheKey, string endpoint, Func<T, ApiObjectDTO> map)
     {
         if (cache.TryGetValue(cacheKey, out List<ApiObjectDTO>? cached) && cached is not null)

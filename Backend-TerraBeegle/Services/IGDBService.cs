@@ -155,61 +155,87 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         return ToGameDetailsDTO(response);
     }
 
-    // public async Task<Models.Game?> GetOrCreateGameAsync(long IGDBGameId)
-    // {
-    //     var game = await db.Games.FirstOrDefaultAsync(g => g.ApiGameId == IGDBGameId);
-    //     if (game is not null)
-    //     {
-    //         return game;
-    //     }
-        
-    //     var response = await FetchGameAsync(IGDBGameId);
-    //     if (response is null)
-    //     {
-    //         return null;
-    //     }
-        
-    //     // loads the genres and the platforms that already exist in the DB using their ID
-    //     var genreIds = response.Genres.Select(g => (GameGenre)g.ApiGenreId).ToList();
-    //     var existingGenres = await db.Genres.Where(g => genreIds.Contains(g.ApiGenreId)).ToListAsync();
+    // Import only the fields needed by saved collections. Shared taxonomy rows are reused.
+    public async Task<Models.Game?> GetOrCreateGameAsync(long igdbGameId)
+    {
+        var existing = await db.Games.FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId && !g.IsPlaceholder);
+        if (existing is not null)
+            return existing;
 
-    //     var platformIds = response.Platforms.Select(p => (GamePlatform)p.ApiPlatformId).ToList();
-    //     var existingPlatforms = await db.Platforms.Where(p => platformIds.Contains(p.ApiPlatformId)).ToListAsync();
-        
-    //     game = new Models.Game
-    //     {
-    //         ApiGameId = response.Id,
-    //         Name = response.Name,
-    //         Slug = response.Slug,
-    //         Summary = response.Summary,
-    //         Cover = response.Cover.Adapt<Image>(),
-    //         ReleaseDate = DateOnly.TryParse(response.FirstReleaseDate, CultureInfo.InvariantCulture, out var releaseDate) ?  : null,
-    //         Tba = response.Tba,
-    //         Website = response.Website,
-    //         Rating = (decimal)response.Rating,
-    //         CriticRating = response.Metacritic,
-    //         Platforms = [
-    //             .. response.Platforms.Select(p => existingPlatforms.FirstOrDefault(ep => ep.ApiPlatformId == (GamePlatform)p.Platform.Id) 
-    //             ?? new Models.Platform
-    //             {
-    //                 Name = p.Platform.Name,
-    //                 ApiPlatformId = (GamePlatform)p.Platform.Id
-    //             })
-    //         ],
-    //         Genres = [
-    //             .. response.Genres.Select(g => existingGenres.FirstOrDefault(eg => eg.ApiGenreId == (GameGenre)g.Id) 
-    //             ?? new Models.Genre
-    //             {
-    //                 Name = g.Name,
-    //                 ApiGenreId = (GameGenre)g.Id
-    //             })
-    //         ]
-    //     };
-        
-    //     db.Games.Add(game);
-    //     await db.SaveChangesAsync();
-    //     return game;
-    // }
+        IGDB.Models.Game[] response;
+        try
+        {
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games,
+                query: $"{GameCardFields.TrimEnd(';')},summary; where id = {igdbGameId}; limit 1;");
+        }
+        catch (RestEase.ApiException ex)
+        {
+            throw new HttpRequestException("IGDB is unavailable.", ex);
+        }
+        if (response.Length == 0)
+            return null;
+
+        // Serialize imports so concurrent saves can reuse games, genres, platforms and images safely.
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74219031)");
+        var game = await db.Games.Include(g => g.Genres).Include(g => g.Platforms)
+            .Include(g => g.Themes).Include(g => g.Cover)
+            .FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId);
+        if (game is { IsPlaceholder: false })
+        {
+            await transaction.CommitAsync();
+            return game;
+        }
+
+        var source = response[0];
+        game ??= new Models.Game { ApiGameId = igdbGameId };
+        game.Name = source.Name;
+        game.Slug = source.Slug;
+        game.Summary = source.Summary ?? "";
+        game.ReleaseDate = source.FirstReleaseDate.HasValue
+            ? DateOnly.FromDateTime(source.FirstReleaseDate.Value.UtcDateTime) : null;
+        game.Rating = source.Rating.HasValue ? (decimal)source.Rating.Value : null;
+        game.AggregatedRating = source.AggregatedRating.HasValue ? (int)Math.Round(source.AggregatedRating.Value) : null;
+        game.GameType = source.GameType?.Id is {} type ? (Enums.GameType)type : null;
+        game.GameStatus = source.GameStatus?.Id is {} status ? (int)status : null;
+        game.IsPlaceholder = false;
+        game.UpdatedAt = DateTime.UtcNow;
+        game.Genres ??= [];
+        game.Platforms ??= [];
+        game.Themes ??= [];
+        game.Genres.Clear();
+        game.Platforms.Clear();
+        game.Themes.Clear();
+
+        foreach (var genre in source.Genres?.Values ?? [])
+        {
+            var id = (GameGenre)genre.Id!.Value;
+            game.Genres.Add(await db.Genres.FirstOrDefaultAsync(g => g.ApiGenreId == id)
+                ?? new Models.Genre { ApiGenreId = id, Name = genre.Name, Slug = genre.Slug });
+        }
+        foreach (var platform in source.Platforms?.Values ?? [])
+        {
+            var id = (GamePlatform)platform.Id!.Value;
+            game.Platforms.Add(await db.Platforms.FirstOrDefaultAsync(p => p.ApiPlatformId == id)
+                ?? new Models.Platform { ApiPlatformId = id, Name = platform.Name,
+                    Slug = platform.Slug, Abbreviation = platform.Abbreviation ?? "" });
+        }
+        foreach (var theme in source.Themes?.Values ?? [])
+        {
+            var id = (GameTheme)theme.Id!.Value;
+            game.Themes.Add(await db.Themes.FirstOrDefaultAsync(t => t.ApiThemeId == id)
+                ?? new Models.Theme { ApiThemeId = id, Name = theme.Name, Slug = theme.Slug });
+        }
+        if (source.Cover?.Value?.ImageId is {} imageId)
+            game.Cover = await db.Images.FirstOrDefaultAsync(i => i.ApiImageId == imageId)
+                ?? new Image { ApiImageId = imageId };
+
+        if (game.Id == 0)
+            db.Games.Add(game);
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return game;
+    }
 
     private static List<ApiObjectDTO>? MapApiObjectList<T>(IdentitiesOrValues<T>? items) where T : class
     {

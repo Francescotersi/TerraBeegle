@@ -3,17 +3,12 @@ using Backend_TerraBeegle.DTOS;
 using Microsoft.AspNetCore.Mvc;
 using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Services;
 using Npgsql;
-using Mapster;
 using Backend_TerraBeegle.RateLimiting;
 using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Linq.Expressions;
-using static Backend_TerraBeegle.Utils;
 
 namespace Backend_TerraBeegle.Controllers;
 
@@ -40,7 +35,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
         {
             return NotFound("User not found.");
         }
-        
+
         if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
             return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's favorites.");
 
@@ -52,14 +47,15 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
         var games = new List<GameCardDTO>();
 
         if (totalCount != 0) {
-            games = await db.Users
+            var savedGames = await db.Users
                 .Where(u => u.Id == userId)
                 .SelectMany(u => u.Favorites)
-                .OrderBy(g => g.Name)
+                .OrderBy(g => g.Name).ThenBy(g => g.Id)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
-                .ProjectToType<GameCardDTO>()
+                .Include(g => g.Cover).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
                 .ToListAsync();
+            games = savedGames.Select(SavedGameCards.Map).ToList();
         }
 
         return Ok(CreatePagedResponse(
@@ -69,57 +65,59 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
             page => Url.Action(nameof(GetFavorites), new { userId, Page = page, pagination.PageSize })
         ));
     }
-    // [HttpGet("favorites")]
-    // public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetFavorites(long userId, [FromQuery] UserGameSearchDTO search)
-    //     => GetUserGamesAsync(userId, search, u => u.Favorites, "favorites", nameof(GetFavorites));
 
-    // [HttpPost("{ApiGameId:int}")]
-    // public async Task<IActionResult> AddGameToFavorites(long userId, int ApiGameId)
-    // {
-    //     if (!IsCurrentUser(User, userId))
-    //         return Forbid();
+    [HttpPost("{ApiGameId:long}")]
+    public async Task<IActionResult> AddGameToFavorites(long userId, long ApiGameId)
+    {
+        if (!Utils.IsCurrentUser(User, userId))
+            return Forbid();
 
-    //     Game? game;
-    //     try
-    //     {
-    //         game = await ApiService.GetOrCreateGameAsync(ApiGameId);
-    //     }
-    //     catch (HttpRequestException)
-    //     {
-    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-    //     }
+        if (!await db.Users.AnyAsync(u => u.Id == userId))
+            return NotFound("User not found.");
+        if (ApiGameId <= 0)
+            return BadRequest("Game ID must be positive.");
 
-    //     if (game is null)
-    //         return NotFound("Game not found.");
+        Game? game;
+        try
+        {
+            game = await ApiService.GetOrCreateGameAsync(ApiGameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
-    //     var user = await db.Users
-    //         .Include(u => u.Favorites.Where(g => g.Id == game.Id))
-    //         .FirstOrDefaultAsync(u => u.Id == userId);
+        if (game is null)
+            return NotFound("Game not found.");
 
-    //     if (user is null)
-    //         return NotFound("User not found.");
+        var user = await db.Users
+            .Include(u => u.Favorites.Where(g => g.Id == game.Id))
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
-    //     if (user.Favorites.Count > 0)
-    //         return NoContent();
+        if (user is null)
+            return NotFound("User not found.");
 
-    //     user.Favorites.Add(game);
+        if (user.Favorites.Count > 0)
+            return NoContent();
 
-    //     try
-    //     {
-    //         await db.SaveChangesAsync();
-    //     }
-    //     catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-    //     {
-    //         // Two requests at the same time for the same game: the other one already added it, so the game is
-    //         // in the favorites anyway. Same answer (204) as the "already in the list" check above
-    //         return NoContent();
-    //     }
+        user.Favorites.Add(game);
 
-    //     return NoContent();
-    // }
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the favorites anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
+        }
 
-    [HttpDelete("{ApiGameId:int}")]
-    public async Task<IActionResult> DeleteGameFromFavorites(long userId, int ApiGameId)
+        return NoContent();
+    }
+
+    [HttpDelete("{ApiGameId:long}")]
+    public async Task<IActionResult> DeleteGameFromFavorites(long userId, long ApiGameId)
     {
         if(!IsCurrentUser(User, userId))
             return Forbid();
@@ -146,10 +144,10 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
     {
         if (viewerId == ownerId)
             return true;
-        
+
         var user1Id = Math.Min(viewerId, ownerId);
         var user2Id = Math.Max(viewerId, ownerId);
-        
+
         return await db.Friendships.AnyAsync(f => f.User1Id == user1Id && f.User2Id == user2Id && f.Status == FriendshipStatus.Accepted);
     }
 }
@@ -177,7 +175,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
         {
             return NotFound("User not found.");
         }
-        
+
         if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
             return StatusCode(StatusCodes.Status403Forbidden, "Only friends can see this user's wishlist.");
 
@@ -185,17 +183,18 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
             .Where(u => u.Id == userId)
             .SelectMany(u => u.WishlistItems)
             .CountAsync();
-        
+
         var games = new List<GameCardDTO>();
         if (totalCount != 0) {
-            games = await db.Users
+            var savedGames = await db.Users
                 .Where(u => u.Id == userId)
                 .SelectMany(u => u.WishlistItems)
-                .OrderBy(g => g.Name)
+                .OrderBy(g => g.Name).ThenBy(g => g.Id)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
-                .ProjectToType<GameCardDTO>()
+                .Include(g => g.Cover).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
                 .ToListAsync();
+            games = savedGames.Select(SavedGameCards.Map).ToList();
         }
 
         return Ok(CreatePagedResponse(
@@ -205,57 +204,59 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
             page => Url.Action(nameof(GetWishlist), new { userId, Page = page, pagination.PageSize })
         ));
     }
-    // [HttpGet("wishlist")]
-    // public Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetWishlist(long userId, [FromQuery] UserGameSearchDTO search)
-    //     => GetUserGamesAsync(userId, search, u => u.WishlistItems, "wishlist", nameof(GetWishlist));
 
-    // [HttpPost("{ApiGameId:int}")]
-    // public async Task<IActionResult> AddGameToWishlist(long userId, int ApiGameId)
-    // {
-    //     if (!IsCurrentUser(User, userId))
-    //         return Forbid();
+    [HttpPost("{ApiGameId:long}")]
+    public async Task<IActionResult> AddGameToWishlist(long userId, long ApiGameId)
+    {
+        if (!Utils.IsCurrentUser(User, userId))
+            return Forbid();
 
-    //     Game? game;
-    //     try
-    //     {
-    //         game = await ApiService.GetOrCreateGameAsync(ApiGameId);
-    //     }
-    //     catch (HttpRequestException)
-    //     {
-    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-    //     }
+        if (!await db.Users.AnyAsync(u => u.Id == userId))
+            return NotFound("User not found.");
+        if (ApiGameId <= 0)
+            return BadRequest("Game ID must be positive.");
 
-    //     if (game is null)
-    //         return NotFound("Game not found.");
+        Game? game;
+        try
+        {
+            game = await ApiService.GetOrCreateGameAsync(ApiGameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
-    //     var user = await db.Users
-    //         .Include(u => u.WishlistItems.Where(g => g.Id == game.Id))
-    //         .FirstOrDefaultAsync(u => u.Id == userId);
+        if (game is null)
+            return NotFound("Game not found.");
 
-    //     if (user is null)
-    //         return NotFound("User not found.");
+        var user = await db.Users
+            .Include(u => u.WishlistItems.Where(g => g.Id == game.Id))
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
-    //     if (user.WishlistItems.Count > 0)
-    //         return NoContent();
+        if (user is null)
+            return NotFound("User not found.");
 
-    //     user.WishlistItems.Add(game);
+        if (user.WishlistItems.Count > 0)
+            return NoContent();
 
-    //     try
-    //     {
-    //         await db.SaveChangesAsync();
-    //     }
-    //     catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-    //     {
-    //         // Two requests at the same time for the same game: the other one already added it, so the game is
-    //         // in the wishlist anyway. Same answer (204) as the "already in the list" check above
-    //         return NoContent();
-    //     }
+        user.WishlistItems.Add(game);
 
-    //     return NoContent();
-    // }
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two requests at the same time for the same game: the other one already added it, so the game is
+            // in the wishlist anyway. Same answer (204) as the "already in the list" check above
+            return NoContent();
+        }
 
-    [HttpDelete("{ApiGameId:int}")]
-    public async Task<IActionResult> DeleteGameFromWishlist(long userId, int ApiGameId)
+        return NoContent();
+    }
+
+    [HttpDelete("{ApiGameId:long}")]
+    public async Task<IActionResult> DeleteGameFromWishlist(long userId, long ApiGameId)
     {
         if(!IsCurrentUser(User, userId))
             return Forbid();
@@ -277,157 +278,16 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
 
         return NoContent();
     }
-    
-    // Shared by GetFavorites and GetWishlist: only the list, the word in the 403 message and the action
-    // used for the page links differ. Private, otherwise ASP.NET would treat it as an endpoint.
-    // Expression (not Func), so EF can translate u => u.Favorites to a JOIN instead of loading the users
-    // Returns one of a user's game lists, filtered and sorted
-    private async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetUserGamesAsync(
-        long userId,
-        UserGameSearchDTO search,
-        PaginationDTO pagination,
-        Expression<Func<User, IEnumerable<Game>>> games,
-        string listName,
-        string actionName)
-    {
-        var viewerId = GetCurrentUserId(User);
-        if (viewerId is null)
-        {
-            return Unauthorized();
-        }
-
-        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
-        if (!userExists)
-        {
-            return NotFound("User not found.");
-        }
-
-        if (!await CanSeeUserGamesAsync(viewerId.Value, userId))
-            return StatusCode(StatusCodes.Status403Forbidden, $"Only friends can see this user's {listName}.");
-
-        // One query for both the count and the page, so the filters (next step) apply to both
-        var query = db.Users
-            .Where(u => u.Id == userId)
-            .SelectMany(games);
-
-        if (!string.IsNullOrWhiteSpace(search.Name))
-        {
-            var term = search.Name.Trim().ToLower();
-            query = query.Where(g => EF.Functions.ILike(g.Name, $"{term}%"));
-        }
-        
-        if (search.Genre.HasValue)
-        {
-            var genre = (GameGenre)search.Genre.Value;
-            query = query.Where(g => g.Genres.Any(x => x.ApiGenreId == genre));
-        }
-        
-        if (search.Platform.HasValue)
-        {
-            var platform = (GamePlatform)search.Platform.Value;
-            query = query.Where(g => g.Platforms.Any(x => x.ApiPlatformId == platform));
-        }
-        
-        if (search.MinYear.HasValue)
-        {
-            var minYear = new DateOnly(search.MinYear.Value, 1, 1);
-            query = query.Where(g => g.ReleaseDate >= minYear);
-        }
-        
-        if (search.MaxYear.HasValue)
-        {
-            var maxYear = new DateOnly(search.MaxYear.Value, 12, 31);
-            query = query.Where(g => g.ReleaseDate <= maxYear);
-        }
-
-        if (search.MinRating.HasValue)
-        {
-            var minRating = search.MinRating.Value;
-            query = query.Where(g => g.Rating >= minRating);
-        }
-
-        if (search.MaxRating.HasValue)
-        {
-            var maxRating = search.MaxRating.Value;
-            query = query.Where(g => g.Rating <= maxRating);
-        }
-
-        if (search.MinCriticRating.HasValue)
-        {
-            var minCriticRating = search.MinCriticRating.Value;
-            query = query.Where(g => g.AggregatedRating >= minCriticRating);
-        }
-
-        if (search.MaxCriticRating.HasValue)
-        {
-            var maxCriticRating = search.MaxCriticRating.Value;
-            query = query.Where(g => g.AggregatedRating <= maxCriticRating);
-        }
-
-        if (search.GameType.HasValue)
-        {
-            var gameType = (GameType)search.GameType.Value;
-            query = query.Where(g => g.GameType == gameType);
-        }
-        
-        var totalCount = await query.CountAsync();
-        
-        IOrderedQueryable<Game> ordered = search.SortBy?.ToLowerInvariant() switch
-        {
-            "released" => search.Ascending 
-                ? query.OrderBy(g => g.ReleaseDate != null).ThenBy(g => g.ReleaseDate)
-                : query.OrderBy(g => g.ReleaseDate != null).ThenByDescending(g => g.ReleaseDate),
-            "rating" => search.Ascending 
-                ? query.OrderBy(g => g.Rating == null).ThenBy(g => g.Rating) 
-                : query.OrderBy(g => g.Rating == null).ThenByDescending(g => g.Rating),
-            _ => search.Ascending ? query.OrderBy(g => g.Name) : query.OrderByDescending(g => g.Name),
-        };
-        
-        ordered = ordered.ThenBy(g => g.Id);
-
-        var items = new List<GameCardDTO>();
-        if (totalCount != 0)
-        {
-            items = await ordered
-                .Skip((pagination.Page - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ProjectToType<GameCardDTO>()
-                .ToListAsync();
-        }
-
-        return Ok(CreatePagedResponse(
-            items,
-            totalCount,
-            pagination,
-            page => Url.Action(actionName, new
-            {
-                userId,
-                Page = page,
-                Pagination = pagination,
-                search.Name,
-                search.Genre,
-                search.Platform,
-                search.MinYear,
-                search.MaxYear,
-                search.MaxRating,
-                search.MinRating,
-                search.MinCriticRating,
-                search.MaxCriticRating,
-                search.SortBy,
-                search.Ascending
-            })
-        ));
-    }
 
     // True if the viewer is the owner or an accepted friend
     private async Task<bool> CanSeeUserGamesAsync(long viewerId, long ownerId)
     {
         if (viewerId == ownerId)
             return true;
-        
+
         var user1Id = Math.Min(viewerId, ownerId);
         var user2Id = Math.Max(viewerId, ownerId);
-        
+
         return await db.Friendships.AnyAsync(f => f.User1Id == user1Id && f.User2Id == user2Id && f.Status == FriendshipStatus.Accepted);
     }
 }

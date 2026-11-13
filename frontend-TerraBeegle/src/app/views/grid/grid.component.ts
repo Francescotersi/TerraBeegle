@@ -13,7 +13,6 @@ export type { GridComponentProps } from './grid.model';
 @Component({
   imports: [GameCardComponent, MobileDetailSheetComponent],
   selector: 'app-grid-component',
-  providers: [GridGameActionsService],
   template: `
     <div class="grid-wrapper w-100 pt-2 pt-md-4">
       <svg width="0" height="0" style="position: absolute; pointer-events: none;" aria-hidden="true">
