@@ -12,16 +12,18 @@ public class Game
 
     public string? Summary { get; set; }
     public string? Storyline { get; set; }
-    public GameType? GameType { get; set; }
+    public string? GameType { get; set; }
     public string? PegiRating { get; set; }
     public ICollection<PegiDescription>? PegiDescriptions { get; set; }
 
     public DateOnly? ReleaseDate { get; set; }
     public ICollection<ReleaseDate>? ReleaseDates { get; set; }
-    public int? GameStatus { get; set; }
+    public string? GameStatus { get; set; }
 
     public decimal? Rating { get; set; }
+    public int RatingCount { get; set; }
     public int? AggregatedRating { get; set; }
+    public int AggregatedRatingCount { get; set; }
 
     public ICollection<Image> Images { get; set; } = [];
     public ICollection<Video>? Videos { get; set; }

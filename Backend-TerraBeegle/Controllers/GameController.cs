@@ -59,7 +59,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             filters.Add($"(involved_companies.{field}=true & {CreateFilter("involved_companies.company", values, all)})");
     }
     
-    static void AddFilterRange(string field, decimal? min, decimal? max, List<string> filters, bool convertToUnix = false)
+    static void AddFilterRange(string field, long? min, long? max, List<string> filters, bool convertToUnix = false)
     {
         if (min is {} MinVal)
             filters.Add($"{field}>={(convertToUnix ? YearToUnixTimestamp((int)MinVal, true) : MinVal)}");
@@ -130,7 +130,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
 
         // The user rating comes out of 10, IGDB stores it out of 100
         // 0 = no minimum (a search by name must find games without votes or critic reviews too)
-        AddFilterRange("rating", search.RatingMin * 10, search.RatingMax * 10, filters, false);
+        AddFilterRange("rating", search.RatingMin, search.RatingMax, filters, false);
         if (search.RatingMin > 0)
             AddFilterRange("rating_count", search.MinRatingCount, null, filters, false);
 

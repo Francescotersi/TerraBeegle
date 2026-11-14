@@ -9,7 +9,7 @@ public class PegiDescriptionConfiguration : IEntityTypeConfiguration<PegiDescrip
 {
     public void Configure(EntityTypeBuilder<PegiDescription> entity)
     {
-        entity.Property(p => p.Name).HasMaxLength(16);
-        entity.HasIndex(p => p.Name).IsUnique();
+        entity.Property(p => p.Description).HasMaxLength(16);
+        entity.HasIndex(p => p.Description).IsUnique();
     }
 }

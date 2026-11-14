@@ -19,6 +19,11 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
         entity.HasIndex(g => g.ApiGameId).IsUnique();
         entity.HasIndex(g => g.Slug).IsUnique();
         entity.HasIndex(g => g.Name);
+        entity.HasIndex(g => g.ReleaseDate);
+        entity.HasIndex(g => g.Rating);
+        entity.HasIndex(g => g.AggregatedRating);
+        entity.HasIndex(g => g.PegiRating);
+        entity.HasIndex(g => g.GameStatus);
         
         // 1-to-many relationships on Game entity
         entity.HasOne(g => g.ParentGame)

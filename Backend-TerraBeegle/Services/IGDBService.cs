@@ -1,11 +1,7 @@
 using Backend_TerraBeegle.DTOS;
 using System.Globalization;
 using System.Linq.Expressions;
-using System.Net;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Backend_TerraBeegle.Models;
-using Backend_TerraBeegle.Enums;
 using Backend_TerraBeegle.Data;
 using Mapster;
 using IGDB;
@@ -38,12 +34,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
     public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query, string pagination)
     {
-        IGDB.Models.Game[]? response;
+        Game[]? response;
         CountResponse totalCount;
 
         try
         {
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameCardFields}{(query.Length > 0 ? $"where {query};" : "")}{pagination}");
+            response = await igdb.QueryAsync<Game>(IGDBClient.Endpoints.Games, query: $"{GameCardFields}{(query.Length > 0 ? $"where {query};" : "")}{pagination}");
             totalCount = await igdb.CountAsync(IGDBClient.Endpoints.Games, query: query.Length > 0 ? $"where {query};" : "");
         }
         catch (RestEase.ApiException ex)
@@ -86,7 +82,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "rating",
         "rating_count",
         "release_dates.date",
-        "release_dates.platform.abbreviation",
+        "release_dates.platform.name",
         "release_dates.status.name",
         "screenshots.image_id",
         "slug",
@@ -126,12 +122,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "collections.games"
     }.Select(str => $"{str}.name,{str}.slug,{str}.aggregated_rating,{str}.rating,{str}.cover.image_id,{str}.first_release_date,{str}.game_type.type")) + ";";
 
-    private async Task<IGDB.Models.Game?> FetchGameAsync(string GameField, string field)
+    private async Task<Game?> FetchGameAsync(string GameField, string field)
     {
-        IGDB.Models.Game[]? response;
+        Game[]? response;
         try
         {
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameDetailsFields} w {field} = {GameField}; limit 1;");
+            response = await igdb.QueryAsync<Game>(IGDBClient.Endpoints.Games, query: $"{GameDetailsFields} w {field} = {GameField}; l 1;");
         }
         catch (RestEase.ApiException ex)
         {
@@ -156,8 +152,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
             return null;
 
         var existing = await db.Games.FirstOrDefaultAsync(filter);
-        // if (existing is not null)
-        //     return convertToGameDetailsDTO(existing);
+        if (existing is not null)
+            return convertToGameDetailsDTO(existing);
 
         var response = await FetchGameAsync(GameField, field);
         if (response is null)
@@ -173,80 +169,20 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         if (existing is not null)
             return existing;
 
-        IGDB.Models.Game[] response;
+        Game[] response;
         try
         {
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games,
-                query: $"{GameCardFields.TrimEnd(';')},summary; where id = {igdbGameId}; limit 1;");
+            response = await igdb.QueryAsync<Game>(IGDBClient.Endpoints.Games,query: $"{GameDetailsFields} w id = {igdbGameId}; l 1;");
         }
         catch (RestEase.ApiException ex)
         {
             throw new HttpRequestException("IGDB is unavailable.", ex);
         }
 
-        if (response.Length == 0)
+        if (response is null or not { Length: 1 })
             return null;
 
-        // Serialize imports so concurrent saves can reuse games, genres, platforms and images safely.
-        await using var transaction = await db.Database.BeginTransactionAsync();
-        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74219031)");
-        var game = await db.Games.Include(g => g.Genres).Include(g => g.Platforms)
-            .Include(g => g.Themes).Include(g => g.Images.Where(i => i.Type == ImageType.Cover))
-            .FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId);
-        if (game is { IsPlaceholder: false })
-        {
-            await transaction.CommitAsync();
-            return game;
-        }
-
-        var source = response[0];
-        game ??= new Models.Game { ApiGameId = igdbGameId };
-        game.Name = source.Name;
-        game.Slug = source.Slug;
-        game.Summary = source.Summary ?? "";
-        game.ReleaseDate = source.FirstReleaseDate.HasValue
-            ? DateOnly.FromDateTime(source.FirstReleaseDate.Value.UtcDateTime) : null;
-        game.Rating = source.Rating.HasValue ? (decimal)source.Rating.Value : null;
-        game.AggregatedRating = source.AggregatedRating.HasValue ? (int)Math.Round(source.AggregatedRating.Value) : null;
-        game.GameType = source.GameType?.Id is {} type ? (Enums.GameType)type : null;
-        game.GameStatus = source.GameStatus?.Id is {} status ? (int)status : null;
-        game.IsPlaceholder = false;
-        game.UpdatedAt = DateTime.UtcNow;
-        game.Genres ??= [];
-        game.Platforms ??= [];
-        game.Themes ??= [];
-        game.Genres.Clear();
-        game.Platforms.Clear();
-        game.Themes.Clear();
-
-        foreach (var genre in source.Genres?.Values ?? [])
-        {
-            var id = genre.Id!.Value;
-            game.Genres.Add(await db.Genres.FirstOrDefaultAsync(g => g.ApiGenreId == id)
-                ?? new Models.Genre { ApiGenreId = id, Name = genre.Name, Slug = genre.Slug });
-        }
-        foreach (var platform in source.Platforms?.Values ?? [])
-        {
-            var id = platform.Id!.Value;
-            game.Platforms.Add(await db.Platforms.FirstOrDefaultAsync(p => p.ApiPlatformId == id)
-                ?? new Models.Platform { ApiPlatformId = id, Name = platform.Name,
-                    Slug = platform.Slug, Abbreviation = platform.Abbreviation ?? "" });
-        }
-        foreach (var theme in source.Themes?.Values ?? [])
-        {
-            var id = theme.Id!.Value;
-            game.Themes.Add(await db.Themes.FirstOrDefaultAsync(t => t.ApiThemeId == id)
-                ?? new Models.Theme { ApiThemeId = id, Name = theme.Name, Slug = theme.Slug });
-        }
-        if (source.Cover?.Value?.ImageId is {} imageId)
-            game.Images.Add(await db.Images.FirstOrDefaultAsync(i => i.ApiImageId == imageId)
-                ?? new Image { ApiImageId = imageId, Type = ImageType.Cover });
-
-        if (game.Id == 0)
-            db.Games.Add(game);
-        await db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        return game;
+        return await SaveGames.SaveGame(db, response[0], igdbGameId);
     }
 
     private static List<ApiObjectDTO>? MapApiObjectList<T>(IdentitiesOrValues<T>? items) where T : class
@@ -257,7 +193,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         return items.Values?.Select(apiObject => apiObject.Adapt<ApiObjectDTO>()).ToList();
     }
 
-    private static List<PlatformDTO>? MapPlatformList(IdentitiesOrValues<IGDB.Models.Platform>? items)
+    private static List<PlatformDTO>? MapPlatformList(IdentitiesOrValues<Platform>? items)
     {
         if (items?.Values is null)
             return null;
@@ -306,12 +242,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
     private static readonly HashSet<int> StorefrontIds = [10, 11, 12, 13, 15, 16, 17, 22, 23, 24, 25, 26];
 
-    private static List<WebsiteDTO>? MapWebsiteList(IdentitiesOrValues<IGDB.Models.Website>? items, bool getStores)
+    private static List<WebsiteDTO>? MapWebsiteList(IdentitiesOrValues<Website>? items, bool getStores)
     {
         if (items?.Values is null)
             return null;
 
-        bool filter(IGDB.Models.Website w, int id) => getStores ? StorefrontIds.Contains(id) : !StorefrontIds.Contains(id);
+        bool filter(Website w, int id) => getStores ? StorefrontIds.Contains(id) : !StorefrontIds.Contains(id);
 
         return items.Values?.Where(w => w.Url is not null && w.Type?.Id is {} id && id != 1 && filter(w, (int)id)).Select(w => new WebsiteDTO
         {
@@ -323,7 +259,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
     // Full https URL of an IGDB image, or null when the game has no such image
     private static string? ImageUrl(string? imageId, ImageSize size) => string.IsNullOrWhiteSpace(imageId) ? null : "https:" + ImageHelper.GetImageUrl(imageId, size, false);
 
-    private static GameCardDTO ToGameCardDTO (IGDB.Models.Game g) => new ()
+    private static GameCardDTO ToGameCardDTO (Game g) => new ()
     {
         ApiGameId = g.Id ?? 0,
         Name = g.Name,
@@ -339,7 +275,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         GameStatus = g.GameStatus?.Value?.Status
     };
 
-    private static GameDetailsDTO ToGameDetailsDTO (IGDB.Models.Game g) => new ()
+    private static GameDetailsDTO ToGameDetailsDTO (Game g) => new ()
     {
         ApiGameId = g.Id ?? 0,
         Name = g.Name,
@@ -364,7 +300,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         ReleaseDates = g.ReleaseDates?.Values?.Select(rd => new ReleaseDateDTO
         {
             Date = rd.Date?.UtcDateTime,
-            PlatformAbbreviation = rd.Platform?.Value?.Abbreviation,
+            PlatformName = rd.Platform?.Value?.Name,
             Status = rd.Status?.Value?.Name
         }).ToList(),
         Screenshots = MapImageList(g.Screenshots, ImageSize.HD720),

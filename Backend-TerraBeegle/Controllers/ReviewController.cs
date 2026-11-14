@@ -91,66 +91,76 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         ));
     }
 
-    // [Authorize]
-    // [EnableRateLimiting(RateLimitPolicies.UserWrite)]
-    // [HttpPost]
-    // public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
-    // {
-    //    
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    [HttpPost]
+    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
+    {
+       
 
-    //     var currentUserId = GetCurrentUserId(User);
-    //     if (currentUserId is null)
-    //     {
-    //         return Unauthorized("User ID not found in token.");
-    //     }
+        var currentUserId = GetCurrentUserId(User);
+        if (currentUserId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
 
-    //     var user = await db.Users.FindAsync(currentUserId.Value);
-    //     if (user is null)
-    //     {
-    //         return NotFound("User not found.");
-    //     }
+        var user = await db.Users.FindAsync(currentUserId.Value);
+        if (user is null)
+        {
+            return NotFound("User not found.");
+        }
 
-    //     // Check if the game exists
-    //     Game? game;
-    //     try
-    //     {
-    //         game = await ApiService.GetOrCreateGameAsync(gameId);
-    //     }
-    //     catch (HttpRequestException)
-    //     {
-    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-    //     }
+        // Check if the game exists
+        Game? game;
+        try
+        {
+            game = await ApiService.GetOrCreateGameAsync(gameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
-    //     if (game is null)
-    //     {
-    //         return NotFound("Game not found.");
-    //     }
+        if (game is null)
+        {
+            return NotFound("Game not found.");
+        }
 
-    //     // Create a new review
-    //     var review = new Review
-    //     {
-    //         Rating = reviewCreateDTO.Rating,
-    //         Content = reviewCreateDTO.Content,
-    //         GameId = game.ApiGameId,
-    //         UserId = currentUserId.Value,
-    //         CreatedAt = DateTime.UtcNow
-    //     };
+        if (game.ReleaseDate is not null && game.ReleaseDate > DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            return BadRequest("Cannot review a game that has not been released yet.");
+        }
 
-    //     db.Reviews.Add(review);
-    //     await db.SaveChangesAsync();
+        // Create a new review
+        var review = new Review
+        {
+            Rating = reviewCreateDTO.Rating,
+            Content = reviewCreateDTO.Content,
+            GameId = gameId,
+            UserId = currentUserId.Value,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Reviews.Add(review);
+
+        // Update the game's average rating
+        game.Rating = ((game.Rating ?? 0m) * game.RatingCount + review.Rating) / (game.RatingCount + 1); 
+        game.RatingCount += 1; 
+
+        await db.SaveChangesAsync();
         
-    //     // Return the created review
-    //     var createdReview = new ReviewResponseDTO
-    //     {
-    //         Id = review.Id,
-    //         Rating = review.Rating,
-    //         Content = review.Content,
-    //         CreatedAt = review.CreatedAt,
-    //         User = user.Adapt<UserPublicResponseDTO>()
-    //     };
+        // Return the created review
+        var createdReview = new ReviewResponseDTO
+        {
+            Id = review.Id,
+            Rating = review.Rating,
+            Content = review.Content,
+            CreatedAt = review.CreatedAt,
+            User = user.Adapt<UserPublicResponseDTO>()
+        };
 
-    //     return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
-    // }
+        return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
+    }
 
     // Edits your own review
     [Authorize]

@@ -54,10 +54,10 @@ public record GameSearchDTO : IValidatableObject
     public int? ReleaseYearMax { get; init; }
 
     // Ratings: user rating out of 10 (the controller converts it to the IGDB 0-100 scale), critic score out of 100
-    [Range(0, 10)]
-    public decimal? RatingMin { get; init; }
-    [Range(0, 10)]
-    public decimal? RatingMax { get; init; }
+    [Range(0, 100)]
+    public int? RatingMin { get; init; }
+    [Range(0, 100)]
+    public int? RatingMax { get; init; }
 
     [Range(0, 100)]
     public int? CriticRatingMin { get; init; }
