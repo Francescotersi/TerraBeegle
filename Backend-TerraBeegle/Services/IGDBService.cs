@@ -191,7 +191,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         await using var transaction = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74219031)");
         var game = await db.Games.Include(g => g.Genres).Include(g => g.Platforms)
-            .Include(g => g.Themes).Include(g => g.Cover)
+            .Include(g => g.Themes).Include(g => g.Images.Where(i => i.Type == ImageType.Cover))
             .FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId);
         if (game is { IsPlaceholder: false })
         {
@@ -239,8 +239,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
                 ?? new Models.Theme { ApiThemeId = id, Name = theme.Name, Slug = theme.Slug });
         }
         if (source.Cover?.Value?.ImageId is {} imageId)
-            game.Cover = await db.Images.FirstOrDefaultAsync(i => i.ApiImageId == imageId)
-                ?? new Image { ApiImageId = imageId };
+            game.Images.Add(await db.Images.FirstOrDefaultAsync(i => i.ApiImageId == imageId)
+                ?? new Image { ApiImageId = imageId, Type = ImageType.Cover });
 
         if (game.Id == 0)
             db.Games.Add(game);

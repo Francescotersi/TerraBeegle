@@ -16,8 +16,8 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
         entity.HasIndex(c => c.Slug).IsUnique();
 
         entity.HasOne(c => c.CompanyLogo)
-            .WithOne()
-            .HasForeignKey<Company>("CompanyLogoId")
+            .WithOne(i => i.Company)
+            .HasForeignKey<Image>(c => c.CompanyId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

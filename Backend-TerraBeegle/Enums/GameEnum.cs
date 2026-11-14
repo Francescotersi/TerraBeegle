@@ -94,6 +94,15 @@ public enum PegiDescriptionEnum
     InGamePurchases = 58
 }
 
+public enum ImageType
+{
+    Cover = 1,
+    Screenshot = 2,
+    Artwork = 3,
+    Logo = 4,
+    Background = 5
+}
+
 public enum LanguageSupportType
 {
     Audio = 1,

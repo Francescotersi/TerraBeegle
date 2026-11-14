@@ -9,7 +9,7 @@ public class LanguageSupport
     public LanguageSupportType Type { get; set; }
 
     public long GameId { get; set; }
-    public Game Games { get; set; } = null!;
+    public Game Game { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

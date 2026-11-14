@@ -15,15 +15,10 @@ public class PlatformConfiguration : IEntityTypeConfiguration<Platform>
 
         entity.HasIndex(p => p.ApiPlatformId).IsUnique();
         entity.HasIndex(p => p.Slug).IsUnique();
-
-        entity.HasOne(p => p.PlatformFamily)
-            .WithMany()
-            .HasForeignKey()
-            .OnDelete(DeleteBehavior.Restrict);
         
         entity.HasOne(p => p.PlatformLogo)
-            .WithOne()
-            .HasForeignKey<Platform>("PlatformLogoId")
+            .WithOne(l => l.Platform)
+            .HasForeignKey<Image>(p => p.PlatformId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -11,7 +11,6 @@ public class Platform
     public string Slug { get; set; } = null!;
     public string Abbreviation { get; set; } = null!;
 
-    public long? PlatformLogoId { get; set; }
     public Image? PlatformLogo { get; set; }
 
     public long? PlatformFamilyId { get; set; }

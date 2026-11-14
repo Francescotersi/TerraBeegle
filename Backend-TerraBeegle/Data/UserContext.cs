@@ -24,19 +24,23 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         entity.HasIndex(u => u.Username).IsUnique();
 
         entity.HasMany(u => u.FriendRequestsAsUser1)
-            .WithOne(f => f.User1).HasForeignKey(f => f.User1Id)
+            .WithOne(f => f.User1)
+            .HasForeignKey(f => f.User1Id)
             .OnDelete(DeleteBehavior.Cascade);
 
         entity.HasMany(u => u.FriendRequestsAsUser2)
-            .WithOne(f => f.User2).HasForeignKey(f => f.User2Id)
+            .WithOne(f => f.User2)
+            .HasForeignKey(f => f.User2Id)
             .OnDelete(DeleteBehavior.Cascade);
 
         entity.HasMany(u => u.Reviews)
-            .WithOne().HasForeignKey()
+            .WithOne(r => r.User)
+            .HasForeignKey(r => r.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         entity.HasOne(u => u.LoginChallenge)
-            .WithOne().HasForeignKey<LoginChallenge>("UserId")
+            .WithOne(lc => lc.User)
+            .HasForeignKey<LoginChallenge>(lc => lc.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

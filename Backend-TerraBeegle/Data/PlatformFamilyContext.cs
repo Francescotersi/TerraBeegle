@@ -13,5 +13,10 @@ public class PlatformFamilyConfiguration : IEntityTypeConfiguration<PlatformFami
 
         entity.HasIndex(p => p.ApiPlatformFamilyId).IsUnique();
         entity.HasIndex(p => p.Slug).IsUnique();
+
+        entity.HasMany(p => p.Platforms)
+            .WithOne(pf => pf.PlatformFamily)
+            .HasForeignKey(p => p.PlatformFamilyId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

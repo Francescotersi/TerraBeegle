@@ -62,87 +62,67 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
 
         // Many-to-many relationships on Game entity with other game related entities
         entity.HasMany(g => g.Franchises)
-            .WithMany()
+            .WithMany(f => f.Games)
             .UsingEntity(j => j.ToTable("game_franchises"));
 
         entity.HasMany(g => g.Series)
-            .WithMany()
+            .WithMany(s => s.Games)
             .UsingEntity(j => j.ToTable("game_series"));
 
         // Many-to-many relationships on Game entity with other entities
         entity.HasMany(g => g.Platforms)
-            .WithMany()
+            .WithMany(p => p.Games)
             .UsingEntity(j => j.ToTable("game_platforms"));
 
         entity.HasMany(g => g.Genres)
-            .WithMany()
+            .WithMany(g => g.Games)
             .UsingEntity(j => j.ToTable("game_genres"));
         
         entity.HasMany(g => g.Themes)
-            .WithMany()
+            .WithMany(t => t.Games)
             .UsingEntity(j => j.ToTable("game_themes"));
 
         entity.HasMany(g => g.Keywords)
-            .WithMany()
+            .WithMany(k => k.Games)
             .UsingEntity(j => j.ToTable("game_keywords"));
         
         entity.HasMany(g => g.GameModes)
-            .WithMany()
+            .WithMany(g => g.Games)
             .UsingEntity(j => j.ToTable("game_game_modes"));
         
         entity.HasMany(g => g.Perspectives)
-            .WithMany()
+            .WithMany(p => p.Games)
             .UsingEntity(j => j.ToTable("game_perspectives"));
             
         entity.HasMany(g => g.LanguageSupports)
-            .WithOne()
-            .HasForeignKey()
+            .WithOne(ls => ls.Game)
+            .HasForeignKey(ls => ls.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         entity.HasMany(g => g.PegiDescriptions)
-            .WithMany()
+            .WithMany(g => g.Games)
             .UsingEntity(j => j.ToTable("game_pegi_descriptions"));
 
         entity.HasMany(g => g.ReleaseDates)
-            .WithOne()
-            .HasForeignKey()
+            .WithOne(rd => rd.Game)
+            .HasForeignKey(rd => rd.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // One-to-one and one-to-many relationships on Game entity with website entities
-        entity.HasOne(g => g.OfficialWebsite)
-            .WithOne()
-            .HasForeignKey<Website>()
-            .OnDelete(DeleteBehavior.Cascade);
-
-        entity.HasMany(g => g.Stores)
-            .WithOne()
-            .HasForeignKey()
-            .OnDelete(DeleteBehavior.Cascade);
-
         entity.HasMany(g => g.Websites)
-            .WithOne()
-            .HasForeignKey()
+            .WithOne(w => w.Game)
+            .HasForeignKey(w => w.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // One-to-one and one-to-many relationships on Game entity with media entities
-        entity.HasOne(g => g.Cover)
-            .WithOne()
-            .HasForeignKey<Game>("CoverId")
-            .OnDelete(DeleteBehavior.Cascade);
-
-        entity.HasMany(g => g.Screenshots)
-            .WithOne()
-            .HasForeignKey()
-            .OnDelete(DeleteBehavior.Cascade);
-
-        entity.HasMany(g => g.Artworks)
-            .WithOne()
-            .HasForeignKey()
+        entity.HasMany(g => g.Images)
+            .WithOne(i => i.Game)
+            .HasForeignKey(s => s.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         entity.HasMany(g => g.Videos)
-            .WithOne()
-            .HasForeignKey()
+            .WithOne(v => v.Game)
+            .HasForeignKey(v => v.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Many-to-many relationships on Game entity with Company entity
@@ -164,8 +144,8 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
             .UsingEntity(j => j.ToTable("wishlist_games"));
         
         entity.HasMany(g => g.Reviews)
-            .WithOne()
-            .HasForeignKey()
+            .WithOne(r => r.Game)
+            .HasForeignKey(r => r.GameId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

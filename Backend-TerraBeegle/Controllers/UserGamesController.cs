@@ -54,9 +54,9 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
                 .OrderBy(g => g.Name).ThenBy(g => g.Id)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
-                .Include(g => g.Cover).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
+                .Include(g => g.Images.Where(i => i.Type == ImageType.Cover)).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
                 .ToListAsync();
-            games = savedGames.Select(SavedGameCards.Map).ToList();
+            games = [.. savedGames.Select(SavedGameCards.Map)];
         }
 
         return Ok(CreatePagedResponse(
@@ -70,7 +70,7 @@ public class UserFavoritesController(AppDbContext db, IIGDBService ApiService) :
     [HttpPost("{ApiGameId:long}")]
     public async Task<IActionResult> AddGameToFavorites(long userId, long ApiGameId)
     {
-        if (!Utils.IsCurrentUser(User, userId))
+        if (!IsCurrentUser(User, userId))
             return Forbid();
 
         if (!await db.Users.AnyAsync(u => u.Id == userId))
@@ -193,9 +193,9 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
                 .OrderBy(g => g.Name).ThenBy(g => g.Id)
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
-                .Include(g => g.Cover).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
+                .Include(g => g.Images.Where(i => i.Type == ImageType.Cover)).Include(g => g.Genres).Include(g => g.Platforms).Include(g => g.Themes)
                 .ToListAsync();
-            games = savedGames.Select(SavedGameCards.Map).ToList();
+            games = [.. savedGames.Select(SavedGameCards.Map)];
         }
 
         return Ok(CreatePagedResponse(
@@ -209,7 +209,7 @@ public class UserWishlistController(AppDbContext db, IIGDBService ApiService) : 
     [HttpPost("{ApiGameId:long}")]
     public async Task<IActionResult> AddGameToWishlist(long userId, long ApiGameId)
     {
-        if (!Utils.IsCurrentUser(User, userId))
+        if (!IsCurrentUser(User, userId))
             return Forbid();
 
         if (!await db.Users.AnyAsync(u => u.Id == userId))
