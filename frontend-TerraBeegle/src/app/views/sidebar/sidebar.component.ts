@@ -69,128 +69,47 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
         </div>
       </div>
 
-      <!-- Genres -->
-      <div class="category-group mb-2">
-        <button
-          class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
-          type="button"
-          (click)="toggleSection('genres')"
-          [attr.aria-expanded]="isSectionOpen('genres')"
-        >
-          <span class="fw-bold small text-uppercase">
-            Genres
-            @if (filters().genres.length) {
-              <span class="count-badge">{{ filters().genres.length }}</span>
-            }
-          </span>
-          <span class="chevron" [class.open]="isSectionOpen('genres')">▾</span>
-        </button>
-        <div class="collapse" [class.show]="isSectionOpen('genres')">
-          <ul class="category-list list-unstyled mb-0 py-1">
-            @for (genre of filteredGenres(); track genre.id) {
-              <li class="category-item">
-                <button
-                  type="button"
-                  class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2 border-0"
-                  [class.active]="filters().genres.includes(genre.id)"
-                  [attr.aria-pressed]="filters().genres.includes(genre.id)"
-                  (click)="filtersService.toggle('genres', genre.id)"
-                >
-                  <span class="text-start">{{ genre.name }}</span>
-                  @if (filters().genres.includes(genre.id)) {
-                    <span aria-hidden="true">✓</span>
-                  }
-                </button>
-              </li>
-            }
-            @if (filteredGenres().length === 0) {
-              <li class="text-muted small px-3 py-1">{{ listsError() ? 'Could not load the genres.' : 'No genres found' }}</li>
-            }
-          </ul>
+      @for (section of orderedSections(); track section.key) {
+        <div class="category-group mb-2">
+          <button
+            class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
+            type="button"
+            (click)="toggleSection(section.key)"
+            [attr.aria-expanded]="isSectionOpen(section.key)"
+          >
+            <span class="fw-bold small text-uppercase">
+              {{ section.label }}
+              @if (section.selectedIds.length) {
+                <span class="count-badge">{{ section.selectedIds.length }}</span>
+              }
+            </span>
+            <span class="chevron" [class.open]="isSectionOpen(section.key)">▾</span>
+          </button>
+          <div class="collapse" [class.show]="isSectionOpen(section.key)">
+            <ul class="category-list list-unstyled mb-0 py-1">
+              @for (item of section.items; track item.id) {
+                <li class="category-item">
+                  <button
+                    type="button"
+                    class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
+                    [class.active]="section.selectedIds.includes(item.id)"
+                    [attr.aria-pressed]="section.selectedIds.includes(item.id)"
+                    (click)="filtersService.toggle(section.key, item.id)"
+                  >
+                    <span class="text-start">{{ item.name }}</span>
+                    @if (section.selectedIds.includes(item.id)) {
+                      <span aria-hidden="true">✓</span>
+                    }
+                  </button>
+                </li>
+              }
+              @if (section.items.length === 0) {
+                <li class="text-muted small px-3 py-1">{{ listsError() ? section.errorLabel : section.emptyLabel }}</li>
+              }
+            </ul>
+          </div>
         </div>
-      </div>
-
-      <!-- Themes -->
-      <div class="category-group mb-2">
-        <button
-          class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
-          type="button"
-          (click)="toggleSection('themes')"
-          [attr.aria-expanded]="isSectionOpen('themes')"
-        >
-          <span class="fw-bold small text-uppercase">
-            Themes
-            @if (filters().themes.length) {
-              <span class="count-badge">{{ filters().themes.length }}</span>
-            }
-          </span>
-          <span class="chevron" [class.open]="isSectionOpen('themes')">▾</span>
-        </button>
-        <div class="collapse" [class.show]="isSectionOpen('themes')">
-          <ul class="category-list list-unstyled mb-0 py-1">
-            @for (theme of filteredThemes(); track theme.id) {
-              <li class="category-item">
-                <button
-                  type="button"
-                  class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2 border-0"
-                  [class.active]="filters().themes.includes(theme.id)"
-                  [attr.aria-pressed]="filters().themes.includes(theme.id)"
-                  (click)="filtersService.toggle('themes', theme.id)"
-                >
-                  <span class="text-start">{{ theme.name }}</span>
-                  @if (filters().themes.includes(theme.id)) {
-                    <span aria-hidden="true">✓</span>
-                  }
-                </button>
-              </li>
-            }
-            @if (filteredThemes().length === 0) {
-              <li class="text-muted small px-3 py-1">{{ listsError() ? 'Could not load the themes.' : 'No themes found' }}</li>
-            }
-          </ul>
-        </div>
-      </div>
-
-      <!-- Platforms -->
-      <div class="category-group mb-2">
-        <button
-          class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
-          type="button"
-          (click)="toggleSection('platforms')"
-          [attr.aria-expanded]="isSectionOpen('platforms')"
-        >
-          <span class="fw-bold small text-uppercase">
-            Platforms
-            @if (filters().platforms.length) {
-              <span class="count-badge">{{ filters().platforms.length }}</span>
-            }
-          </span>
-          <span class="chevron" [class.open]="isSectionOpen('platforms')">▾</span>
-        </button>
-        <div class="collapse" [class.show]="isSectionOpen('platforms')">
-          <ul class="category-list list-unstyled mb-0 py-1">
-            @for (platform of filteredPlatforms(); track platform.id) {
-              <li class="category-item">
-                <button
-                  type="button"
-                  class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2 border-0"
-                  [class.active]="filters().platforms.includes(platform.id)"
-                  [attr.aria-pressed]="filters().platforms.includes(platform.id)"
-                  (click)="filtersService.toggle('platforms', platform.id)"
-                >
-                  <span class="text-start">{{ platform.name }}</span>
-                  @if (filters().platforms.includes(platform.id)) {
-                    <span aria-hidden="true">✓</span>
-                  }
-                </button>
-              </li>
-            }
-            @if (filteredPlatforms().length === 0) {
-              <li class="text-muted small px-3 py-1">{{ listsError() ? 'Could not load the platforms.' : 'No platform found' }}</li>
-            }
-          </ul>
-        </div>
-      </div>
+      }
 
       <!-- Release year -->
       <div class="category-group mb-3 mt-3">
@@ -434,6 +353,44 @@ export class SidebarComponent implements OnInit {
   protected readonly filteredGenres = computed(() => this.byName(this.genres()));
   protected readonly filteredPlatforms = computed(() => this.byName(this.platforms()));
 
+  // Orders dropdown sections by search match accuracy when a query is active (exact > prefix > substring)
+  protected readonly orderedSections = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const f = this.filters();
+    const sections = [
+      {
+        key: 'genres' as const,
+        label: 'Genres',
+        items: this.filteredGenres(),
+        selectedIds: f.genres,
+        emptyLabel: 'No genres found',
+        errorLabel: 'Could not load the genres.',
+      },
+      {
+        key: 'themes' as const,
+        label: 'Themes',
+        items: this.filteredThemes(),
+        selectedIds: f.themes,
+        emptyLabel: 'No themes found',
+        errorLabel: 'Could not load the themes.',
+      },
+      {
+        key: 'platforms' as const,
+        label: 'Platforms',
+        items: this.filteredPlatforms(),
+        selectedIds: f.platforms,
+        emptyLabel: 'No platform found',
+        errorLabel: 'Could not load the platforms.',
+      },
+    ];
+
+    if (!query) {
+      return sections;
+    }
+
+    return [...sections].sort((a, b) => this.sectionScore(b.items, query) - this.sectionScore(a.items, query));
+  });
+
   ngOnInit(): void {
     // During SSR the relative /api URL cannot be called; the browser loads the lists after hydration
     if (!isPlatformBrowser(this.platformId)) {
@@ -508,14 +465,39 @@ export class SidebarComponent implements OnInit {
 
   protected isSectionOpen(sectionKey: string): boolean {
     if (this.searchQuery().trim().length > 0) {
+      switch (sectionKey) {
+        case 'genres':
+          return this.filteredGenres().length > 0;
+        case 'themes':
+          return this.filteredThemes().length > 0;
+        case 'platforms':
+          return this.filteredPlatforms().length > 0;
+      }
       return true;
     }
     return !!this.openSections()[sectionKey];
   }
 
-  // The text of "Search genres, themes or platforms..." filters all three lists
   private byName(items: GameGenreItem[]): GameGenreItem[] {
     const query = this.searchQuery().toLowerCase().trim();
-    return query ? items.filter((item) => item.name.toLowerCase().includes(query)) : items;
+    if (!query) return items;
+    return items
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .sort((a, b) => this.matchScore(b.name, query) - this.matchScore(a.name, query));
+  }
+
+  private matchScore(name: string, query: string): number {
+    const lower = name.toLowerCase();
+    if (lower === query) return 3;
+    if (lower.startsWith(query)) return 2;
+    const idx = lower.indexOf(query);
+    return idx !== -1 ? 1 - idx * 0.001 : 0;
+  }
+
+  private sectionScore(items: GameGenreItem[], query: string): number {
+    if (items.length === 0) return 0;
+    const best = this.matchScore(items[0].name, query);
+    const sameTierCount = items.filter((item) => Math.floor(this.matchScore(item.name, query)) === Math.floor(best)).length;
+    return best * 1000 + sameTierCount;
   }
 }

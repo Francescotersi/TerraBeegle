@@ -76,14 +76,12 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
       aspect-ratio: 16 / 9;
       cursor: zoom-in;
     }
+
     .gallery-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: transform 0.3s ease;
-    }
-    .gallery-item:hover img {
-      transform: scale(1.06);
     }
 
     .lightbox {
@@ -128,7 +126,6 @@ import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
   ],
 })
 export class GameGalleryComponent {
-  // Screenshots first, then artworks (720p URLs from IGDB)
   readonly images = input<string[]>([]);
   readonly gameName = input<string>('');
 
