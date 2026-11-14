@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, OnDestroy, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { GameDetailsDTO } from '../../../../models-services/game.model';
 import { GridGameActionsService } from '../../../grid/services/grid-game-actions.service';
@@ -26,10 +26,77 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
           />
 
           <div class="flex-grow-1 min-w-0">
-            @if (g.gameType && g.gameType !== 'Main Game') {
-              <span class="type-chip mb-2">{{ g.gameType }}</span>
-            }
-            <h1 class="game-title fw-bold mb-2">{{ g.name }}</h1>
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+              <div class="min-w-0">
+                @if (g.gameType && g.gameType !== 'Main Game') {
+                  <span class="type-chip mb-2">{{ g.gameType }}</span>
+                }
+                <h1 class="game-title fw-bold mb-0">{{ g.name }}</h1>
+              </div>
+
+              @if (g.pegiRating) {
+                <div
+                  class="pegi-wrapper flex-shrink-0 ms-auto"
+                  (mouseenter)="onPegiMouseEnter()"
+                  (mouseleave)="onPegiMouseLeave()"
+                >
+                  <button
+                    type="button"
+                    class="pegi-trigger"
+                    [attr.aria-expanded]="pegiDescriptions().length > 0 ? isPegiMenuOpen() : null"
+                    [attr.aria-label]="'PEGI ' + g.pegiRating + (pegiDescriptions().length ? ' content descriptors' : '')"
+                    (click)="pegiDescriptions().length > 0 && togglePegiMenu()"
+                  >
+                    @if (pegiRatingIcon(); as iconUrl) {
+                      @if (!failedPegiIcons().has(iconUrl)) {
+                        <img
+                          class="pegi-icon"
+                          [src]="iconUrl"
+                          [alt]="'PEGI ' + g.pegiRating"
+                          [title]="pegiTitle()"
+                          (error)="onPegiIconError(iconUrl)"
+                        />
+                      } @else {
+                        <span class="pegi-box" [title]="pegiTitle()">PEGI {{ g.pegiRating }}</span>
+                      }
+                    }
+                    @if (pegiDescriptions().length > 0) {
+                      <svg
+                        class="pegi-arrow"
+                        [class.open]="isPegiMenuOpen()"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    }
+                  </button>
+
+                  @if (pegiDescriptions().length > 0 && isPegiMenuOpen()) {
+                    <div class="pegi-submenu" role="menu" aria-label="PEGI content descriptors">
+                      @for (desc of pegiDescriptions(); track desc.label) {
+                        @if (!failedPegiIcons().has(desc.iconUrl)) {
+                          <img
+                            class="pegi-sub-icon"
+                            [src]="desc.iconUrl"
+                            [alt]="desc.label"
+                            [title]="desc.label"
+                            (error)="onPegiIconError(desc.iconUrl)"
+                          />
+                        }
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
               @if (g.rating != null) {
@@ -48,9 +115,6 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
                   {{ g.criticRating }}
                 </span>
                 <span class="small text-body-secondary">Critics</span>
-              }
-              @if (g.pegiRating) {
-                <span class="pegi-box" [title]="pegiTitle()">PEGI {{ g.pegiRating }}</span>
               }
               @if (g.releaseDate) {
                 <span class="small fw-medium text-body-secondary">{{ g.releaseDate | date: 'longDate' }}</span>
@@ -170,6 +234,76 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
       line-height: 1.15;
     }
 
+    .pegi-wrapper {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .pegi-trigger {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--tb-text-muted);
+      cursor: pointer;
+    }
+    .pegi-arrow {
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .pegi-trigger:hover .pegi-arrow,
+    .pegi-arrow.open {
+      color: var(--tb-accent);
+    }
+    .pegi-arrow.open {
+      transform: rotate(180deg);
+    }
+    .pegi-submenu {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--tb-glass-border);
+      background: var(--tb-glass-bg);
+      backdrop-filter: blur(12px);
+      animation: pegiMenuIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .pegi-sub-icon {
+      height: 40px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 5px;
+      display: block;
+    }
+    @keyframes pegiMenuIn {
+      from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .pegi-icon {
+      height: 560px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+    @media (min-width: 768px) {
+      .pegi-icon {
+        height: 90px;
+      }
+    }
     .pegi-box {
       display: inline-flex;
       align-items: center;
@@ -185,7 +319,7 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
   `,
   ],
 })
-export class GameHeroComponent {
+export class GameHeroComponent implements OnDestroy {
   readonly game = input.required<GameDetailsDTO>();
 
   // Provided by the details page, so the hero and the page share the same favorites / wishlist state
@@ -206,4 +340,61 @@ export class GameHeroComponent {
     const descriptions = this.game().pegiRatingDescription;
     return descriptions?.length ? descriptions.join(', ') : 'PEGI age rating';
   });
+
+  protected readonly failedPegiIcons = signal<Set<string>>(new Set());
+  protected readonly isPegiMenuOpen = signal(false);
+  private pegiHoverTimer: ReturnType<typeof setTimeout> | null = null;
+
+  protected readonly pegiRatingIcon = computed(() => {
+    const rating = this.game().pegiRating?.trim();
+    return rating ? `https://www.igdb.com/icons/rating_icons/pegi/pegi_${rating.toLowerCase()}.png` : null;
+  });
+
+  protected readonly pegiDescriptions = computed(() =>
+    (this.game().pegiRatingDescription ?? []).map((label) => {
+      const slug = label.trim().toLowerCase().replace(/\s+/g, '-');
+      return {
+        label,
+        iconUrl: `https://www.igdb.com/icons/rating_icons/pegi/pegi_${slug}.png`,
+      };
+    })
+  );
+
+  protected onPegiMouseEnter(): void {
+    if (this.pegiDescriptions().length === 0 || this.isPegiMenuOpen()) return;
+    this.clearPegiTimer();
+    this.pegiHoverTimer = setTimeout(() => {
+      this.isPegiMenuOpen.set(true);
+      this.pegiHoverTimer = null;
+    }, 1000);
+  }
+
+  protected onPegiMouseLeave(): void {
+    this.clearPegiTimer();
+    this.isPegiMenuOpen.set(false);
+  }
+
+  protected togglePegiMenu(): void {
+    this.clearPegiTimer();
+    this.isPegiMenuOpen.update((open) => !open);
+  }
+
+  ngOnDestroy(): void {
+    this.clearPegiTimer();
+  }
+
+  private clearPegiTimer(): void {
+    if (this.pegiHoverTimer) {
+      clearTimeout(this.pegiHoverTimer);
+      this.pegiHoverTimer = null;
+    }
+  }
+
+  protected onPegiIconError(url: string): void {
+    this.failedPegiIcons.update((prev) => {
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
+  }
 }

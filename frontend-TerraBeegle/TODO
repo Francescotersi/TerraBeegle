@@ -5,5 +5,3 @@ Nella detail page del gioco per il PEGI aggiungerci le immagini originali  prese
     "Bad Language",
     "Sex"
   ], fare un toLower sulla stringa ricevuta e sostituire gli spazi con '-'
-
-nel grid component cambiare la forma delel game card cosi da non tagliare la copertina del gioco, passare da 16/9 a 9/16 o simile ma non rendere ingobrante la nuova gamecard
