@@ -111,7 +111,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
               [class.is-active]="actions.favoritedIds().has(mobileGame.rawgGameId)"
               type="button"
               [title]="actions.favoritedIds().has(mobileGame.rawgGameId) ? 'Remove from Favorites' : 'Add to Favorites'"
-              (click)="actions.onToggleFavorite($event, mobileGame.rawgGameId)"
+              (click)="actions.onToggleFavorite($event, mobileGame.rawgGameId, mobileGame.name)"
               [attr.aria-label]="actions.favoritedIds().has(mobileGame.rawgGameId) ? 'Remove from Favorites' : 'Add to Favorites'"
             >
               <div class="svg-container">

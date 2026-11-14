@@ -1,7 +1,3 @@
 Cambiare slug del gioco che sta nell URL, adesso ci sta l`id del db meglio mettercio lo slug effettivo del gioco o direttamente il nome
 
-Nella detail page del gioco per il PEGI aggiungerci le immagini originali  prese da questo URL https://www.igdb.com/icons/rating_icons/pegi/pegi_{numero}.png da qua dell api "pegiRating": "18" , e nella stessa parte aggiungere anche il tipo di violenza, discriminazione o altri simile senpre di pegi da questo URL https://www.igdb.com/icons/rating_icons/pegi/pegi_{string-lowered}.png prendere la parte da mettere nell`url da qua "pegiRatingDescription": [
-    "Violence",
-    "Bad Language",
-    "Sex"
-  ], fare un toLower sulla stringa ricevuta e sostituire gli spazi con '-'
+per le review degli user sono da 1 a 10 
