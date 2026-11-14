@@ -1,11 +1,12 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FriendshipResponseDTO } from '../../../models-services/friendship.model';
 
 @Component({
   selector: 'app-profile-friend-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="friend-card p-3 rounded-3 d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-3">
@@ -32,6 +33,14 @@ import { FriendshipResponseDTO } from '../../../models-services/friendship.model
       <div class="d-flex align-items-center gap-2">
         @switch (type()) {
           @case ('friend') {
+            <!-- A friend's favorites and wishlist (/friends/{id}) -->
+            <a
+              class="btn btn-sm btn-tb-accent"
+              [routerLink]="['/friends', friend().user.id]"
+              [queryParams]="{ username: friend().user.username }"
+            >
+              View lists
+            </a>
             <button
               class="btn btn-sm btn-outline-danger"
               (click)="remove.emit({ id: friend().id, message: 'Friend removed' })"

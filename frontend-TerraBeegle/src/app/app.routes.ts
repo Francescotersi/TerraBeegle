@@ -10,6 +10,7 @@ import { CatalogPage } from './views/catalog-page/catalog-page.component';
 import { WishlistPageComponent } from './views/wishlist-page/wishlist-page.component';
 import { ForgotPasswordComponent } from './views/user/forgot-password/forgot-password.component';
 import { GameDetailsPage } from './views/game-details-page/game-details-page.component';
+import { FriendListsPage } from './views/friend-lists-page/friend-lists-page.component';
 
 export const routes: Routes = [
     {
@@ -55,6 +56,12 @@ export const routes: Routes = [
     {
         path: 'profile',
         component: ProfilePageComponent,
+        canActivate: [authGuard],
+    },
+    {
+        // A friend's favorites and wishlist (only for accepted friends)
+        path: 'friends/:id',
+        component: FriendListsPage,
         canActivate: [authGuard],
     }
 ];

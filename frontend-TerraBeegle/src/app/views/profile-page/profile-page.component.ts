@@ -3,7 +3,7 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
 import { AuthService } from '../../services/auth.service';
 import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
-import { ProfileStatisticsComponent } from './profile-statistics.component';
+import { ProfileStatisticsComponent } from './profile-statistics/profile-statistics.component';
 import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendlist.component';
 import { ProfileSettingsComponent } from './profile-settings/profile-settings.component';
 

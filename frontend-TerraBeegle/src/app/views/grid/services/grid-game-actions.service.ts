@@ -1,6 +1,6 @@
 import { Injectable, signal, inject, PLATFORM_ID, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { catchError, forkJoin, of } from 'rxjs';
+import { Subject } from 'rxjs';
 import { WishlistFavoritesService } from '../../../services/wishlist-favorites.service';
 import { AuthService } from '../../../services/auth.service';
 import { AlertService } from '../../../services/alert.service';
@@ -21,6 +21,8 @@ export class GridGameActionsService {
   readonly animatingFavoriteId = signal<number | null>(null);
   readonly pendingReview = signal<{ gameId: number; gameName: string } | null>(null);
   readonly isPublishingReview = signal(false);
+  // Emits the game id after a review is published (the details page reloads its reviews)
+  readonly reviewPublished = new Subject<number>();
 
   private loadedUserId: number | undefined;
   private readonly collectionVersions = { wishlist: 0, favorites: 0 };
@@ -81,75 +83,64 @@ export class GridGameActionsService {
     });
   }
 
-  onToggleFavorite(event: MouseEvent, gameId: number, gameName?: string): void {
+  // The heart adds / removes the game directly (the review has its own button on the details page)
+  onToggleFavorite(event: MouseEvent, gameId: number, _gameName?: string): void {
     event.stopPropagation();
     if (!this.authService.isLoggedIn()) {
       event.preventDefault();
       this.alertService.showAlert('Please log in to manage your favorites.');
       return;
     }
-    if (!this.favoritedIds().has(gameId)) {
-      this.pendingReview.set({ gameId, gameName: gameName || 'Game' });
-      return;
-    }
     this.toggle('favorites', gameId);
   }
 
+  // "Write a review" on the details page: opens the review popup
+  openReview(gameId: number, gameName: string): void {
+    if (!this.authService.isLoggedIn()) {
+      this.alertService.showAlert('Please log in to write a review.');
+      return;
+    }
+    this.pendingReview.set({ gameId, gameName: gameName || 'Game' });
+  }
+
+  // "Cancel", backdrop or Escape on the review popup: close it
   cancelReview(): void {
     if (this.isPublishingReview()) return;
     this.pendingReview.set(null);
   }
 
+  // "Publish": saves only the review (it no longer adds the game to favorites)
   publishReview(payload: ReviewSubmitPayload): void {
     const pending = this.pendingReview();
     if (!pending || this.isPublishingReview()) return;
 
     const userId = this.authService.currentUser()?.id;
-    const key = `${userId}:favorites:${pending.gameId}`;
-    if (this.pending.has(key)) return;
-
-    this.pending.add(key);
     this.isPublishingReview.set(true);
 
-    let reviewFailed = false;
-    const review$ = this.reviewService
-      .createReview(pending.gameId, {
-        gameId: pending.gameId,
-        rating: payload.rating,
-        content: payload.content,
-      })
-      .pipe(
-        catchError(() => {
-          reviewFailed = true;
-          return of(null);
-        })
-      );
-
-    forkJoin({
-      favorite: this.wishlistService.addGame('favorites', pending.gameId),
-      review: review$,
-    }).subscribe({
-      next: () => {
-        this.pending.delete(key);
-        this.isPublishingReview.set(false);
-        this.pendingReview.set(null);
-        if (this.authService.currentUser()?.id !== userId) return;
-        this.collectionVersions.favorites++;
-        this.updateFavoriteLocal(pending.gameId, true);
-        this.wishlistService.changes.next('favorites');
-        if (reviewFailed) {
-          this.alertService.showAlert('Added to favorites, but the review could not be saved.');
-        } else {
-          this.alertService.showSuccess('Added to favorites and review published.');
-        }
-      },
-      error: () => {
-        this.pending.delete(key);
-        this.isPublishingReview.set(false);
-        if (this.authService.currentUser()?.id !== userId) return;
-        this.alertService.showAlert('Could not update your favorites. Please try again.');
-      },
-    });
+    this.reviewService
+      .createReview(pending.gameId, { gameId: pending.gameId, rating: payload.rating, content: payload.content })
+      .subscribe({
+        next: () => {
+          this.isPublishingReview.set(false);
+          this.pendingReview.set(null);
+          if (this.authService.currentUser()?.id !== userId) return;
+          this.reviewPublished.next(pending.gameId);
+          this.alertService.showSuccess('Review published.');
+        },
+        error: (error: { status?: number; error?: unknown }) => {
+          this.isPublishingReview.set(false);
+          if (this.authService.currentUser()?.id !== userId) return;
+          if (error.status === 409) {
+            // One review per game: close the popup, there is nothing else to do
+            this.pendingReview.set(null);
+            this.alertService.showAlert('You already reviewed this game.');
+            return;
+          }
+          this.alertService.showAlert(
+            typeof error.error === 'string' ? error.error : 'Could not publish your review. Please try again.'
+          );
+        },
+      });
   }
 
   private toggle(type: 'wishlist' | 'favorites', gameId: number): void {

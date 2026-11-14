@@ -15,9 +15,10 @@ export type { GameCollectionType };
 export class WishlistFavoritesService {
   readonly changes = new Subject<GameCollectionType>();
 
-  getAllGames(type: GameCollectionType): Observable<GameCardDTO[]> {
-    return this.getGames(type, 1, 50).pipe(
-      expand(page => page.page < page.totalPages ? this.getGames(type, page.page + 1, 50) : EMPTY),
+  // Every page of a list; without userId the logged-in user's, with it a friend's (the backend allows only friends)
+  getAllGames(type: GameCollectionType, userId?: number): Observable<GameCardDTO[]> {
+    return this.getGames(type, 1, 50, userId).pipe(
+      expand(page => page.page < page.totalPages ? this.getGames(type, page.page + 1, 50, userId) : EMPTY),
       reduce((games, page) => [...games, ...page.items], [] as GameCardDTO[])
     );
   }

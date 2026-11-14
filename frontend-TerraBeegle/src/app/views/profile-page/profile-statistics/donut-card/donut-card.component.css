@@ -1,0 +1,205 @@
+/* Shades of one hue, validated as an ordinal ramp (each step distinct, all visible on the card):
+   light: pinks of the site accent, darkest = largest; dark: cyans, lightest = largest. --shade-5 = "Other" */
+:host {
+  display: block;
+  min-width: 0;
+  --stats-surface: #ffffff;
+  --shade-0: #9d174d;
+  --shade-1: #be185d;
+  --shade-2: #db2777;
+  --shade-3: #ec4899;
+  --shade-4: #f472b6;
+  --shade-5: #94a3b8;
+}
+:host-context([data-bs-theme="dark"]) {
+  --stats-surface: #071c40;
+  --shade-0: #a5f3fc;
+  --shade-1: #5ee4ef;
+  --shade-2: #22c3d1;
+  --shade-3: #1795a1;
+  --shade-4: #127079;
+  --shade-5: #64748b;
+}
+
+/* ---- Card ---- */
+.stats-card {
+  height: 100%;
+  border: 1px solid var(--tb-glass-border);
+  border-radius: 16px;
+  background: var(--stats-surface);
+  box-shadow: 0 4px 14px var(--tb-glass-shadow);
+  overflow: hidden;
+  /* the layout below follows the width of the card, not of the screen */
+  container-type: inline-size;
+}
+
+.stats-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--tb-glass-border);
+}
+.stats-title {
+  margin: 0;
+  color: var(--tb-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.stats-subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--tb-text-muted);
+  font-size: 0.78rem;
+}
+
+/* ---- Donut + legend beside it ---- */
+.stats-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.1rem 1.25rem 1.25rem;
+}
+
+.donut-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  flex-shrink: 0;
+}
+.donut {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* The stroke in the card color is the gap between segments */
+.slice {
+  fill-rule: evenodd; /* a single 100% segment is a full ring: keeps the hole empty */
+  stroke: var(--stats-surface);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transform-origin: 0 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.slice.active {
+  transform: scale(1.04);
+}
+.slice.dimmed {
+  opacity: 0.35;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+.center-value {
+  color: var(--tb-text);
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.center-label {
+  max-width: 72px;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--tb-text-muted);
+  font-size: 0.7rem;
+}
+
+.legend {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.legend-row {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto 2.9rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  outline: none;
+  cursor: default;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+.legend-row:hover,
+.legend-row:focus-visible {
+  background: var(--tb-accent-subtle);
+}
+.legend-row.dimmed {
+  opacity: 0.45;
+}
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.legend-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--tb-text);
+}
+.legend-count {
+  color: var(--tb-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.legend-percent {
+  color: var(--tb-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-note {
+  width: 100%;
+  margin: 0;
+  padding: 2rem 0;
+  color: var(--tb-text-muted);
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+/* Narrow card: the legend goes under the donut */
+@container (max-width: 380px) {
+  .stats-body {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .legend {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slice,
+  .legend-row {
+    transition: none;
+  }
+}
+
+@media (min-width: 2000px) {
+  .stats-title {
+    font-size: 1.25rem;
+  }
+  .stats-subtitle,
+  .legend-row {
+    font-size: 1rem;
+  }
+  .donut-wrap {
+    width: 190px;
+    height: 190px;
+  }
+  .center-value {
+    font-size: 2.3rem;
+  }
+}
