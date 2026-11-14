@@ -1,11 +1,11 @@
-import { Component, DestroyRef, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { GameService } from '../../services/game.service';
 import { GameGenreItem } from '../../models-services/game.model';
-import { CatalogFiltersService, CatalogSortBy, MAX_YEAR, MIN_YEAR } from '../../services/catalog-filters.service';
+import { CatalogFiltersService, CatalogSortBy, MAX_YEAR, MIN_TO_YEAR, MIN_YEAR } from '../../services/catalog-filters.service';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
 
 @Component({
@@ -115,27 +115,85 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       <div class="category-group mb-3 mt-3">
         <span class="filter-label">Release year</span>
         <div class="d-flex align-items-center gap-2">
-          <input
-            type="number"
-            class="form-control form-control-sm sidebar-search"
-            placeholder="From"
-            aria-label="Released from year"
-            [min]="minYear"
-            [max]="maxYear"
-            [value]="filters().yearMin ?? ''"
-            (change)="onYearChange('yearMin', $event)"
-          />
+          <div class="year-select-wrap">
+            <button
+              type="button"
+              class="year-select-trigger sidebar-search"
+              aria-label="Released from year"
+              [attr.aria-expanded]="openYearMenu() === 'yearMin'"
+              (click)="toggleYearMenu('yearMin', $event)"
+            >
+              <span>{{ filters().yearMin ?? 'From' }}</span>
+              <span class="year-caret" aria-hidden="true">▾</span>
+            </button>
+            @if (openYearMenu() === 'yearMin') {
+              <ul class="year-dropdown list-unstyled mb-0" role="listbox" aria-label="From year">
+                <li>
+                  <button
+                    type="button"
+                    class="year-option"
+                    [class.active]="filters().yearMin === null"
+                    (click)="selectYear('yearMin', null)"
+                  >
+                    From
+                  </button>
+                </li>
+                @for (year of years; track year) {
+                  <li>
+                    <button
+                      type="button"
+                      class="year-option"
+                      [class.active]="filters().yearMin === year"
+                      (click)="selectYear('yearMin', year)"
+                    >
+                      {{ year }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
           <span class="text-body-secondary small">–</span>
-          <input
-            type="number"
-            class="form-control form-control-sm sidebar-search"
-            placeholder="To"
-            aria-label="Released until year"
-            [min]="minYear"
-            [max]="maxYear"
-            [value]="filters().yearMax ?? ''"
-            (change)="onYearChange('yearMax', $event)"
-          />
+
+          <div class="year-select-wrap">
+            <button
+              type="button"
+              class="year-select-trigger sidebar-search"
+              aria-label="Released until year"
+              [attr.aria-expanded]="openYearMenu() === 'yearMax'"
+              (click)="toggleYearMenu('yearMax', $event)"
+            >
+              <span>{{ filters().yearMax ?? 'To' }}</span>
+              <span class="year-caret" aria-hidden="true">▾</span>
+            </button>
+            @if (openYearMenu() === 'yearMax') {
+              <ul class="year-dropdown list-unstyled mb-0" role="listbox" aria-label="To year">
+                <li>
+                  <button
+                    type="button"
+                    class="year-option"
+                    [class.active]="filters().yearMax === null"
+                    (click)="selectYear('yearMax', null)"
+                  >
+                    To
+                  </button>
+                </li>
+                @for (year of toYears(); track year) {
+                  <li>
+                    <button
+                      type="button"
+                      class="year-option"
+                      [class.active]="filters().yearMax === year"
+                      (click)="selectYear('yearMax', year)"
+                    >
+                      {{ year }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
         </div>
       </div>
 
@@ -297,17 +355,25 @@ export class SidebarComponent implements OnInit {
   private readonly gameService = inject(GameService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
 
   protected readonly filters = this.filtersService.filters;
   protected readonly searchQuery = signal('');
   protected readonly isMobileDrawerOpen = signal(false);
+  protected readonly openYearMenu = signal<'yearMin' | 'yearMax' | null>(null);
   protected readonly themes = signal<GameGenreItem[]>([]);
   protected readonly genres = signal<GameGenreItem[]>([]);
   protected readonly platforms = signal<GameGenreItem[]>([]);
   protected readonly listsError = signal(false);
 
-  protected readonly minYear = MIN_YEAR;
-  protected readonly maxYear = MAX_YEAR;
+  protected readonly years = Array.from(
+    { length: MAX_YEAR - MIN_YEAR + 1 },
+    (_, i) => MAX_YEAR - i
+  );
+  protected readonly toYears = computed(() => {
+    const min = Math.max(MIN_TO_YEAR, this.filters().yearMin ?? MIN_TO_YEAR);
+    return this.years.filter((year) => year >= min);
+  });
 
   protected readonly sortOptions: { value: CatalogSortBy; label: string }[] = [
     { value: 'rating', label: 'User rating' },
@@ -423,7 +489,7 @@ export class SidebarComponent implements OnInit {
   protected applyScoreRange(score: 'rating' | 'critic'): void {
     if (score === 'rating') {
       this.filtersService.update({ ratingMin: this.ratingDraft() || null,
-        ratingMax: this.ratingMaxDraft() === 10 ? null : this.ratingMaxDraft() });
+        ratingMax: (this.ratingMaxDraft() * 10) === 10 ? null : this.ratingMaxDraft() });
     } else {
       this.filtersService.update({ criticMin: this.criticDraft() || null,
         criticMax: this.criticMaxDraft() === 100 ? null : this.criticMaxDraft() });
@@ -449,11 +515,31 @@ export class SidebarComponent implements OnInit {
     this.filtersService.update({ sortBy, ascending: sortBy === 'name' });
   }
 
-  // Empty or out-of-range years remove that side of the interval
-  protected onYearChange(key: 'yearMin' | 'yearMax', event: Event): void {
-    const value = Number((event.target as HTMLInputElement).value);
-    const year = Number.isInteger(value) && value >= MIN_YEAR && value <= MAX_YEAR ? value : null;
+  protected toggleYearMenu(key: 'yearMin' | 'yearMax', event: Event): void {
+    event.stopPropagation();
+    this.openYearMenu.update((current) => (current === key ? null : key));
+  }
+
+  protected selectYear(key: 'yearMin' | 'yearMax', year: number | null): void {
+    this.openYearMenu.set(null);
+    const currentMax = this.filters().yearMax;
+    if (key === 'yearMin' && year !== null && currentMax !== null && year > currentMax) {
+      this.filtersService.update({ yearMin: year, yearMax: null });
+      return;
+    }
     this.filtersService.update({ [key]: year });
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: Event): void {
+    if (this.openYearMenu() && !this.hostEl.nativeElement.contains(event.target as Node)) {
+      this.openYearMenu.set(null);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.openYearMenu.set(null);
   }
 
   protected toggleSection(section: string): void {

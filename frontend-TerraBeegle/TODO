@@ -7,7 +7,3 @@ Nella detail page del gioco per il PEGI aggiungerci le immagini originali  prese
   ], fare un toLower sulla stringa ricevuta e sostituire gli spazi con '-'
 
 nel grid component cambiare la forma delel game card cosi da non tagliare la copertina del gioco, passare da 16/9 a 9/16 o simile ma non rendere ingobrante la nuova gamecard
-
-nella sidebar per il release year fare un piccolo menu a tendina per le annate che vanno dall'anno di uscita del primo videogioco all'anno attuale
-
-----------nella sidebar quando si cercano i generi o le platform fare in modo che si apra solamente il menu a tendina con dei risultati effettivi, quelli che non ne hanno sono da lasciare chiusi e aggiungi un piccolo bordo ad ognuno degli item contenuti dentro ai menu 

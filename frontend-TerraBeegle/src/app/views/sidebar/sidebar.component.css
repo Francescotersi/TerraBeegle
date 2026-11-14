@@ -214,6 +214,85 @@
       border-color: rgba(51, 65, 85, 0.35) !important;
     }
 
+    .year-select-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .year-select-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.25rem;
+      padding: 0.28rem 0.55rem;
+      font-size: 0.8rem;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .year-caret {
+      font-size: 0.7rem;
+      color: var(--tb-text-muted);
+    }
+
+    .year-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      max-height: 155px;
+      overflow-y: auto;
+      z-index: 30;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--tb-glass-border);
+      background: var(--tb-glass-bg);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      scrollbar-width: thin;
+      scrollbar-color: var(--tb-accent) transparent;
+    }
+
+    .year-dropdown::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .year-dropdown::-webkit-scrollbar-thumb {
+      background: var(--tb-accent-glow);
+      border-radius: 4px;
+    }
+
+    .year-option {
+      width: 100%;
+      text-align: left;
+      padding: 0.2rem 0.45rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--tb-text);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background-color 0.12s ease-out, color 0.12s ease-out;
+    }
+
+    .year-option:hover:not(:disabled) {
+      background: var(--tb-accent-subtle);
+      color: var(--tb-accent);
+    }
+
+    .year-option.active {
+      background: var(--tb-btn-gradient);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .year-option:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
     .category-btn {
       background: transparent;
       color: var(--tb-text);

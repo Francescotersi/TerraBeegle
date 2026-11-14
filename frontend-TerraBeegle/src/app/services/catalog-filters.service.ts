@@ -23,8 +23,9 @@ export interface CatalogFilters {
 
 const DEFAULT_SORT: CatalogSortBy = 'rating';
 const SORT_OPTIONS: CatalogSortBy[] = ['rating', 'released', 'name', 'critic_rating'];
-export const MIN_YEAR = 1950;
-export const MAX_YEAR = new Date().getFullYear() + 2;
+export const MIN_YEAR = 1953;
+export const MIN_TO_YEAR = 1970;
+export const MAX_YEAR = new Date().getFullYear();
 
 // Reads and writes the catalog filters in the URL; used by the sidebar (writes) and the catalog page (reads)
 @Injectable({ providedIn: 'root' })
@@ -44,9 +45,9 @@ export class CatalogFiltersService {
   parse(params: ParamMap): CatalogFilters {
     const ids = (key: string) =>
       params.getAll(key).map(Number).filter((id) => Number.isInteger(id) && id > 0);
-    const year = (key: string) => {
+    const year = (key: string, min = MIN_YEAR) => {
       const value = Number(params.get(key));
-      return Number.isInteger(value) && value >= MIN_YEAR && value <= MAX_YEAR ? value : null;
+      return Number.isInteger(value) && value >= min && value <= MAX_YEAR ? value : null;
     };
     const range = (key: string, max: number) => {
       const value = Number(params.get(key));
@@ -61,8 +62,8 @@ export class CatalogFiltersService {
       genres: ids('genres'),
       themes: ids('themes'),
       platforms: ids('platforms'),
-      yearMin: year('yearMin'),
-      yearMax: year('yearMax'),
+      yearMin: year('yearMin', MIN_YEAR),
+      yearMax: year('yearMax', MIN_TO_YEAR),
       ratingMin: rating[0] || null,
       ratingMax: rating[1] < 10 ? rating[1] : null,
       criticMin: critic[0] || null,
