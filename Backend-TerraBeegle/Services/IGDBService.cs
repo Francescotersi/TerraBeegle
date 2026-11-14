@@ -1,5 +1,6 @@
 using Backend_TerraBeegle.DTOS;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -84,9 +85,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "platforms.platform_logo.image_id",
         "rating",
         "rating_count",
-        "release_dates.human",
         "release_dates.date",
-        "release_dates.platform.name",
+        "release_dates.platform.abbreviation",
         "release_dates.status.name",
         "screenshots.image_id",
         "slug",
@@ -126,12 +126,12 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "collections.games"
     }.Select(str => $"{str}.name,{str}.slug,{str}.aggregated_rating,{str}.rating,{str}.cover.image_id,{str}.first_release_date,{str}.game_type.type")) + ";";
 
-    private async Task<IGDB.Models.Game?> FetchGameAsync(long GameId)
+    private async Task<IGDB.Models.Game?> FetchGameAsync(string GameField, string field)
     {
         IGDB.Models.Game[]? response;
         try
         {
-            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameDetailsFields} w id = {GameId};");
+            response = await igdb.QueryAsync<IGDB.Models.Game>(IGDBClient.Endpoints.Games, query: $"{GameDetailsFields} w {field} = {GameField}; limit 1;");
         }
         catch (RestEase.ApiException ex)
         {
@@ -143,12 +143,23 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
     }
 
     // The only place where a game is looked up for GET /api/games/{id}
-    public async Task<GameDetailsDTO?> GetGameAsync(long IGDBGameId)
+    public async Task<GameDetailsDTO?> GetGameAsync(string GameField, string field)
     {
-        // Always from IGDB: the database keeps only what the lists need (no screenshots, videos, stores...),
-        // and EF cannot translate the ProjectToType<GameDetailsDTO> projection to SQL (500 on every request)
-        var response = await FetchGameAsync(IGDBGameId);
+        Expression<Func<Models.Game, bool>>? filter = field switch
+        {
+            "id" => g => g.ApiGameId == long.Parse(GameField, CultureInfo.InvariantCulture) && !g.IsPlaceholder,
+            "slug" => g => g.Slug == GameField && !g.IsPlaceholder,
+            _ => null
+        };
 
+        if (filter is null)
+            return null;
+
+        var existing = await db.Games.FirstOrDefaultAsync(filter);
+        // if (existing is not null)
+        //     return convertToGameDetailsDTO(existing);
+
+        var response = await FetchGameAsync(GameField, field);
         if (response is null)
             return null;
 
@@ -172,6 +183,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         {
             throw new HttpRequestException("IGDB is unavailable.", ex);
         }
+
         if (response.Length == 0)
             return null;
 
@@ -209,20 +221,20 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
         foreach (var genre in source.Genres?.Values ?? [])
         {
-            var id = (GameGenre)genre.Id!.Value;
+            var id = genre.Id!.Value;
             game.Genres.Add(await db.Genres.FirstOrDefaultAsync(g => g.ApiGenreId == id)
                 ?? new Models.Genre { ApiGenreId = id, Name = genre.Name, Slug = genre.Slug });
         }
         foreach (var platform in source.Platforms?.Values ?? [])
         {
-            var id = (GamePlatform)platform.Id!.Value;
+            var id = platform.Id!.Value;
             game.Platforms.Add(await db.Platforms.FirstOrDefaultAsync(p => p.ApiPlatformId == id)
                 ?? new Models.Platform { ApiPlatformId = id, Name = platform.Name,
                     Slug = platform.Slug, Abbreviation = platform.Abbreviation ?? "" });
         }
         foreach (var theme in source.Themes?.Values ?? [])
         {
-            var id = (GameTheme)theme.Id!.Value;
+            var id = theme.Id!.Value;
             game.Themes.Add(await db.Themes.FirstOrDefaultAsync(t => t.ApiThemeId == id)
                 ?? new Models.Theme { ApiThemeId = id, Name = theme.Name, Slug = theme.Slug });
         }
@@ -351,9 +363,8 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         RatingCount = g.RatingCount,
         ReleaseDates = g.ReleaseDates?.Values?.Select(rd => new ReleaseDateDTO
         {
-            Human = rd.Human,
             Date = rd.Date?.UtcDateTime,
-            PlatformName = rd.Platform?.Value?.Name,
+            PlatformAbbreviation = rd.Platform?.Value?.Abbreviation,
             Status = rd.Status?.Value?.Name
         }).ToList(),
         Screenshots = MapImageList(g.Screenshots, ImageSize.HD720),

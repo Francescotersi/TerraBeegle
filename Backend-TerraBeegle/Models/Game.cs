@@ -13,7 +13,7 @@ public class Game
     public string? Summary { get; set; }
     public string? Storyline { get; set; }
     public GameType? GameType { get; set; }
-    public PegiRating? PegiRating { get; set; }
+    public string? PegiRating { get; set; }
     public ICollection<PegiDescription> PegiDescriptions { get; set; } = null!;
 
     public DateOnly? ReleaseDate { get; set; }
@@ -43,8 +43,11 @@ public class Game
     public ICollection<Game>? Forks { get; set; }
     public ICollection<Game>? Remakes { get; set; }
     public ICollection<Game>? Remasters { get; set; }
-    public ICollection<Serie>? Series { get; set; }
+
     public ICollection<Franchise>? Franchises { get; set; }
+    public ICollection<Serie>? Series { get; set; }
+
+    public ICollection<Platform> Platforms { get; set; } = null!;
 
     public ICollection<Genre> Genres { get; set; } = null!;
     public ICollection<Theme> Themes { get; set; } = null!;
@@ -59,7 +62,6 @@ public class Game
     public ICollection<Company>? Developers { get; set; }
     public ICollection<Company>? Publishers { get; set; }
 
-    public ICollection<Platform> Platforms { get; set; } = null!;
     public ICollection<Review>? Reviews { get; set; }
 
     public ICollection<User> FavoritedByUsers { get; set; } = null!;

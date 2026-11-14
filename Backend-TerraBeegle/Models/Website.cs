@@ -4,7 +4,7 @@ public class Website
 {
     public long Id { get; set; }
     public string Url { get; set; } = null!;              // IGDB Id
-    public int Type { get; set; }               // IGDB Id
+    public string Type { get; set; } = null!;             // IGDB Id
     public long? GameId { get; set; }
     public Game? Game { get; set; }
 

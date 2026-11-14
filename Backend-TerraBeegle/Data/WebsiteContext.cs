@@ -8,14 +8,9 @@ public class WebsiteConfiguration : IEntityTypeConfiguration<Website>
 {
     public void Configure(EntityTypeBuilder<Website> entity)
     {
-        entity.Property(v => v.Id).ValueGeneratedOnAdd();
-        entity.Property(v => v.Url).IsRequired().HasMaxLength(255);
+        entity.Property(v => v.Url).HasMaxLength(500);
 
+        entity.HasIndex(v => new { v.GameId, v.Type }).IsUnique();
         entity.HasIndex(v => v.Url).IsUnique();
-
-        entity.HasOne(v => v.Game)
-            .WithMany(g => g.Websites)
-            .HasForeignKey(v => v.GameId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

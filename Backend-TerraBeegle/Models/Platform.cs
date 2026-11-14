@@ -6,7 +6,7 @@ public class Platform
 {
     public long Id { get; set; }
 
-    public GamePlatform ApiPlatformId { get; set; }             // IGDB Id
+    public long ApiPlatformId { get; set; }             // IGDB Id
     public string Name { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public string Abbreviation { get; set; } = null!;
@@ -14,7 +14,7 @@ public class Platform
     public long? PlatformLogoId { get; set; }
     public Image? PlatformLogo { get; set; }
 
-    public GamePlatformFamily? PlatformFamilyId { get; set; }
+    public long? PlatformFamilyId { get; set; }
     public PlatformFamily? PlatformFamily { get; set; }
 
     public ICollection<Game> Games { get; set; } = [];

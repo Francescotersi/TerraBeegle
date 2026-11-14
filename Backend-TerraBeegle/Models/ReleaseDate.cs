@@ -4,7 +4,6 @@ public class ReleaseDate
 {
     public long Id { get; set; }
     public DateOnly? Date { get; set; }
-    public string Human { get; set; } = null!;
     public string Status { get; set; } = null!;
     public string Platform { get; set; } = null!;
 
