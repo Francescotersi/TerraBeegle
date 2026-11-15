@@ -228,6 +228,8 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.HasIndex("GameStatus");
 
+                    b.HasIndex("GameType");
+
                     b.HasIndex("Name");
 
                     b.HasIndex("ParentGameId");
@@ -609,6 +611,9 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<long?>("ApiPlatformFamilyId")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("ApiPlatformId")
                         .HasColumnType("bigint");
 
@@ -622,9 +627,6 @@ namespace Backend_TerraBeegle.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<long?>("PlatformFamilyId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -637,10 +639,10 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApiPlatformFamilyId");
+
                     b.HasIndex("ApiPlatformId")
                         .IsUnique();
-
-                    b.HasIndex("PlatformFamilyId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -738,6 +740,9 @@ namespace Backend_TerraBeegle.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("ApiGameId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Content")
                         .HasColumnType("text");
 
@@ -745,9 +750,6 @@ namespace Backend_TerraBeegle.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
-
-                    b.Property<long>("GameId")
-                        .HasColumnType("bigint");
 
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
@@ -759,7 +761,7 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("GameId", "UserId")
+                    b.HasIndex("ApiGameId", "UserId")
                         .IsUnique();
 
                     b.ToTable("Reviews");
@@ -1446,7 +1448,7 @@ namespace Backend_TerraBeegle.Migrations
                 {
                     b.HasOne("Backend_TerraBeegle.Models.PlatformFamily", "PlatformFamily")
                         .WithMany("Platforms")
-                        .HasForeignKey("PlatformFamilyId")
+                        .HasForeignKey("ApiPlatformFamilyId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("PlatformFamily");
@@ -1467,7 +1469,7 @@ namespace Backend_TerraBeegle.Migrations
                 {
                     b.HasOne("Backend_TerraBeegle.Models.Game", "Game")
                         .WithMany("Reviews")
-                        .HasForeignKey("GameId")
+                        .HasForeignKey("ApiGameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

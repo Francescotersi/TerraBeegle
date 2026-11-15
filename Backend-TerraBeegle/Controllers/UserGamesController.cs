@@ -92,16 +92,21 @@ public abstract class UserGamesController(AppDbContext db, IIGDBService ApiServi
         {
             var NormalizeGameType = gameType switch
             {
-                0 => "main_game",
-                1 => "dlc_addon",
-                2 => "expansion",
-                3 => "bundle",
-                4 => "standalone_expansion",
-                5 => "remake",
-                6 => "remaster",
-                7 => "expanded_game",
-                8 => "port",
-                9 => "fork",
+                0 => "Main Game",
+                1 => "DLC",
+                2 => "Expansion",
+                3 => "Bundle",
+                4 => "Standalone Expansion",
+                5 => "Mod",
+                6 => "Episode",
+                7 => "Season",
+                8 => "Remake",
+                9 => "Remaster",
+                10 => "Expanded Game",
+                11 => "Port",
+                12 => "Fork",
+                13 => "Pack / Addon",
+                14 => "Update",
                 _ => "unknown"
             };
             
