@@ -164,6 +164,7 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
         entity.HasMany(g => g.Reviews)
             .WithOne(r => r.Game)
             .HasForeignKey(r => r.ApiGameId)
+            .HasPrincipalKey(g => g.ApiGameId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
