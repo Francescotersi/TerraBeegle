@@ -15,7 +15,7 @@ export const routes: Routes = [
                 component: CatalogPage,
             },
             {
-                path: 'game/:id',
+                path: 'game/:slug',
                 loadComponent: () => import('./views/game-details-page/game-details-page.component').then(m => m.GameDetailsPage),
             },
             {

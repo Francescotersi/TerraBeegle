@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { GridComponentProps } from './grid.model';
 import { GridGameActionsService } from './services/grid-game-actions.service';
+import { GameService } from '../../services/game.service';
 import { getReleaseYear } from './utils/grid.utils';
 import { GameCardComponent } from './components/game-card/game-card.component';
 import { MobileDetailSheetComponent } from './components/mobile-detail-sheet/mobile-detail-sheet.component';
@@ -317,10 +318,12 @@ export class GridComponent implements OnInit {
     }
   }
 
-  // Opens /game/{id}
+  // Opens /game/{slug} (falls back to {id} when slug is unavailable)
   protected openDetails(gameId: number): void {
+    const slug = this.games().find(g => g.rawgGameId === gameId)?.slug;
+    this.gameService.rememberGameSlug(slug, gameId);
     this.isMobileSheetOpen.set(false);
-    this.router.navigate(['/game', gameId]);
+    this.router.navigate(['/game', slug || gameId]);
   }
 
   protected closeMobileSheet(event?: Event): void {
@@ -352,6 +355,7 @@ export class GridComponent implements OnInit {
   // ---- Wishlist / Favorites functionality (logic in GridGameActionsService) ----
   private readonly actions = inject(GridGameActionsService);
   private readonly router = inject(Router);
+  private readonly gameService = inject(GameService);
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly wishlistedIds = this.actions.wishlistedIds;

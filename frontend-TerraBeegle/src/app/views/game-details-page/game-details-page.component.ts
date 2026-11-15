@@ -103,7 +103,7 @@ export class GameDetailsPage implements OnInit {
   protected readonly game = signal<GameDetailsDTO | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
-  private gameId = 0;
+  private gameParam = '';
 
   // Screenshots first, then artworks
   protected readonly gallery = computed(() => {
@@ -120,7 +120,7 @@ export class GameDetailsPage implements OnInit {
 
     // paramMap (not a snapshot), so opening a similar game from this page loads the new one
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      this.gameId = Number(params.get('id'));
+      this.gameParam = (params.get('slug') ?? '').trim();
       this.loadGame();
     });
   }
@@ -130,14 +130,22 @@ export class GameDetailsPage implements OnInit {
     this.loadGame();
   }
 
-  // Downloads the game details from GET /api/games/{id}
+  // Downloads the game details by slug (via local cache or search fallback) or numeric ID
   private loadGame(): void {
     // During SSR the relative /api URL cannot be called; the browser loads the data after hydration
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
 
-    if (!Number.isInteger(this.gameId) || this.gameId <= 0) {
+    if (!this.gameParam) {
+      this.isLoading.set(false);
+      this.errorMessage.set('This game does not exist.');
+      return;
+    }
+
+    const isNumeric = /^\d+$/.test(this.gameParam);
+    const numericId = isNumeric ? Number(this.gameParam) : 0;
+    if (isNumeric && (!Number.isInteger(numericId) || numericId <= 0)) {
       this.isLoading.set(false);
       this.errorMessage.set('This game does not exist.');
       return;
@@ -146,7 +154,11 @@ export class GameDetailsPage implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.gameService.getGameById(this.gameId).subscribe({
+    const request$ = isNumeric
+      ? this.gameService.getGameById(numericId)
+      : this.gameService.getGameBySlug(this.gameParam);
+
+    request$.subscribe({
       next: (game) => {
         this.game.set(game);
         this.isLoading.set(false);

@@ -187,7 +187,6 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             UpdatedAt = friendship.UpdatedAt
         };
 
-        // The private GetFriendships has no route: CreatedAtAction threw after saving, so the request answered 500
         return CreatedAtAction(nameof(GetSentFriendships), null, createdFriendship);
     }
 

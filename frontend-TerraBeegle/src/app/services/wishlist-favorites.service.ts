@@ -97,6 +97,7 @@ export class WishlistFavoritesService {
   toGridProps(game: GameCardDTO): GridComponentProps {
     return {
       rawgGameId: game.apiGameId,
+      slug: game.slug,
       name: game.name,
       description: '',
       released: game.releaseDate ?? '',

@@ -1,5 +1,6 @@
 export interface GridComponentProps {
   rawgGameId: number;
+  slug?: string;
   name: string;
   description: string;
   released: string;
