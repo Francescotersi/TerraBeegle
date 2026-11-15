@@ -92,7 +92,14 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             friendships, 
             totalCount, 
             pagination, 
-            page => Url.Action(nameof(GetFriendships), new { userId, search, Page = page, pagination.PageSize })
+            // GetFriendships is private (not an endpoint), so Url.Action(nameof(GetFriendships)) gave null links:
+            // point to the public endpoint of this list instead
+            page => Url.Action(search switch
+            {
+                "friends" => nameof(GetFriends),
+                "received" => nameof(GetReceivedFriendships),
+                _ => nameof(GetSentFriendships)
+            }, new { Page = page, pagination.PageSize })
         ));
     }
 
@@ -165,6 +172,11 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         {
             return Conflict("Cannot create friendship due to database constraints.");
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two requests at the same time between the same users: the unique (User1Id, User2Id) index stopped the second one
+            return Conflict("Friendship already exists.");
+        }
 
         var createdFriendship = new FriendshipResponseDTO
         {
@@ -198,7 +210,11 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
             return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
 
-        var friendship = await db.Friendships.FindAsync(dto.Id);
+        // Users included: the response contains the other user (FindAsync left User1 / User2 null)
+        var friendship = await db.Friendships
+            .Include(f => f.User1)
+            .Include(f => f.User2)
+            .FirstOrDefaultAsync(f => f.Id == dto.Id);
         var user1Id = Math.Min(dto.SenderId, dto.ReceiverId);
         var user2Id = Math.Max(dto.SenderId, dto.ReceiverId);
 

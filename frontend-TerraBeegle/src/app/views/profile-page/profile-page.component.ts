@@ -3,9 +3,10 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
 import { AuthService } from '../../services/auth.service';
 import { logoutPopupComponent } from './logout-popup.component';
 import { ProfileDetailsComponent } from './profile-details.component';
-import { ProfileStatisticsComponent } from './profile-statistics.component';
+import { ProfileStatisticsComponent } from './profile-statistics/profile-statistics.component';
 import { ProfileFriendlistComponent } from './profile-friendlist/profile-friendlist.component';
 import { ProfileSettingsComponent } from './profile-settings/profile-settings.component';
+import { ProfileReviewsComponent } from './profile-reviews/profile-reviews.component';
 
 // TODO: "modify profile" button
 // pie chart with the most played game genres
@@ -15,7 +16,7 @@ import { ProfileSettingsComponent } from './profile-settings/profile-settings.co
 //              |- 3) modify profile email
 //              |- 4) modify profile password
 
-export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
+export type ProfileTab = 'details' | 'statistics' | 'reviews' | 'friendlist' | 'settings';
 
 @Component({
   selector: 'app-profile-page',
@@ -27,6 +28,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
     ProfileStatisticsComponent,
     ProfileFriendlistComponent,
     ProfileSettingsComponent,
+    ProfileReviewsComponent,
   ],
   template: `
     <div class="container-fluid px-3 px-md-4 px-xl-5">
@@ -62,7 +64,7 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                   </div>
                 </div>
 
-                <!-- DETAILS | STATISTICS | FRIENDLIST | SETTINGS -->
+                <!-- DETAILS | STATISTICS | REVIEWS | FRIENDLIST | SETTINGS -->
                 <div class="profile-tabs-layout mb-4">
                   <div class="profile-tabs-nav d-flex align-items-center gap-3 gap-sm-4 pb-2 border-bottom border-secondary border-opacity-25">
                   <button
@@ -80,6 +82,14 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                     (click)="setTab('statistics')"
                   >
                     STATISTICS
+                  </button>
+                  <button
+                    type="button"
+                    class="profile-tab-btn"
+                    [class.active]="activeTab() === 'reviews'"
+                    (click)="setTab('reviews')"
+                  >
+                    REVIEWS
                   </button>
                   <button
                     type="button"
@@ -108,6 +118,9 @@ export type ProfileTab = 'details' | 'statistics' | 'friendlist' | 'settings';
                     }
                     @case ('statistics') {
                       <app-profile-statistics />
+                    }
+                    @case ('reviews') {
+                      <app-profile-reviews [username]="user()?.username ?? ''" />
                     }
                     @case ('friendlist') {
                       <app-profile-friendlist />

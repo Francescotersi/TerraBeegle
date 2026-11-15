@@ -33,10 +33,13 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
                 }
                 <h1 class="game-title fw-bold mb-0">{{ g.name }}</h1>
               </div>
+            </div>
 
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+              <!-- PEGI first, then the scores -->
               @if (g.pegiRating) {
                 <div
-                  class="pegi-wrapper flex-shrink-0 ms-auto"
+                  class="pegi-wrapper flex-shrink-0"
                   (mouseenter)="onPegiMouseEnter()"
                   (mouseleave)="onPegiMouseLeave()"
                 >
@@ -96,9 +99,6 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
                   }
                 </div>
               }
-            </div>
-
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
               @if (g.rating != null) {
                 <span class="rating-box" [title]="'User rating, ' + (g.ratingCount ?? 0) + ' votes'">
                   ★ {{ toTen(g.rating) }}
@@ -183,6 +183,17 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
                   Add to Wishlist
                 }
               </button>
+              <!-- The review has its own button (adding to favorites no longer asks for one) -->
+              <button
+                type="button"
+                class="btn btn-glass d-inline-flex align-items-center gap-2"
+                (click)="actions.openReview(g.apiGameId, g.name)"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"></polygon>
+                </svg>
+                Write a review
+              </button>
             </div>
           </div>
         </div>
@@ -237,14 +248,13 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
     .pegi-wrapper {
       position: relative;
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
     }
+    /* Icon and arrow side by side, so PEGI is as tall as the score badges next to it */
     .pegi-trigger {
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       padding: 0;
       border: 0;
       background: transparent;
@@ -263,8 +273,8 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
     }
     .pegi-submenu {
       position: absolute;
-      top: calc(100% + 4px);
-      right: 0;
+      top: calc(100% + 6px);
+      left: 0; /* PEGI is now the first badge: opening to the right keeps the menu on screen */
       z-index: 10;
       display: flex;
       align-items: center;
@@ -277,7 +287,7 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
       animation: pegiMenuIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .pegi-sub-icon {
-      height: 40px;
+      height: 36px;
       width: auto;
       object-fit: contain;
       border-radius: 5px;
@@ -293,15 +303,17 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
         transform: translateY(0) scale(1);
       }
     }
+    /* Same height as the rating badges (24px) or a little more: 28px on phones, 32px on desktop */
     .pegi-icon {
-      height: 560px;
+      height: 28px;
       width: auto;
       object-fit: contain;
       display: block;
+      border-radius: 4px;
     }
     @media (min-width: 768px) {
       .pegi-icon {
-        height: 90px;
+        height: 32px;
       }
     }
     .pegi-box {

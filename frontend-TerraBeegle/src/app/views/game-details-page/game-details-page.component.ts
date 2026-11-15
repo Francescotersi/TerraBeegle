@@ -13,6 +13,7 @@ import { GameHeroComponent } from './components/game-hero/game-hero.component';
 import { GameAboutComponent } from './components/game-about/game-about.component';
 import { GameGalleryComponent } from './components/game-gallery/game-gallery.component';
 import { GameInfoComponent } from './components/game-info/game-info.component';
+import { GameReviewsComponent } from './components/game-reviews/game-reviews.component';
 import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
 
 // /game/:id — loads the game from GET /api/games/{id} and places its sections
@@ -28,6 +29,7 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
     GameAboutComponent,
     GameGalleryComponent,
     GameInfoComponent,
+    GameReviewsComponent,
   ],
   // One instance for the page and its sections (the hero buttons); the similar games grid has its own
   template: `
@@ -58,6 +60,7 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
           <div class="col-12 col-xl-8 d-flex flex-column gap-3 gap-lg-4">
             <app-game-about [game]="g" />
             <app-game-gallery [images]="gallery()" [gameName]="g.name" />
+            <app-game-reviews [gameId]="g.apiGameId" />
           </div>
 
           <div class="col-12 col-xl-4">

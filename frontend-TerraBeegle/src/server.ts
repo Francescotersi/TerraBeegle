@@ -4,13 +4,40 @@ import {
   isMainModule,
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
+import compression from 'compression';
 import express from 'express';
+import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
+const backendUrl = new URL(process.env['BACKEND_URL'] || 'http://localhost:5144');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+
+/**
+ * Forward /api calls to the backend (same job proxy.conf.js does for `ng serve`).
+ * Only used by the production build; in dev the Angular dev server proxy answers first.
+ */
+app.use('/api', (req, res) => {
+  const proxyReq = httpRequest(
+    {
+      hostname: backendUrl.hostname,
+      port: backendUrl.port,
+      path: req.originalUrl,
+      method: req.method,
+      headers: { ...req.headers, host: backendUrl.host },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on('error', () => {
+    if (!res.headersSent) res.status(502).end();
+  });
+  req.pipe(proxyReq);
+});
 
 /**
  * Example Express Rest API endpoints can be defined here.
@@ -23,6 +50,11 @@ const angularApp = new AngularNodeAppEngine();
  * });
  * ```
  */
+
+/**
+ * Gzip everything served below (JS, CSS, HTML). Placed after /api so backend responses pass through untouched.
+ */
+app.use(compression());
 
 /**
  * Serve static files from /browser

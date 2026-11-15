@@ -80,3 +80,32 @@ public enum PegiRating
     PEGI16 = 11,
     PEGI18 = 12
 }
+
+public enum PegiDescriptionEnum
+{
+    Violence = 50,
+    Sex = 51,
+    Drugs = 52,
+    Fear = 53,
+    Discrimination = 54,
+    BadLanguage = 55,
+    Gambling = 56,
+    OnlineGameplay = 57,
+    InGamePurchases = 58
+}
+
+public enum ImageType
+{
+    Cover = 1,
+    Screenshot = 2,
+    Artwork = 3,
+    Logo = 4,
+    Background = 5
+}
+
+public enum LanguageSupportType
+{
+    Audio = 1,
+    Subtitles = 2,
+    Interface = 3
+}

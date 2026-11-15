@@ -55,9 +55,9 @@ describe('GridGameActionsService', () => {
     actions.wishlistedIds.set(new Set([119133]));
     actions.onToggleWishlist(new MouseEvent('click'), 119133);
     request.error(new Error('offline'));
+    // Optimistic: the success message appears right away, then the error undoes the change
     expect(actions.wishlistedIds().has(119133)).toBe(true);
     expect(alerts.showAlert).toHaveBeenCalled();
-    expect(alerts.showSuccess).not.toHaveBeenCalled();
   });
   it('preserves the session error shown by the interceptor after logout', () => {
     actions.onToggleFavorite(new MouseEvent('click'), 119133, 'Elden Ring');

@@ -25,6 +25,7 @@ Built for the **Terranova Software – Gaming Explorer** challenge at **42 Flore
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
+- [Swagger / OpenAPI](#swagger--openapi)
 - [API Reference](#api-reference)
 - [Security](#security)
 - [Rate Limiting](#rate-limiting)
@@ -39,14 +40,11 @@ Built for the **Terranova Software – Gaming Explorer** challenge at **42 Flore
 
 TerraBeegle lets users search a large catalog of video games, filter and sort the results, open a detailed
 page for each game and build a personal collection of favorites and a wishlist. On top of the mandatory features,
-it has a complete account system: email verification, optional two-factor authentication, friends, reviews,
-personal statistics and a pixel-art dog companion.
+it has a complete account system: email verification, optional two-factor authentication, friends, reviews and
+personal statistics.
 
-Game data comes from the [IGDB Video Games Database API](https://rawg.io/apidocs). The backend sits between
+Game data comes from the [IGDB Video Games Database API](https://api-docs.igdb.com/). The backend sits between
 the frontend and IGDB, so the API key never reaches the browser.
-
-> **Note:** a migration of the game data source from RAWG to IGDB is in progress on a separate branch.
-> This document describes the current state of `main`.
 
 ---
 
@@ -58,9 +56,9 @@ the frontend and IGDB, so the API key never reaches the browser.
 | :--- | :--- |
 | **Home page** | Entry point with a search bar and a selection of games retrieved from the API. |
 | **Basic search** | Search games by full or partial name; results update dynamically. |
-| **Advanced search** | Filter by genre, platform, release year, Metacritic score, and sort by name, release date, rating, Metacritic and more. |
+| **Advanced search** | Filter by genre, theme, platform, release year, user rating and critic score, and sort by name, release date, rating or critic score. |
 | **Game list** | Results shown as a responsive grid of cards: cover, title, release date, rating and platforms. |
-| **Detail page** | Description, images, genres, platforms, rating and Metacritic score. |
+| **Detail page** | Summary and storyline, screenshots and artworks, trailers, genres, platforms, companies, PEGI rating with its content descriptors, user rating, critic score, stores and websites, similar games. |
 | **Favorites** | Add and remove games; the list is stored in the database and has its own page. |
 | **State management** | Loading indicators, API error handling and "no results" messages. |
 | **Responsive design** | Layout adapted to desktop, tablet and smartphone. |
@@ -73,10 +71,10 @@ the frontend and IGDB, so the API key never reaches the browser.
 | **Two-factor authentication** | Optional second step at login, with a one-time code sent by email. |
 | **Dark / Light mode** | Theme preference saved on the user profile and restored on every visit. |
 | **Wishlist** | A separate list of games the user wants to buy or try. |
-| **Personal statistics** | Dashboard with genre and platform distribution of the user's favorites. |
+| **Personal statistics** | Dashboard with the genre, platform and theme distribution of the user's favorites, plus an estimated playing style (singleplayer / multiplayer). |
 | **Friends** | Send, accept, reject and remove friend requests; friends can see each other's lists. |
-| **Reviews** | Users can rate games from 1 to 5 and write a review. |
-| **Dog companion** | Each user picks one of four animated pixel-art dogs (Beagle, Elkhound, Golden Retriever, Husky) shown across the app. |
+| **Reviews** | Users rate games from 1 to 10 (half stars) and can add a text. The reviews of a game are listed on its detail page; your own reviews are in the **Reviews** tab of the profile, where you can delete them. User ratings are averaged into the game rating. |
+| **Instant feedback** | Adding a game to favorites or wishlist updates the heart immediately (optimistic update); if the server fails, the change is undone and an error is shown. |
 
 ---
 
@@ -84,7 +82,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 
 ```
 ┌──────────────────────┐      /api/*       ┌───────────────────────┐      HTTPS      ┌──────────────┐
-│   Angular frontend   │ ────────────────▶ │  ASP.NET Core Web API │ ──────────────▶ │   RAWG API   │
+│   Angular frontend   │ ────────────────▶ │  ASP.NET Core Web API │ ──────────────▶ │   IGDB API   │
 │  (SSR, Bootstrap 5)  │ ◀──────────────── │       (.NET 10)       │ ◀────────────── │              │
 └──────────────────────┘    JSON + JWT     └───────────┬───────────┘                 └──────────────┘
                                                        │ EF Core (Npgsql)
@@ -94,13 +92,21 @@ the frontend and IGDB, so the API key never reaches the browser.
                                               └──────────────────┘                    └──────────────┘
 ```
 
-- **Client–server separation:** the Angular app talks only to our API, never directly to RAWG.
-- **Thin controllers, focused services:** everything about RAWG lives in `RawgService`; email codes, 2FA,
+- **Client–server separation:** the Angular app talks only to our API, never directly to IGDB.
+- **Thin controllers, focused services:** everything about IGDB lives in `IGDBService`; email codes, 2FA,
   JWT generation and cleanup jobs each have their own service behind an interface.
 - **DTOs everywhere:** entities never leave the backend; requests are validated with data annotations,
   responses are mapped with Mapster.
 - **Lazy game caching:** a game is saved to the database only when a user adds it to a list or reviews it
-  (`GetOrCreateGameAsync`), together with its genres and platforms.
+  (`GetOrCreateGameAsync`), with all its data: genres, themes, platforms, companies, images, videos, websites,
+  release dates, PEGI descriptors. Related games (similar games, DLCs, expansions, series...) are saved as
+  lightweight **placeholders** (name, cover, rating) and become full games when someone saves them.
+  Saved games are then served from the database instead of IGDB.
+- **Serialized imports:** saving a game runs inside a transaction with a PostgreSQL advisory lock, so two
+  imports at the same time cannot create the same genre, platform or image twice.
+- **Production frontend in Docker:** the frontend container builds Angular in production mode (minified,
+  lazy-loaded pages) and serves it with the SSR Express server, which also compresses the responses (gzip)
+  and forwards `/api` to the backend.
 - **Automatic migrations:** pending EF Core migrations are applied at startup.
 
 ---
@@ -113,7 +119,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 | **Frontend** | Angular 22 (standalone components, signals, `HttpClient`, SSR), TypeScript 6, Bootstrap 5 |
 | **Database** | PostgreSQL 16 |
 | **Infrastructure** | Docker Compose, `concurrently` for local development |
-| **External services** | RAWG Video Games Database API, SMTP (Gmail App Password) |
+| **External services** | IGDB Video Games Database API, SMTP (Gmail App Password) |
 
 ---
 
@@ -122,7 +128,7 @@ the frontend and IGDB, so the API key never reaches the browser.
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) with Docker Compose
-- A free [RAWG API key](https://rawg.io/apidocs)
+- Free [IGDB API credentials](https://api-docs.igdb.com/#account-creation) (a Twitch application: client ID + client secret)
 - An SMTP account for sending emails (for example Gmail with an
   [App Password](https://support.google.com/accounts/answer/185833))
 
@@ -137,13 +143,13 @@ cp .env.example .env
 | Variable | Description |
 | :--- | :--- |
 | `USER_POSTGRES` / `PASSWORD_POSTGRES` / `DB_NAME` | PostgreSQL credentials and database name. |
-| `RAWG_API_KEY` | Your RAWG API key. |
+| `IGDB_CLIENT_ID` / `IGDB_CLIENT_SECRET` | Your IGDB (Twitch) application credentials. |
 | `JWT_KEY` | Secret used to sign the tokens, **at least 32 characters**. |
 | `SMTP_HOST` / `SMTP_PORT` | SMTP server, e.g. `smtp.gmail.com` / `587`. |
 | `SMTP_USER` / `SMTP_PASSWORD` | SMTP login (for Gmail, the App Password). |
 | `SMTP_FROM` | Sender address, the same as `SMTP_USER` for Gmail. |
 
-The backend refuses to start if the JWT key, the RAWG key or any SMTP setting is missing, so misconfiguration
+The backend refuses to start if the JWT key, the IGDB credentials or any SMTP setting is missing, so misconfiguration
 is caught immediately instead of at the first request.
 
 ### 2. Run with Docker
@@ -156,10 +162,15 @@ docker compose up --build
 | :--- | :--- |
 | Frontend | http://localhost:4200 |
 | Backend API | http://localhost:5144 |
-| Swagger UI (Development) | http://localhost:5144/swagger |
+| Swagger UI | http://localhost:5144/swagger |
+| OpenAPI JSON | http://localhost:5144/swagger/v1/swagger.json |
 | Health check | http://localhost:5144/api/health |
 
-To start from an empty database: `docker compose down -v` and then `docker compose up --build`.
+- To start from an empty database: `docker compose down -v` and then `docker compose up --build`.
+- The frontend container runs the **production build** (the one to use for Lighthouse), so it has no
+  hot reload: after changing frontend code, run `docker compose up --build` again. For development with
+  hot reload use `npm run frontend` (see below).
+- Database migrations are applied automatically when the backend starts.
 
 ### Available npm scripts
 
@@ -173,6 +184,22 @@ To start from an empty database: `docker compose down -v` and then `docker compo
 
 ---
 
+## Swagger / OpenAPI
+
+The backend publishes interactive API documentation with Swashbuckle.
+
+| What | Path |
+| :--- | :--- |
+| Swagger UI | [`/swagger`](http://localhost:5144/swagger) → http://localhost:5144/swagger |
+| OpenAPI document | [`/swagger/v1/swagger.json`](http://localhost:5144/swagger/v1/swagger.json) |
+
+- Swagger is enabled only when `ASPNETCORE_ENVIRONMENT` is `Development`, which is what `docker-compose.yml` sets.
+- To call the 🔒 endpoints: log in with `POST /api/auth/login`, copy the `token` from the response, press
+  **Authorize** in Swagger UI and paste it (Swagger adds the `Bearer` prefix).
+- Swagger is reachable only on the backend port (`5144`), not through the frontend (`4200`).
+
+---
+
 ## API Reference
 
 All endpoints are under `/api`. Requests and responses use JSON, and enums are sent as text
@@ -182,7 +209,7 @@ All endpoints are under `/api`. Requests and responses use JSON, and enums are s
 
 ### Pagination
 
-Every list endpoint accepts `page` (default `1`) and `pageSize` (default `20`, max `50`; max `40` for games)
+Every list endpoint accepts `page` (default `1`) and `pageSize` (default `24`, max `500`, the IGDB limit)
 and returns the same envelope:
 
 ```json
@@ -243,9 +270,9 @@ The current user is always taken from the token, never from the URL, so a user c
 | :--- | :--- | :--- | :--- |
 | `GET` | `/users` | 🔒 | Paginated list of users (public profile only). |
 | `GET` | `/users/search?username=` | 🔒 | Case-insensitive prefix search by username, paginated. |
-| `GET` | `/users/{username}` | 🔓 | Public profile: id, username, image and dog companion. |
+| `GET` | `/users/{username}` | 🔓 | Public profile: id, username, image |
 | `GET` | `/users/{username}/profile` | 🔒 | Full profile of the logged-in user (email, theme, 2FA status, …). |
-| `PATCH` | `/users` | 🔒 ⏱️ | Partial update: name, family name, username, profile image, theme, dog companion. |
+| `PATCH` | `/users` | 🔒 ⏱️ | Partial update: name, family name, username, profile image, theme |
 | `PATCH` | `/users/password` | 🔒 ⏱️ | Changes the password (requires the old one). |
 | `PATCH` | `/users/email` | 🔒 ⏱️ | Starts an email change: a code is sent to the **new** address (requires the password). |
 | `POST` | `/users/email/confirm` | 🔒 ⏱️ | Confirms the new email with the code; only then the email is replaced. |
@@ -259,23 +286,43 @@ Unverified accounts are hidden everywhere: they do not appear in lists, searches
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/games` | 🔓 | Searches the RAWG catalog with filters, sorting and pagination. Returns game cards. |
-| `GET` | `/games/{rawgGameId}` | 🔓 | Game details: from our database if saved, otherwise from RAWG. |
-| `GET` | `/games/all` | 🔓 | Games saved in our database (paginated). |
+| `GET` | `/games` | 🔓 | Searches the IGDB catalog with filters, sorting and pagination. Returns game cards. |
+| `GET` | `/games/{igdbGameId}` | 🔓 | Game details by IGDB id: from our database if saved, otherwise from IGDB. |
+| `GET` | `/games/{slug}` | 🔓 | Same as above, by IGDB slug (e.g. `/games/the-witcher-3-wild-hunt`). |
+| `GET` | `/games/coming-soon` | 🔓 | Games released in the next `months` (default 6, max 24), with the same name / platform / genre filters. |
+| `GET` | `/games/all` | 🔓 | Games saved in our database (paginated); `includePlaceholders=true` also lists the placeholders. |
+
+### Filter lists — `/api`
+
+Used by the sidebar. Loaded from IGDB and cached in memory for 24 hours.
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/genres` | 🔓 | All IGDB genres (`id`, `name`, `slug`), sorted by name. |
+| `GET` | `/themes` | 🔓 | All IGDB themes. |
+| `GET` | `/platforms` | 🔓 | All IGDB platforms. |
 
 <details>
 <summary><b>Search parameters for <code>GET /api/games</code></b></summary>
 
 | Parameter | Example | Description |
 | :--- | :--- | :--- |
-| `name` | `witcher` | Full or partial game name. |
-| `genres` | `4,51` | Comma-separated RAWG genre IDs. |
-| `platforms` / `parentPlatforms` | `187` / `2` | Comma-separated platform IDs. |
-| `releaseDate` | `2015,2020` | Release year range. |
-| `metacritic` | `80,100` | Metacritic score range. |
-| `sortBy` | `rating` | `name`, `released`, `added`, `created`, `updated`, `rating` or `metacritic`. |
+| `name` | `witcher` | Full or partial game name (case-insensitive). `searchExact`, `searchStartExact`, `caseSensitive` change the match. |
+| `genres` / `themes` / `keywords` | `12&genres=31` | IGDB ids. By default the game must have **all** of them (`genresExact=false` = at least one). |
+| `platforms` / `platformsFamily` | `6` / `1` | IGDB platform / platform family ids. |
+| `developers` / `publishers` | `908` | IGDB company ids. |
+| `gameType` | `0` | IGDB game type ids (main game, DLC, expansion...). |
+| `pegiRating` | `11` | PEGI rating category ids (8–12). |
+| `releaseYearMin` / `releaseYearMax` | `2015` / `2020` | Release year range. |
+| `ratingMin` / `ratingMax` | `7.5` / `10` | User rating **out of 10** (decimals allowed); converted to the IGDB 0–100 scale. |
+| `criticRatingMin` / `criticRatingMax` | `80` / `100` | Critic score out of 100. |
+| `minRatingCount` / `minCriticRatingCount` | `300` / `5` | Minimum number of votes / critic reviews (`0` = no minimum), so a game rated 100 by two people does not top the list. |
+| `sortBy` | `rating` | `name`, `released`, `rating` or `critic_rating`. |
 | `ascending` | `false` | Sort direction (default `true`). |
-| `page` / `pageSize` | `2` / `20` | Pagination (`pageSize` max 40, the RAWG limit). |
+| `page` / `pageSize` | `2` / `24` | Pagination. |
+
+Ratings in the responses are always **out of 100**, like IGDB, both for games from IGDB and for games saved in
+our database.
 
 </details>
 
@@ -283,17 +330,17 @@ Unverified accounts are hidden everywhere: they do not appear in lists, searches
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/users/{userId}/favorites` | 🔒 | The user's favorites, with filters and sorting. |
-| `POST` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Adds a game to favorites. |
-| `DELETE` | `/users/{userId}/favorites/{rawgGameId}` | 🔒 ⏱️ | Removes a game from favorites. |
-| `GET` | `/users/{userId}/wishlist` | 🔒 | The user's wishlist, with filters and sorting. |
-| `POST` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Adds a game to the wishlist. |
-| `DELETE` | `/users/{userId}/wishlist/{rawgGameId}` | 🔒 ⏱️ | Removes a game from the wishlist. |
+| `GET` | `/users/{userId}/favorites` | 🔒 | The user's favorites, sorted by name, paginated. |
+| `POST` | `/users/{userId}/favorites/{ApiGameId}` | 🔒 ⏱️ | Adds a game to favorites. |
+| `DELETE` | `/users/{userId}/favorites/{ApiGameId}` | 🔒 ⏱️ | Removes a game from favorites. |
+| `GET` | `/users/{userId}/wishlist` | 🔒 | The user's wishlist, sorted by name, paginated. |
+| `POST` | `/users/{userId}/wishlist/{ApiGameId}` | 🔒 ⏱️ | Adds a game to the wishlist. |
+| `DELETE` | `/users/{userId}/wishlist/{ApiGameId}` | 🔒 ⏱️ | Removes a game from the wishlist. |
 
 - **Privacy:** a list can be viewed only by its owner and by accepted friends (otherwise `403`).
   Only the owner can change it.
-- **Filters on the lists:** `name`, `genre`, `platform`, `year`, `minRating`, `sortBy` (`name`, `released`, `rating`),
-  `ascending`, plus pagination. Filtering runs directly in SQL.
+- **First add of a game:** if the game is not in our database yet, it is downloaded from IGDB and saved first
+  (about 1–2 seconds); the frontend already shows it as added.
 - **Idempotent:** adding a game that is already in the list returns `204`, like the first time.
 
 ### Friendships — `/api/users/friendship`
@@ -314,11 +361,13 @@ crossed requests are impossible.
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/games/{gameId}/reviews` | 🔓 | Reviews of a game, newest first. |
-| `POST` | `/games/{gameId}/reviews` | 🔒 ⏱️ | Writes a review (rating 1–5 and optional text). |
-| `PATCH` | `/games/{gameId}/reviews` | 🔒 ⏱️ | Edits your own review. |
-| `DELETE` | `/games/{gameId}/reviews/{id}` | 🔒 ⏱️ | Deletes your own review. |
-| `GET` | `/user/{username}/reviews` | 🔓 | All reviews written by a user. |
+| `GET` | `/games/{igdbGameId}/reviews` | 🔓 | Reviews of a game with their author, newest first, paginated. |
+| `POST` | `/games/{igdbGameId}/reviews` | 🔒 ⏱️ | Writes a review: `rating` 1–10 and optional `content`. One review per user and game (`409` for a second one). Unreleased games cannot be reviewed. |
+| `PATCH` | `/games/{igdbGameId}/reviews` | 🔒 ⏱️ | Edits your own review (`id`, `rating`, optional `content`). |
+| `DELETE` | `/games/{igdbGameId}/reviews/{id}` | 🔒 ⏱️ | Deletes your own review. |
+| `GET` | `/user/{username}/reviews` | 🔓 | All reviews written by a user, with the game (name, cover, IGDB id), newest first. |
+
+Every review updates the average rating of the game (create, edit and delete).
 
 ### Health
 
@@ -338,7 +387,7 @@ crossed requests are impossible.
 | **Two-factor authentication** | Optional. Every login attempt gets its own challenge (random 64-character token + code, both stored hashed). The code lasts 5 minutes, the challenge 15, max 5 attempts, single use, protected against two simultaneous requests. |
 | **Safe account changes** | Changing the email, the password or the 2FA status requires the current password, so a stolen token alone cannot take over the account. The new email is saved only after it is confirmed. |
 | **No user enumeration** | Password reset and code resend return the same answer for any email. Login gives the same error for an unknown user and a wrong password. |
-| **Secrets** | All keys and passwords come from environment variables (`.env`, not committed). The RAWG key stays on the server and is never written to logs or responses. |
+| **Secrets** | All keys and passwords come from environment variables (`.env`, not committed). The IGDB key stays on the server and is never written to logs or responses. |
 | **Race conditions** | Unique constraints in the database plus handling of `UniqueViolation`, so simultaneous requests get `409` instead of `500`. |
 | **CORS** | Only the Angular origin (`localhost:4200`) is allowed. |
 
@@ -392,9 +441,9 @@ Policy names are `const` fields in `RateLimitPolicies`, so a misspelled policy n
 | `401` | Missing or invalid token, wrong credentials, expired login challenge. |
 | `403` | Logged in, but not allowed (e.g. someone else's list, unverified email at login). |
 | `404` | Resource not found. |
-| `409` | Conflict (username or email already taken, friendship already exists). |
+| `409` | Conflict (username or email already taken, friendship already exists, game already reviewed). |
 | `429` | Rate limit reached. |
-| `503` | RAWG is unreachable. |
+| `503` | IGDB is unreachable. |
 
 - Error messages written by us are returned as plain text.
 - Errors generated by ASP.NET Core (validation errors, empty `401` / `403` / `404`, `500`) are returned as
@@ -417,20 +466,24 @@ Policy names are `const` fields in `RateLimitPolicies`, so a misspelled policy n
 ```
 TerraBeegle/
 ├── Backend-TerraBeegle/          ASP.NET Core Web API
-│   ├── Controllers/              Auth, User, Game, UserGames, Friendship, Review
-│   ├── Services/                 RAWG, JWT, email, verification codes, 2FA, cleanup jobs
+│   ├── Controllers/              Auth, User, Game, Filters, UserGames, Friendship, Review
+│   ├── Services/                 IGDB client and mapping (IGDBToGameDTO, DBToGameDTO), game import
+│   │                             (SaveGames, SaveGameContents, SaveMedia, SavePlatforms, SaveCompanies),
+│   │                             JWT, email, verification codes, 2FA, cleanup jobs
 │   ├── RateLimiting/             Policy names and partitioning helpers
 │   ├── Models/                   EF Core entities
 │   ├── DTOS/                     Request / response contracts
-│   ├── Data/                     AppDbContext and model configuration
+│   ├── Data/                     AppDbContext and one configuration file per entity
 │   ├── Migrations/               EF Core migrations
-│   ├── Enums/                    Theme, DogCompanion, FriendshipStatus, RAWG IDs, …
+│   ├── Enums/                    Theme, FriendshipStatus, IGDB IDs, …
 │   └── milestone.md              Development log: issues found, decisions taken and why
 ├── frontend-TerraBeegle/         Angular application
-│   ├── src/app/views/            Pages: catalog, favorites, wishlist, profile, login, register, …
-│   ├── src/app/services/         HTTP services (auth, games, favorites, friends)
-│   ├── src/app/ui/               Shared UI: theme, spinner, liquid glass, dog companion
-│   └── public/                   Static assets (logo, dog sprites)
+│   ├── src/app/views/            Pages: catalog, game details (with reviews), favorites, wishlist,
+│   │                             friend lists, profile (details, statistics, reviews, friends, settings), login, …
+│   ├── src/app/services/         HTTP services (auth, games, filters, favorites, friends, reviews)
+│   ├── src/app/ui/               Shared UI: theme, spinner, liquid glass, alerts, review popup
+│   ├── src/server.ts             SSR server: static files, gzip, /api proxy to the backend
+│   └── public/                   Static assets (logo)
 ├── docs/                         Challenge specification (EN / IT)
 ├── docker-compose.yml            PostgreSQL + backend + frontend
 └── .env.example                  Environment variables template
@@ -440,6 +493,5 @@ TerraBeegle/
 
 ## Credits
 
-- **Game data:** [RAWG Video Games Database API](https://rawg.io/apidocs).
-- **Dog sprites:** [*DogPack*](https://megamicrobats.itch.io/dogpack) by **[megamicrobats](https://megamicrobats.itch.io/)**. Thank you for the lovely pixel art!
+- **Game data:** [IGDB Video Games Database API](https://api-docs.igdb.com/).
 - Project developed for the **Terranova Challenge** at **42 Florence**.

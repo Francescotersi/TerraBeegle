@@ -27,5 +27,5 @@ public record ReviewResponseDTO
     public string? Content { get; init; }
     public DateTime CreatedAt { get; init; }
     public UserPublicResponseDTO? User { get; init; }
-    public GameDetailsDTO? Game { get; init; }
+    public GameCardDTO? Game { get; init; }        // only filled in a user's review list (name, cover, link)
 }
