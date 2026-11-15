@@ -43,7 +43,7 @@ describe('GridGameActionsService', () => {
     actions.publishReview({ rating: 8, content: null });
     actions.publishReview({ rating: 8, content: null });
     expect(service.addGame).toHaveBeenCalledTimes(1);
-    expect(reviewService.createReview).toHaveBeenCalledWith(119133, { gameId: 119133, rating: 8, content: null });
+    expect(reviewService.createReview).toHaveBeenCalledWith(119133, { apiGameId: 119133, rating: 8, content: null });
     expect(actions.favoritedIds().has(119133)).toBe(false);
 
     request.next();

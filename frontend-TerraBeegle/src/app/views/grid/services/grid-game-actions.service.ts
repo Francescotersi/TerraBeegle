@@ -118,7 +118,7 @@ export class GridGameActionsService {
     this.isPublishingReview.set(true);
 
     this.reviewService
-      .createReview(pending.gameId, { gameId: pending.gameId, rating: payload.rating, content: payload.content })
+      .createReview(pending.gameId, { apiGameId: pending.gameId, rating: payload.rating, content: payload.content })
       .subscribe({
         next: () => {
           this.isPublishingReview.set(false);

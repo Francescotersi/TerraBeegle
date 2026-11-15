@@ -3,7 +3,7 @@ import { UserPublicResponseDTO } from './user.model';
 
 export interface ReviewCreateDTO {
   rating: number; // 1-10
-  gameId: number;
+  apiGameId: number;
   content?: string | null;
 }
 
