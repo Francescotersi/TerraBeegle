@@ -86,7 +86,7 @@ public static class DBToGameDTO
         Platforms = MapPlatformList(g.Platforms),
         Themes = MapThemes(g.Themes),
         GameStatus = g.GameStatus,
-        Trailer = IGDBToGameDTO.PickTrailer(g.Videos?.Select(v => ((string?)v.ApiVideoId, (string?)v.Name))),
+        Trailer = IGDBToGameDTO.PickTrailer(g.Videos?.Select(v => (v.ApiVideoId, v.Name))),
     };
 
     public static GameCardDTO? DBToParentGameCardDTO(Game? g) => g is null ? null : DBToGameCardDTO(g);

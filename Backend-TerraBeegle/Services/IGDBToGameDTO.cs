@@ -78,14 +78,14 @@ public static class IGDBToGameDTO
     }
 
     // The video for the card hover: the first one called "...trailer...", otherwise the first video
-    public static string? PickTrailer(IEnumerable<(string? Id, string? Name)>? videos)
+    public static string? PickTrailer(IEnumerable<(string Id, string Name)>? videos)
     {
         var list = videos?.Where(v => !string.IsNullOrWhiteSpace(v.Id)).ToList();
         if (list is not { Count: > 0 })
             return null;
 
         return (list.FirstOrDefault(v => v.Name?.Contains("trailer", StringComparison.OrdinalIgnoreCase) == true) is { Id: not null } trailer
-            ? trailer : list[0]).Id;
+            ? trailer : list[0]).Id ?? null;
     }
 
     // Full https URL of an IGDB image, or null when the game has no such image
