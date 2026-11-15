@@ -1470,6 +1470,7 @@ namespace Backend_TerraBeegle.Migrations
                     b.HasOne("Backend_TerraBeegle.Models.Game", "Game")
                         .WithMany("Reviews")
                         .HasForeignKey("ApiGameId")
+                        .HasPrincipalKey("ApiGameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
