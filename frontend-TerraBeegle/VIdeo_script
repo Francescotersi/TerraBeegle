@@ -1,0 +1,27 @@
+
+struttura dei container come comunicano front back e database
+parlare di come il front comunica tramite SSR
+
+parla di come hai usato Angular come Single file Component per lo piu
+perche in precedenza hai usato VueJs e questo ti ha aiutato a rendere il tutto
+piu ordinato e immediato da comprendere
+
+come hai strutturato il front end per renderlo il piu user friendly possibile
+mostrando anche il sito nel frattempo
+
+spiega come hai integrato l`AI nel tuo workflow di lavoro
+come l`hai usato per un apprendimanto guidato per il primo approccio ad Angular
+e come l`ultima settimana e' stata fondamentale per la riuscita del sito
+
+reattivita del frontend usando cose come
+i nuovi tipi di wrapper creati con la veriosne 19 di angular(signal compute)
+
+come hai fatto lo sfondo lo stile simil liquid-glass tramite i filtri svg
+
+quali fonti hai usato per prendere alcune cose la sferetta del caricamento
+https://uiverse.io/
+https://reactbits.dev/
+AI ha aiutato molto in questa parte del lavoro
+soprattutto quando si trattava di dare il porting di un componente da un linguaggio scritto in React a Angular
+
+mostra il file di routing e spiega perche hai implementato una authGuard e un interceptor
