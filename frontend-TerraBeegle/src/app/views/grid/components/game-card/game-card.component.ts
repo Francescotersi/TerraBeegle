@@ -1,4 +1,5 @@
-import { Component, input, output, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, input, output, inject, signal, untracked } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LiquidGlassComponent } from '../../../../ui/liquid-glass/liquid-glass.component';
 import { GridComponentProps } from '../../grid.model';
 import { GridGameActionsService } from '../../services/grid-game-actions.service';
@@ -9,27 +10,51 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
 @Component({
   imports: [LiquidGlassComponent],
   selector: 'app-game-card',
+  // On the host (always in its grid place, and the wide card is its child): coming back on a card that is
+  // closing (pointer-events: none) still opens it again
+  host: {
+    '(mouseenter)': 'onMouseEnter()',
+    '(mouseleave)': 'hoverEnd.emit()',
+  },
   template: `
     <div
       class="card game-card"
-      [class.is-hovered]="isHovered()"
+      [class.is-hovered]="isActive()"
+      [class.is-closing]="isClosing()"
+      [class.is-expanded]="isExpanded()"
       [class.is-mobile-selected]="isMobileSelected()"
-      (mouseenter)="hoverStart.emit()"
-      (mouseleave)="hoverEnd.emit()"
+      [style.width.px]="isExpanded() ? expansion()!.width : null"
+      [style.left.px]="isExpanded() ? expansion()!.left : null"
       (click)="cardClick.emit($event)"
     >
       <!-- Image container -->
-      <div class="game-cover-container">
+      <div
+        class="game-cover-container"
+        [style.height.px]="isExpanded() ? expansion()!.height : null"
+        [style.clip-path]="coverClip()"
+      >
         <img
           [src]="game().coverImage"
           [alt]="game().name"
           class="card-img game-cover"
           [attr.loading]="index() === 0 ? 'eager' : 'lazy'"
           [attr.fetchpriority]="index() === 0 ? 'high' : 'low'"
-          width="616"
-          height="353"
+          width="264"
+          height="374"
           decoding="async"
         />
+
+        <!-- Hover: the trailer (muted, autoplay, loop) over the cover; pointer-events: none so the click opens the game -->
+        @if (isExpanded() && trailerUrl(); as url) {
+          <iframe
+            class="game-trailer"
+            [src]="url"
+            [title]="game().name + ' trailer'"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            referrerpolicy="strict-origin-when-cross-origin"
+            tabindex="-1"
+          ></iframe>
+        }
 
         <!-- Title overlay -->
         <div class="card-img-overlay d-flex flex-column justify-content-end p-2.5 card-overlay-title">
@@ -40,7 +65,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
       </div>
 
       <!-- Details panel -->
-      @if (isHovered()) {
+      @if (isActive()) {
         <div class="game-details-liquid">
           <app-liquid-glass
             sharedFilterId="tb-global-liquid-filter"
@@ -150,10 +175,13 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
   `,
   styles: [
     `
+    /* Keeps the card's place in the grid (also while the hovered card floats above it). On the host, not on
+       the column: the column also contains the gutter, so it was taller than the card (empty space between rows) */
     :host {
       display: block;
+      position: relative;
       width: 100%;
-      height: 100%;
+      aspect-ratio: 3 / 4;
     }
 
     .game-card {
@@ -170,6 +198,42 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
     }
 
     @media (min-width: 992px) {
+      /* Wide hover: same height, 16:9 width (the trailer shape), above the neighbours without moving them */
+      .game-card.is-hovered.is-expanded {
+        transform: none;
+      }
+
+      /* The YouTube player already shows the video title on top */
+      .game-card.is-expanded .card-overlay-title {
+        display: none !important;
+      }
+
+      /* The clip-path (set in coverClip) goes from the original card to the wide card and back */
+      .game-card.is-expanded .game-cover-container {
+        aspect-ratio: auto;
+        transition: clip-path 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* Mouse left: the same animations backwards, then the card goes back to its place (see CLOSE_MS) */
+      .game-card.is-closing {
+        z-index: 999 !important; /* below a card that is opening at the same time */
+        transform: none !important; /* the zoomed card (no trailer) shrinks back with the transform transition */
+        pointer-events: none;
+      }
+
+      .game-card.is-closing.is-expanded .game-cover-container {
+        transition-duration: 0.26s;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .game-card.is-closing .game-trailer {
+        animation: trailerFadeOut 0.18s ease forwards;
+      }
+
+      .game-card.is-closing .game-details-liquid {
+        animation: detailsCollapseOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+
       .game-card.is-hovered {
         position: absolute;
         top: 0;
@@ -202,7 +266,7 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
     .game-cover-container {
       position: relative;
       width: 100%;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 3 / 4; /* vertical card: IGDB covers are portrait (264 x 374) */
       overflow: hidden;
       border-radius: 14px;
       border: 1px solid rgba(255, 255, 255, 0.6);
@@ -214,6 +278,38 @@ import { GAME_BADGES_STYLES } from '../../styles/game-badges.styles';
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    .game-trailer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      pointer-events: none;
+      background: #000;
+      animation: trailerFadeIn 0.4s ease 0.15s both;
+    }
+
+    @keyframes trailerFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes trailerFadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes detailsCollapseOut {
+      from {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+      }
+      to {
+        opacity: 0;
+        clip-path: inset(0 0 100% 0);
+      }
     }
 
     .card-overlay-title .card-title {
@@ -271,6 +367,8 @@ export class GameCardComponent {
   readonly index = input<number>(0);
   readonly isHovered = input<boolean>(false);
   readonly isMobileSelected = input<boolean>(false);
+  // Wide hover with the trailer (grid). The carousel keeps the old zoom: its scroll area would cut a wider card
+  readonly expandable = input<boolean>(true);
 
   readonly hoverStart = output<void>();
   readonly detailsClick = output<void>();
@@ -279,6 +377,103 @@ export class GameCardComponent {
 
   protected readonly actions = inject(GridGameActionsService);
   protected readonly getReleaseYear = getReleaseYear;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly sanitizer = inject(DomSanitizer);
+
+  // Size and position of the wide hover card, measured when the mouse enters (null = normal hover)
+  protected readonly expansion = signal<{ width: number; height: number; left: number; clipLeft: number; clipRight: number } | null>(null);
+  // Short "closing" phase after the mouse leaves, so the card animates back instead of disappearing
+  protected readonly isClosing = signal(false);
+  protected readonly isActive = computed(() => this.isHovered() || this.isClosing());
+  protected readonly isExpanded = computed(() => this.isActive() && this.expansion() !== null);
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
+  // false = clipped to the original card, true = the whole wide card (the CSS transition animates between them)
+  private readonly clipOpen = signal(false);
+  private openFrame = 0;
+  protected readonly coverClip = computed(() => {
+    const e = this.expansion();
+    if (!this.isExpanded() || !e) return null;
+    return this.clipOpen()
+      ? 'inset(0px 0px 0px 0px round 14px 14px 0px 0px)'
+      : `inset(0px ${e.clipRight}px 0px ${e.clipLeft}px round 14px)`;
+  });
+  private static readonly CLOSE_MS = 260; // = the longest closing animation in the styles
+
+  constructor() {
+    let wasHovered = false;
+    effect(() => {
+      const hovered = this.isHovered();
+      untracked(() => {
+        if (wasHovered && !hovered) this.startClosing();
+        if (!wasHovered && hovered) this.openClip();
+        wasHovered = hovered;
+      });
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.clearCloseTimer();
+      cancelAnimationFrame(this.openFrame);
+    });
+  }
+
+  // First frame clipped to the original card, then the whole card: the transition makes it open to the sides
+  private openClip(): void {
+    this.clipOpen.set(false);
+    cancelAnimationFrame(this.openFrame);
+    this.openFrame = requestAnimationFrame(() => {
+      this.openFrame = requestAnimationFrame(() => this.clipOpen.set(true));
+    });
+  }
+
+  private startClosing(): void {
+    this.clearCloseTimer();
+    cancelAnimationFrame(this.openFrame);
+    this.isClosing.set(true);
+    this.clipOpen.set(false); // back to the original card size, animated by the transition
+    this.closeTimer = setTimeout(() => {
+      this.closeTimer = null;
+      this.isClosing.set(false);
+      if (!this.isHovered()) this.expansion.set(null);
+    }, GameCardComponent.CLOSE_MS);
+  }
+
+  private clearCloseTimer(): void {
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+  }
+
+  // YouTube embed: muted (browsers block autoplay with sound), no controls, looping
+  protected readonly trailerUrl = computed<SafeResourceUrl | null>(() => {
+    const id = this.game().trailer;
+    if (!id || !/^[\w-]{6,20}$/.test(id)) return null; // only a YouTube id can reach the iframe URL
+    const params = `autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube-nocookie.com/embed/${id}?${params}`);
+  });
+
+  // Measures the wide card: same height, 16:9 width, centred on the card but kept inside the grid
+  protected onMouseEnter(): void {
+    // Back on the card while it was closing: stop closing, it opens again
+    this.clearCloseTimer();
+    this.isClosing.set(false);
+    this.expansion.set(null);
+    if (this.expandable() && this.game().trailer && window.innerWidth >= 992) {
+      const card = this.host.nativeElement.getBoundingClientRect();
+      const area = (this.host.nativeElement.closest('.grid-wrapper') ?? document.body).getBoundingClientRect();
+      const width = Math.min(card.height * 16 / 9, area.width);
+      let left = (card.width - width) / 2;
+      if (card.left + left < area.left) left = area.left - card.left;
+      if (card.left + left + width > area.right) left = area.right - width - card.left;
+      this.expansion.set({
+        width,
+        height: card.height,
+        left,
+        clipLeft: -left,
+        clipRight: width - card.width + left,
+      });
+    }
+    this.hoverStart.emit();
+  }
 
   // Opens the details page without also triggering the card click
   protected openDetails(event: MouseEvent): void {

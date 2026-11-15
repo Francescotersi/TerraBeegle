@@ -14,4 +14,5 @@ export interface GridComponentProps {
   platforms: number[];
   tags: string[];
   genres: string[];
+  trailer?: string | null; // YouTube video id: on hover the card plays it instead of the cover
 }

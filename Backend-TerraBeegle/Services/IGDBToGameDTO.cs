@@ -77,6 +77,17 @@ public static class IGDBToGameDTO
         }).ToList();
     }
 
+    // The video for the card hover: the first one called "...trailer...", otherwise the first video
+    public static string? PickTrailer(IEnumerable<(string? Id, string? Name)>? videos)
+    {
+        var list = videos?.Where(v => !string.IsNullOrWhiteSpace(v.Id)).ToList();
+        if (list is not { Count: > 0 })
+            return null;
+
+        return (list.FirstOrDefault(v => v.Name?.Contains("trailer", StringComparison.OrdinalIgnoreCase) == true) is { Id: not null } trailer
+            ? trailer : list[0]).Id;
+    }
+
     // Full https URL of an IGDB image, or null when the game has no such image
     public static string? ImageUrl(string? imageId, ImageSize size) => string.IsNullOrWhiteSpace(imageId) ? null : "https:" + ImageHelper.GetImageUrl(imageId, size, false);
 
@@ -93,7 +104,8 @@ public static class IGDBToGameDTO
         Genres = MapApiObjectList(g.Genres),
         Platforms = MapPlatformList(g.Platforms),
         Themes = MapApiObjectList(g.Themes),
-        GameStatus = g.GameStatus?.Value?.Status
+        GameStatus = g.GameStatus?.Value?.Status,
+        Trailer = PickTrailer(g.Videos?.Values?.Select(v => (v.VideoId, v.Name)))
     };
 
     private static GameCardDTO? ToParentGameCardDTO(IdentityOrValue<Game>? g) => g?.Value is null ? null : ToGameCardDTO(g.Value);

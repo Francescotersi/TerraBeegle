@@ -16,6 +16,7 @@ public record GameCardDTO
     public List<ApiObjectDTO>? Genres { get; init; } = [];
     public List<PlatformDTO>? Platforms { get; init; } = [];
     public List<ApiObjectDTO>? Themes { get; init; } = [];
+    public string? Trailer { get; init; }               // YouTube video id, played on the card hover (null = only the cover)
 }
 
 public record GameDetailsDTO

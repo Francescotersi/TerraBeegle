@@ -87,6 +87,7 @@ public abstract class UserGamesController(AppDbContext db, IIGDBService ApiServi
                 .Include(g => g.Platforms!).ThenInclude(p => p.PlatformLogo)
                 .Include(g => g.Platforms!).ThenInclude(p => p.PlatformFamily)
                 .Include(g => g.Themes)
+                .Include(g => g.Videos)
                 .AsSplitQuery()
                 .ToListAsync();
 

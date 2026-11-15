@@ -28,7 +28,9 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         "themes.name",
         "themes.slug",
         "game_type.type",
-        "game_status.status"
+        "game_status.status",
+        "videos.video_id",
+        "videos.name"
     ]) + ";";
 
     public async Task<GameSearchResponseDTO?> SearchGamesAsync(string query, string pagination)
