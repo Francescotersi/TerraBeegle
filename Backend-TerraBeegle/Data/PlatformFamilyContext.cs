@@ -16,7 +16,7 @@ public class PlatformFamilyConfiguration : IEntityTypeConfiguration<PlatformFami
 
         entity.HasMany(p => p.Platforms)
             .WithOne(pf => pf.PlatformFamily)
-            .HasForeignKey(p => p.PlatformFamilyId)
+            .HasForeignKey(p => p.ApiPlatformFamilyId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }
