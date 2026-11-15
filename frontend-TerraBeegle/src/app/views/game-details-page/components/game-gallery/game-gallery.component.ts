@@ -3,7 +3,7 @@ import { LiquidGlassComponent } from '../../../../ui/liquid-glass/liquid-glass.c
 import { createCarouselScroll } from '../../../../ui/carousel/carousel-scroll';
 import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
 
-// Screenshot grid; a click opens the image full size, a click or Escape closes it
+/** Displays the screenshot carousel with a fullscreen lightbox preview. */
 @Component({
   selector: 'app-game-gallery',
   standalone: true,

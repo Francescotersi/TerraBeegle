@@ -1,4 +1,4 @@
-// Shared by every section of the game details page (chips, section titles, facts list, buttons)
+/** Shared styles for game details sections (chips, facts list, buttons, carousels). */
 export const GAME_DETAILS_STYLES = `
     :host {
       display: block;
@@ -51,7 +51,6 @@ export const GAME_DETAILS_STYLES = `
       transform: translateY(-1px);
     }
 
-    /* Two columns: label on the left, value on the right */
     .facts {
       display: grid;
       grid-template-columns: max-content 1fr;
@@ -67,7 +66,6 @@ export const GAME_DETAILS_STYLES = `
       min-width: 0;
     }
 
-    /* Same gradient buttons as "Show More" */
     .btn-gradient,
     .btn-glass {
       border-radius: 20px;

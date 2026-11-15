@@ -11,7 +11,7 @@ interface EmbeddableVideo {
   embedUrl: SafeResourceUrl | null;
 }
 
-// "About" (summary + storyline) and the trailers of the game
+/** Displays the game's summary, storyline, and embedded trailer carousel. */
 @Component({
   selector: 'app-game-about',
   standalone: true,

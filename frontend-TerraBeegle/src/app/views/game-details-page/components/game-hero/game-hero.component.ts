@@ -7,7 +7,7 @@ import { GAME_BADGES_STYLES } from '../../../grid/styles/game-badges.styles';
 import { GAME_DETAILS_STYLES } from '../../styles/game-details.styles';
 import { joinNames, toTen } from '../../utils/game-details.utils';
 
-// Top of the details page: cover, title, scores, main facts and the Favorites / Wishlist buttons
+/** Displays the hero banner with cover, PEGI rating, scores, metadata, and collection actions. */
 @Component({
   selector: 'app-game-hero',
   standalone: true,
@@ -36,7 +36,6 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
-              <!-- PEGI first, then the scores -->
               @if (g.pegiRating) {
                 <div
                   class="pegi-wrapper flex-shrink-0"
@@ -303,7 +302,6 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
         transform: translateY(0) scale(1);
       }
     }
-    /* Same height as the rating badges (24px) or a little more: 28px on phones, 32px on desktop */
     .pegi-icon {
       height: 28px;
       width: auto;
@@ -334,14 +332,12 @@ import { joinNames, toTen } from '../../utils/game-details.utils';
 export class GameHeroComponent implements OnDestroy {
   readonly game = input.required<GameDetailsDTO>();
 
-  // Provided by the details page, so the hero and the page share the same favorites / wishlist state
   protected readonly actions = inject(GridGameActionsService);
 
   protected readonly fallbackCover = 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/292030/capsule_616x353.jpg';
   protected readonly toTen = toTen;
   protected readonly joinNames = joinNames;
 
-  // Blurred background: first artwork, else first screenshot, else the cover
   protected readonly heroImage = computed(() => {
     const g = this.game();
     const image = g.artworks?.[0] || g.screenshots?.[0] || g.cover;

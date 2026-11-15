@@ -1,6 +1,5 @@
 import { GameWebsiteItem } from '../../../models-services/game.model';
 
-// Names for the IGDB website types; any other link shows its domain
 const WEBSITE_NAMES: Record<number, string> = {
   2: 'Community wiki',
   3: 'Wikipedia',
@@ -24,17 +23,17 @@ const WEBSITE_NAMES: Record<number, string> = {
   24: 'Nintendo eShop',
 };
 
-// IGDB rating 0-100 shown out of 10, like on the cards (87.5 -> 8.8)
+/** Converts an IGDB 0-100 rating to a 0-10 scale rounded to one decimal. */
 export function toTen(rating: number): number {
   return Math.round(rating) / 10;
 }
 
-// "FromSoftware, Bandai Namco" from a list of objects with a name
+/** Joins named items into a comma-separated string. */
 export function joinNames(items: { name: string }[] | null | undefined): string {
   return (items ?? []).map((item) => item.name).join(', ');
 }
 
-// "Steam", "GOG"... or the domain of the link when the type is unknown
+/** Returns a human-readable label for a website item, falling back to its hostname. */
 export function websiteLabel(site: GameWebsiteItem): string {
   if (WEBSITE_NAMES[site.type]) return WEBSITE_NAMES[site.type];
   try {

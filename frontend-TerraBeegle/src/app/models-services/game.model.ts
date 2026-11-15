@@ -126,4 +126,11 @@ export interface GameDetailsDTO {
   similarGames: GameCardDTO[] | null;
   dlcs: GameCardDTO[] | null;
   expansions: GameCardDTO[] | null;
+  standaloneExpansions: GameCardDTO[] | null;
+  expandedGames: GameCardDTO[] | null;
+  bundles: GameCardDTO[] | null;
+  remakes: GameCardDTO[] | null;
+  remasters: GameCardDTO[] | null;
+  parentGame: GameCardDTO | null;
+  versionParent: GameCardDTO | null;
 }

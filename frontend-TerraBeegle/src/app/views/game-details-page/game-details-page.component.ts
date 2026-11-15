@@ -14,9 +14,10 @@ import { GameAboutComponent } from './components/game-about/game-about.component
 import { GameGalleryComponent } from './components/game-gallery/game-gallery.component';
 import { GameInfoComponent } from './components/game-info/game-info.component';
 import { GameReviewsComponent } from './components/game-reviews/game-reviews.component';
+import { GameContentsComponent } from './components/game-contents/game-contents.component';
 import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
 
-// /game/:id — loads the game from GET /api/games/{id} and places its sections
+/** Page component for `/game/:slug` that loads game details and renders all detail sections. */
 @Component({
   selector: 'app-game-details-page',
   standalone: true,
@@ -30,6 +31,7 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
     GameGalleryComponent,
     GameInfoComponent,
     GameReviewsComponent,
+    GameContentsComponent,
   ],
   // One instance for the page and its sections (the hero buttons); the similar games grid has its own
   template: `
@@ -60,11 +62,12 @@ import { GAME_DETAILS_STYLES } from './styles/game-details.styles';
           <div class="col-12 col-xl-8 d-flex flex-column gap-3 gap-lg-4">
             <app-game-about [game]="g" />
             <app-game-gallery [images]="gallery()" [gameName]="g.name" />
-            <app-game-reviews [gameId]="g.apiGameId" />
+            <app-game-contents [game]="g" />
           </div>
 
-          <div class="col-12 col-xl-4">
+          <div class="col-12 col-xl-4 d-flex flex-column gap-3 gap-lg-4">
             <app-game-info [game]="g" />
+            <app-game-reviews [gameId]="g.apiGameId" />
           </div>
         </div>
 
@@ -105,7 +108,6 @@ export class GameDetailsPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   private gameParam = '';
 
-  // Screenshots first, then artworks
   protected readonly gallery = computed(() => {
     const g = this.game();
     return g ? [...(g.screenshots ?? []), ...(g.artworks ?? [])] : [];
@@ -125,12 +127,10 @@ export class GameDetailsPage implements OnInit {
     });
   }
 
-  // Reloads the current game (the "Try again" button)
   protected reload(): void {
     this.loadGame();
   }
 
-  // Downloads the game details by slug (via local cache or search fallback) or numeric ID
   private loadGame(): void {
     // During SSR the relative /api URL cannot be called; the browser loads the data after hydration
     if (!isPlatformBrowser(this.platformId)) {
