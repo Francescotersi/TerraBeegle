@@ -7,6 +7,8 @@ import { ReviewResponseDTO } from '../../../models-services/review.model';
 import { SpinnerComponent } from '../../../ui/spinner/spinner.component';
 
 const PAGE_SIZE = 5;
+const REVIEW_PREVIEW_CHARS = 180;
+const REVIEW_PREVIEW_LINES = 3;
 
 // "REVIEWS" tab of the profile: the reviews you wrote (GET /api/user/{username}/reviews), newest first
 @Component({
@@ -14,6 +16,51 @@ const PAGE_SIZE = 5;
   standalone: true,
   imports: [DatePipe, RouterLink, SpinnerComponent],
   template: `
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <select
+          class="form-select form-select-sm filter-select"
+          aria-label="Filter by creation date"
+          [value]="dateFilter()"
+          (change)="dateFilter.set($any($event.target).value)"
+        >
+          <option value="all">All dates</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="1y">Last year</option>
+        </select>
+
+        <select
+          class="form-select form-select-sm filter-select"
+          aria-label="Filter by rating"
+          [value]="ratingFilter()"
+          (change)="ratingFilter.set($any($event.target).value)"
+        >
+          <option value="all">All ratings</option>
+          <option value="9-10">9 - 10 ★</option>
+          <option value="7-8">7 - 8 ★</option>
+          <option value="5-6">5 - 6 ★</option>
+          <option value="1-4">1 - 4 ★</option>
+        </select>
+
+        <select
+          class="form-select form-select-sm filter-select"
+          aria-label="Sort reviews"
+          [value]="sortBy()"
+          (change)="sortBy.set($any($event.target).value)"
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="rating-desc">Highest rating</option>
+          <option value="rating-asc">Lowest rating</option>
+        </select>
+      </div>
+
+      @if (hasActiveFilters()) {
+        <button type="button" class="btn btn-sm btn-outline-glass" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+
     @if (errorMessage()) {
       <p class="text-body-secondary mb-0">{{ errorMessage() }}</p>
     } @else if (reviews().length === 0 && isLoading()) {
@@ -46,7 +93,12 @@ const PAGE_SIZE = 5;
                 <span class="review-rating ms-auto" [title]="review.rating + ' out of 10'">★ {{ review.rating }}/10</span>
               </div>
               @if (review.content) {
-                <p class="review-content mb-1">{{ review.content }}</p>
+                <p class="review-content mb-1">{{ displayContent(review) }}</p>
+                @if (isLongReview(review.content)) {
+                  <button type="button" class="btn-link-toggle mb-1" (click)="toggleReviewExpand(review.id)">
+                    {{ isReviewExpanded(review.id) ? 'Show less' : 'Show more' }}
+                  </button>
+                }
               }
               <div class="d-flex align-items-center gap-2 review-meta">
                 <span>{{ review.createdAt | date: 'mediumDate' }}</span>
@@ -95,8 +147,25 @@ const PAGE_SIZE = 5;
       background: none; border: none; padding: 0; font-size: 0.78rem; font-weight: 600; color: #ef4444;
     }
     .btn-link-danger:hover:not(:disabled) { text-decoration: underline; }
+    .btn-link-toggle {
+      background: none; border: none; padding: 0; font-size: 0.8rem; font-weight: 600;
+      color: var(--tb-accent); cursor: pointer;
+    }
+    .btn-link-toggle:hover { text-decoration: underline; }
     .btn-outline-glass {
       border: 1px solid var(--tb-glass-border); color: var(--tb-text); background: var(--tb-glass-bg); border-radius: 12px;
+    }
+    .filter-select {
+      width: auto;
+      background-color: var(--tb-input-bg);
+      border: 1px solid var(--tb-input-border);
+      color: var(--tb-text);
+      border-radius: 10px;
+      font-size: 0.8rem;
+    }
+    .filter-select:focus {
+      border-color: var(--tb-accent);
+      box-shadow: none;
     }
   `,
 })
@@ -111,6 +180,13 @@ export class ProfileReviewsComponent implements OnChanges {
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly deletingId = signal<number | null>(null);
+  protected readonly expandedReviewIds = signal<Record<number, boolean>>({});
+  protected readonly dateFilter = signal<string>('all');
+  protected readonly ratingFilter = signal<string>('all');
+  protected readonly sortBy = signal<string>('newest');
+  protected readonly hasActiveFilters = computed(
+    () => this.dateFilter() !== 'all' || this.ratingFilter() !== 'all' || this.sortBy() !== 'newest'
+  );
   protected readonly hasMore = computed(() => this.reviews().length < this.totalCount());
   private page = 1;
   private requestVersion = 0; // ignores answers that arrive after the username changed
@@ -123,6 +199,39 @@ export class ProfileReviewsComponent implements OnChanges {
     if (this.isLoading() || !this.hasMore()) return;
     this.page++;
     this.fetch();
+  }
+
+  protected resetFilters(): void {
+    this.dateFilter.set('all');
+    this.ratingFilter.set('all');
+    this.sortBy.set('newest');
+  }
+
+  protected isLongReview(content: string | null | undefined): boolean {
+    if (!content) return false;
+    return content.length > REVIEW_PREVIEW_CHARS || content.split('\n').length > REVIEW_PREVIEW_LINES;
+  }
+
+  protected isReviewExpanded(reviewId: number): boolean {
+    return Boolean(this.expandedReviewIds()[reviewId]);
+  }
+
+  protected toggleReviewExpand(reviewId: number): void {
+    this.expandedReviewIds.update((prev) => ({ ...prev, [reviewId]: !prev[reviewId] }));
+  }
+
+  protected displayContent(review: ReviewResponseDTO): string {
+    const content = review.content ?? '';
+    if (!this.isLongReview(content) || this.isReviewExpanded(review.id)) return content;
+
+    const lines = content.split('\n');
+    const previewByLines = lines.length > REVIEW_PREVIEW_LINES ? lines.slice(0, REVIEW_PREVIEW_LINES).join('\n') : content;
+    if (previewByLines.length <= REVIEW_PREVIEW_CHARS) return `${previewByLines.trimEnd()}...`;
+
+    const sliced = previewByLines.slice(0, REVIEW_PREVIEW_CHARS);
+    const lastSpace = sliced.lastIndexOf(' ');
+    const cut = lastSpace > REVIEW_PREVIEW_CHARS * 0.6 ? sliced.slice(0, lastSpace) : sliced;
+    return `${cut.trimEnd()}...`;
   }
 
   // DELETE /api/games/{igdbId}/reviews/{id}
@@ -147,6 +256,7 @@ export class ProfileReviewsComponent implements OnChanges {
     this.page = 1;
     this.reviews.set([]);
     this.totalCount.set(0);
+    this.expandedReviewIds.set({});
     if (!this.username()) return;
     this.fetch();
   }
