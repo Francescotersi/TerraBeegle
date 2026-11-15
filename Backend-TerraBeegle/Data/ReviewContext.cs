@@ -11,7 +11,7 @@ public class ReviewConfiguration : IEntityTypeConfiguration<Review>
     {
         entity.Property(r => r.Content).HasColumnType("text");
 
-        entity.HasIndex(r => new { r.GameId, r.UserId }).IsUnique();
+        entity.HasIndex(r => new { r.ApiGameId, r.UserId }).IsUnique();
         entity.HasIndex(r => r.UserId);
     }
 }

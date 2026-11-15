@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public record GameSearchDTO : IValidatableObject
+public record GameSearchDTO
 {
     // Sorting (no StringLength: the regex already allows only these 4 values, and "critic_rating" has 13 characters)
     [RegularExpression(@"^(name|released|rating|critic_rating)$", 
@@ -17,15 +17,12 @@ public record GameSearchDTO : IValidatableObject
     public bool CaseSensitive { get; init; } = false;
 
     // Platforms
-    // [Range(1, 9, ErrorMessage = "PlatformsFamily must be between 1 and 9.")]
     public int[]? PlatformsFamily { get; init; }
     public bool PlatformsFamilyExact { get; init; } = true;
     public int[]? Platforms { get; init; }
     public bool PlatformsExact { get; init; } = true;
 
     // Genres and Themes
-    // [AllowedValues(4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 
-    //     ErrorMessage = "Invalid genre ID.")] // Example allowed values for genre IDs
     public int[]? Genres { get; init; }
     public bool GenresExact { get; init; } = true;
     public int[]? Themes { get; init; }
@@ -50,7 +47,10 @@ public record GameSearchDTO : IValidatableObject
     public bool StoresExact { get; init; } = true;
 
     // Date
+    [Range(1950, 2100)]
     public int? ReleaseYearMin { get; init; }
+    [Range(1950, 2100)]
+    [GreaterThanOrEqualTo("ReleaseYearMin", ErrorMessage = "MaxReleaseYear must be greater than or equal to MinReleaseYear.")]
     public int? ReleaseYearMax { get; init; }
 
     // Ratings: user rating out of 10 with decimals, like the sidebar slider sends it (the controller converts it
@@ -58,11 +58,13 @@ public record GameSearchDTO : IValidatableObject
     [Range(0.0, 10.0)]
     public decimal? RatingMin { get; init; }
     [Range(0.0, 10.0)]
+    [GreaterThanOrEqualTo("RatingMin", ErrorMessage = "MaxRating must be greater than or equal to MinRating.")]
     public decimal? RatingMax { get; init; }
 
     [Range(0, 100)]
     public int? CriticRatingMin { get; init; }
     [Range(0, 100)]
+    [GreaterThanOrEqualTo("CriticRatingMin", ErrorMessage = "MaxCriticRating must be greater than or equal to MinCriticRating.")]
     public int? CriticRatingMax { get; init; }
 
     // Minimum number of votes, so a game rated 100 by 2 people does not top the list; 0 = no minimum
@@ -75,18 +77,6 @@ public record GameSearchDTO : IValidatableObject
     // PEGI Ratings
     [Range(8, 12, ErrorMessage = "PEGI rating must be between 8 and 12.")]
     public int[]? PegiRating { get; init; }
-
-    // Max >= min, checked only when both are sent. [Compare] cannot do this: it requires the two values to be EQUAL,
-    // so sending only RatingMin = 8 gave 400 (8 != null)
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (RatingMin > RatingMax)
-            yield return new ValidationResult("RatingMax must be greater than or equal to RatingMin.", [nameof(RatingMax)]);
-        if (CriticRatingMin > CriticRatingMax)
-            yield return new ValidationResult("CriticRatingMax must be greater than or equal to CriticRatingMin.", [nameof(CriticRatingMax)]);
-        if (ReleaseYearMin > ReleaseYearMax)
-            yield return new ValidationResult("ReleaseYearMax must be greater than or equal to ReleaseYearMin.", [nameof(ReleaseYearMax)]);
-    }
 }
 
 public record GameComingSoonSearchDTO
@@ -98,15 +88,12 @@ public record GameComingSoonSearchDTO
     public bool CaseSensitive { get; init; } = false;
 
     // Platforms
-    // [Range(1, 9, ErrorMessage = "PlatformsFamily must be between 1 and 9.")]
     public int[]? PlatformsFamily { get; init; }
     public bool PlatformsFamilyExact { get; init; } = true;
     public int[]? Platforms { get; init; }
     public bool PlatformsExact { get; init; } = true;
 
     // Genres and Themes
-    // [AllowedValues(4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 
-    //     ErrorMessage = "Invalid genre ID.")] // Example allowed values for genre IDs
     public int[]? Genres { get; init; }
     public bool GenresExact { get; init; } = true;
     public int[]? Themes { get; init; }
@@ -136,43 +123,76 @@ public record GameSearchResponseDTO
     public IEnumerable<GameCardDTO> Results { get; init; } = [];
 }
 
-public record UserGameSearchDTO : IValidatableObject
+public record UserGameSearchDTO
 {
     [MaxLength(100)]
     public string? Name { get; init; }
-    public int? Genre { get; init; }
-    public int? Platform { get; init; }
+    public long[]? Genres { get; init; }
+    public long[]? Platforms { get; init; }
+    public long[]? Themes { get; init; }
     
     [Range(1950, 2100)]
     public int? MinYear { get; init; }
 
     [Range(1950, 2100)]
+    [GreaterThanOrEqualTo("MinYear", ErrorMessage = "MaxYear must be greater than or equal to MinYear.")]
     public int? MaxYear { get; init; }
     public int? GameType { get; init; }
 
     [Range(0.0, 10.0)]
     public decimal? MinRating { get; init; }
+
     [Range(0.0, 10.0)]
+    [GreaterThanOrEqualTo("MinRating", ErrorMessage = "MaxRating must be greater than or equal to MinRating.")]
     public decimal? MaxRating { get; init; }
 
     [Range(0, 100)]
     public int? MinCriticRating { get; init; }
     [Range(0, 100)]
+    [GreaterThanOrEqualTo("MinCriticRating", ErrorMessage = "MaxCriticRating must be greater than or equal to MinCriticRating.")]
     public int? MaxCriticRating { get; init; }
 
     [RegularExpression(@"^(name|released|rating|critic_rating)$", 
         ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'rating' or 'critic_rating'.")]
     public string? SortBy { get; init; }
     public bool Ascending { get; init; } = true;
+}
 
-    // Max >= min, checked only when both are sent (see GameSearchDTO.Validate)
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+public sealed class GreaterThanOrEqualToAttribute(string minPropertyName) : ValidationAttribute
+{
+    private readonly string _minPropertyName = minPropertyName;
+
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
-        if (MinYear > MaxYear)
-            yield return new ValidationResult("MaxYear must be greater than or equal to MinYear.", [nameof(MaxYear)]);
-        if (MinRating > MaxRating)
-            yield return new ValidationResult("MaxRating must be greater than or equal to MinRating.", [nameof(MaxRating)]);
-        if (MinCriticRating > MaxCriticRating)
-            yield return new ValidationResult("MaxCriticRating must be greater than or equal to MinCriticRating.", [nameof(MaxCriticRating)]);
+        if (value is null)
+            return ValidationResult.Success;
+
+        var minProperty = validationContext.ObjectType.GetProperty(_minPropertyName) ?? throw new ArgumentException($"Property '{_minPropertyName}' not found on type '{validationContext.ObjectType.FullName}'.");
+        var minValue = minProperty.GetValue(validationContext.ObjectInstance);
+
+        if (minValue is null)
+            return ValidationResult.Success;
+
+        if (value is IComparable maxComparable && minValue is IComparable minComparable)
+        {
+            if (maxComparable.GetType() != minComparable.GetType())
+                throw new InvalidOperationException("Cannot compare values of different types.");
+
+            int comparison = maxComparable.CompareTo(minComparable);
+            bool isValid = comparison >= 0;
+
+            if (!isValid)
+            {
+                var defaultError = $"{validationContext.DisplayName} must be greater than or equal to {_minPropertyName}.";
+
+                return new ValidationResult(
+                    ErrorMessage ?? defaultError,
+                    [validationContext.MemberName!]
+                );
+            }
+        }
+
+        return ValidationResult.Success;
     }
 }

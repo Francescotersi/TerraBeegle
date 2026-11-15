@@ -22,21 +22,32 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 {
     // Lists the reviews written by a user
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(string username, [FromQuery] PaginationDTO pagination)
+    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(string username, [FromQuery] PaginationDTO pagination, [FromQuery] ReviewOrderDTO sort)
     {
         var totalCount = await db.Reviews.CountAsync(r => r.User.Username == username);
         var reviews = new List<ReviewResponseDTO>();
 
         if (totalCount != 0) {
             // Load the games with their cover, then map them in memory like the favorites / wishlist do
-            var page = await db.Reviews
-                .Where(r => r.User.Username == username)
-                .OrderByDescending(r => r.CreatedAt)
-                .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
+            var query = db.Reviews
+                .Where(r => r.User.Username == username);
+            
+            IOrderedQueryable<Review> OrderedQuery = sort.SortBy?.ToLowerInvariant() switch
+            {
+                "rating" => sort.Ascending ? query.OrderBy(r => r.Rating) : query.OrderByDescending(r => r.Rating),
+                "date" => sort.Ascending ? query.OrderBy(r => r.CreatedAt) : query.OrderByDescending(r => r.CreatedAt),
+                _ => query.OrderByDescending(r => r.CreatedAt)
+            };
+
+            OrderedQuery = sort.SortBy == "rating" 
+                ? OrderedQuery.ThenByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
+                : OrderedQuery.ThenByDescending(r => r.Id); // To ensure consistent ordering for reviews created at the same time
+                
+            var page = await OrderedQuery // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
                 .Take(pagination.PageSize)
                 .Include(r => r.Game)
-                    .ThenInclude(g => g.Images.Where(i => i.Type == ImageType.Cover))
+                .ThenInclude(g => g.Images.Where(i => i.Type == ImageType.Cover))
                 .ToListAsync();
 
             reviews = [.. page.Select(r => new ReviewResponseDTO
@@ -100,7 +111,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPost]
-    public async Task<ActionResult<ReviewResponseDTO>> CreateReview(long gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
+    public async Task<ActionResult<ReviewResponseDTO>> CreateReview([FromBody] ReviewCreateDTO reviewCreateDTO)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)

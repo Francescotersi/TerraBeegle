@@ -175,11 +175,17 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ThenBy(g => g.Slug) // Secondary ordering by slug to ensure consistent ordering for games with the same name
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ToListAsync(); // Projecting to GameDetailsDTO
+            .Include(g => g.Images)
+            .Include(g => g.Genres)
+            .Include(g => g.Themes)
+            .Include(g => g.Platforms!).ThenInclude(p => p.PlatformLogo)
+            .AsSplitQuery()
+            .AsNoTracking()
+            .ToListAsync();
 
         return Ok(CreatePagedResponse(
-            [.. games.Select(DBToGameDTO.DBToGameDetailsDTO)],
-            await db.Games.CountAsync(),
+            games.Select(DBToGameDTO.DBToGameDetailsDTO).ToList(),
+            await db.Games.CountAsync(g => !g.IsPlaceholder || IncludePlaceholders),
             pagination,
             page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
