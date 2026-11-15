@@ -11,33 +11,39 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
   standalone: true,
   imports: [GridComponent, SpinnerComponent, CollectionSearchBarComponent],
   template: `
-    <app-collection-search-bar
-      placeholder="Search in favorites..."
-      ariaLabel="Search in favorites"
-      [(query)]="searchQuery"
-      (searchSubmit)="onSearch()"
-    />
+    <div class="container-fluid px-3 px-md-4">
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+          <app-collection-search-bar
+            placeholder="Search in favorites..."
+            ariaLabel="Search in favorites"
+            [(query)]="searchQuery"
+            (searchSubmit)="onSearch()"
+          />
 
-    @if (isLoading()) {
-      <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
-        <app-spinner size="lg" text="Loading your favorites..." />
+          @if (isLoading()) {
+            <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
+              <app-spinner size="lg" text="Loading your favorites..." />
+            </div>
+          } @else if (errorMessage()) {
+            <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">
+              {{ errorMessage() }}
+              <button type="button" class="btn btn-outline-danger d-block mx-auto mt-3" (click)="loadFavorites()">Try again</button>
+            </div>
+          } @else {
+            <app-grid-component
+              title=""
+              [games]="favoriteGames()"
+              [canLoadMore]="hasMore()"
+              [isLoadingMore]="isLoadingMore()"
+              (loadMore)="loadMore()"
+              [emptyMessage]="searchQuery().trim() ? 'No favorite games match your search.' : 'No favorite games yet. Browse the catalog and add your favorites!'"
+            >
+            </app-grid-component>
+          }
+        </div>
       </div>
-    } @else if (errorMessage()) {
-      <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">
-        {{ errorMessage() }}
-        <button type="button" class="btn btn-outline-danger d-block mx-auto mt-3" (click)="loadFavorites()">Try again</button>
-      </div>
-    } @else {
-      <app-grid-component
-        title=""
-        [games]="favoriteGames()"
-        [canLoadMore]="hasMore()"
-        [isLoadingMore]="isLoadingMore()"
-        (loadMore)="loadMore()"
-        [emptyMessage]="searchQuery().trim() ? 'No favorite games match your search.' : 'No favorite games yet. Browse the catalog and add your favorites!'"
-      >
-      </app-grid-component>
-    }
+    </div>
   `,
   styles: `
     :host {

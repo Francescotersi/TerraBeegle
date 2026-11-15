@@ -11,33 +11,39 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
   standalone: true,
   imports: [GridComponent, SpinnerComponent, CollectionSearchBarComponent],
   template: `
-    <app-collection-search-bar
-      placeholder="Search in wishlist..."
-      ariaLabel="Search in wishlist"
-      [(query)]="searchQuery"
-      (searchSubmit)="onSearch()"
-    />
+    <div class="container-fluid px-3 px-md-4">
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+          <app-collection-search-bar
+            placeholder="Search in wishlist..."
+            ariaLabel="Search in wishlist"
+            [(query)]="searchQuery"
+            (searchSubmit)="onSearch()"
+          />
 
-    @if (isLoading()) {
-      <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
-        <app-spinner size="lg" text="Loading your wishlist..." />
+          @if (isLoading()) {
+            <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
+              <app-spinner size="lg" text="Loading your wishlist..." />
+            </div>
+          } @else if (errorMessage()) {
+            <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">
+              {{ errorMessage() }}
+              <button type="button" class="btn btn-outline-danger d-block mx-auto mt-3" (click)="loadWishlist()">Try again</button>
+            </div>
+          } @else {
+            <app-grid-component
+              title=""
+              [games]="wishlistGames()"
+              [canLoadMore]="hasMore()"
+              [isLoadingMore]="isLoadingMore()"
+              (loadMore)="loadMore()"
+              [emptyMessage]="searchQuery().trim() ? 'No wishlist games match your search.' : 'Your wishlist is empty. Add games you want to play later!'"
+            >
+            </app-grid-component>
+          }
+        </div>
       </div>
-    } @else if (errorMessage()) {
-      <div class="alert alert-danger mx-auto my-4 text-center" style="max-width: 600px;">
-        {{ errorMessage() }}
-        <button type="button" class="btn btn-outline-danger d-block mx-auto mt-3" (click)="loadWishlist()">Try again</button>
-      </div>
-    } @else {
-      <app-grid-component
-        title=""
-        [games]="wishlistGames()"
-        [canLoadMore]="hasMore()"
-        [isLoadingMore]="isLoadingMore()"
-        (loadMore)="loadMore()"
-        [emptyMessage]="searchQuery().trim() ? 'No wishlist games match your search.' : 'Your wishlist is empty. Add games you want to play later!'"
-      >
-      </app-grid-component>
-    }
+    </div>
   `,
   styles: `
     :host {

@@ -18,16 +18,6 @@ export const routes: Routes = [
                 path: 'game/:slug',
                 loadComponent: () => import('./views/game-details-page/game-details-page.component').then(m => m.GameDetailsPage),
             },
-            {
-                path: 'favorites',
-                loadComponent: () => import('./views/favorite-page/favorite-page.component').then(m => m.FavoritePageComponent),
-                canActivate: [authGuard],
-            },
-            {
-                path: 'wishlist',
-                loadComponent: () => import('./views/wishlist-page/wishlist-page.component').then(m => m.WishlistPageComponent),
-                canActivate: [authGuard],
-            },
         ]
     },
     {
@@ -52,7 +42,16 @@ export const routes: Routes = [
         canActivate: [authGuard],
     },
     {
-        // A friend's favorites and wishlist (only for accepted friends)
+        path: 'favorites',
+        loadComponent: () => import('./views/favorite-page/favorite-page.component').then(m => m.FavoritePageComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'wishlist',
+        loadComponent: () => import('./views/wishlist-page/wishlist-page.component').then(m => m.WishlistPageComponent),
+        canActivate: [authGuard],
+    },
+    {
         path: 'friends/:id',
         loadComponent: () => import('./views/friend-lists-page/friend-lists-page.component').then(m => m.FriendListsPage),
         canActivate: [authGuard],
