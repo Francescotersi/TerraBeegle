@@ -21,7 +21,7 @@ export const routes: Routes = [
                 component: CatalogPage,
             },
             {
-                path: 'game/:id',
+                path: 'game/:slug',
                 component: GameDetailsPage,
             },
             {

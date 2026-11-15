@@ -175,7 +175,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             UpdatedAt = friendship.UpdatedAt
         };
 
-        return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
+        return CreatedAtAction(nameof(GetSentFriendships), null, createdFriendship);
     }
 
     // Accepts or rejects a friend request

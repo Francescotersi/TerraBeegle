@@ -83,9 +83,6 @@ import { PagedResponse, FriendshipResponseDTO } from '../../../models-services/f
 
         <!-- RIGHT OF THE SEARCH BAR: "Enter Your Friend Username:" + Send Request button -->
         <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-2 flex-wrap flex-shrink-0">
-          <span class="friend-label text-nowrap small fw-semibold text-body">
-            Enter Your Friend Username:
-          </span>
           <button
             class="btn btn-sm btn-tb-accent text-nowrap px-3"
             [disabled]="!searchUsername.trim() || isSending()"

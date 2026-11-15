@@ -386,7 +386,8 @@ export class GameSearchBoxComponent implements OnInit {
     this.suggestions.set([]);
     // Also reset the stream, otherwise typing the same text again would be ignored by distinctUntilChanged
     this.input$.next('');
-    this.router.navigate(['/game', game.apiGameId]);
+    this.gameService.rememberGameSlug(game.slug, game.apiGameId);
+    this.router.navigate(['/game', game.slug || game.apiGameId]);
     this.navigated.emit();
   }
 
