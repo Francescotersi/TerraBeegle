@@ -187,7 +187,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             User = user.Adapt<UserPublicResponseDTO>()
         };
 
-        return CreatedAtAction(nameof(GetReviews), new { game.ApiGameId }, createdReview);
+        return CreatedAtAction(nameof(GetReviews), new { gameId = game.ApiGameId }, createdReview);
     }
 
     // Edits your own review
