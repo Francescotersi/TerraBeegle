@@ -56,6 +56,7 @@ export type { GridComponentProps } from './grid.model';
             @for (game of games(); track game.rawgGameId; let idx = $index) {
               <div class="similar-carousel-item">
                 <app-game-card
+                  [expandable]="false"
                   [game]="game"
                   [index]="idx"
                   [isHovered]="hoveredGameId() === game.rawgGameId"
@@ -83,7 +84,7 @@ export type { GridComponentProps } from './grid.model';
         </div>
       } @else {
         <div
-          class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xxl-4 gx-3 gy-2 gx-md-4 gy-md-2 justify-content-center"
+          class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xxl-6 gx-3 gy-3 gx-md-4 gy-md-3 justify-content-center"
         >
           @for (game of visibleGames(); track game.rawgGameId; let idx = $index) {
             <div class="col game-col">
@@ -135,7 +136,6 @@ export type { GridComponentProps } from './grid.model';
 
     .game-col {
       position: relative;
-      aspect-ratio: 16 / 9;
       margin-bottom: 0.35rem;
     }
 
@@ -172,8 +172,8 @@ export type { GridComponentProps } from './grid.model';
     }
     .similar-carousel-item {
       position: relative;
-      flex: 0 0 240px;
-      aspect-ratio: 16 / 9;
+      flex: 0 0 160px;
+      aspect-ratio: 3 / 4;
       scroll-snap-align: start;
     }
     .similar-carousel-btn {

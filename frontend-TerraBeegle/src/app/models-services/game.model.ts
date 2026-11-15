@@ -27,6 +27,7 @@ export interface GameCardDTO {
   genres: GameGenreItem[] | null;
   platforms: GamePlatformItem[] | null;
   themes: GameGenreItem[] | null;
+  trailer?: string | null; // YouTube video id, played on the card hover
 }
 
 export interface GameSearchResponse {

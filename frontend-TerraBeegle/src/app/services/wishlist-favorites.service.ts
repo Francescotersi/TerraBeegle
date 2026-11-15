@@ -113,6 +113,7 @@ export class WishlistFavoritesService {
       platforms: game.platforms?.map((p) => p.apiPlatformId) ?? [],
       tags: [],
       genres: game.genres?.map((g) => g.name) ?? [],
+      trailer: game.trailer ?? null,
     };
   }
 }
