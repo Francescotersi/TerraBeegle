@@ -59,7 +59,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             filters.Add($"(involved_companies.{field}=true & {CreateFilter("involved_companies.company", values, all)})");
     }
     
-    static void AddFilterRange(string field, decimal? min, decimal? max, List<string> filters, bool convertToUnix = false)
+    static void AddFilterRange(string field, long? min, long? max, List<string> filters, bool convertToUnix = false)
     {
         if (min is {} MinVal)
             filters.Add($"{field}>={(convertToUnix ? YearToUnixTimestamp((int)MinVal, true) : MinVal)}");
@@ -127,12 +127,16 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         AddFilterList("website.type", search.Stores, search.StoresExact, filters);
 
         AddFilterRange("first_release_date", search.ReleaseYearMin, search.ReleaseYearMax, filters, true);
+
         // The user rating comes out of 10, IGDB stores it out of 100
-        AddFilterRange("rating", search.RatingMin * 10, search.RatingMax * 10, filters, false);
-        AddFilterRange("aggregated_rating", search.CriticRatingMin, search.CriticRatingMax, filters, false);
         // 0 = no minimum (a search by name must find games without votes or critic reviews too)
-        AddFilterRange("rating_count", search.MinRatingCount > 0 ? search.MinRatingCount : null, null, filters, false);
-        AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount > 0 ? search.MinCriticRatingCount : null, null, filters, false);
+        AddFilterRange("rating", search.RatingMin, search.RatingMax, filters, false);
+        if (search.RatingMin > 0)
+            AddFilterRange("rating_count", search.MinRatingCount, null, filters, false);
+
+        AddFilterRange("aggregated_rating", search.CriticRatingMin, search.CriticRatingMax, filters, false);
+        if (search.CriticRatingMin > 0)
+            AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount, null, filters, false);
 
         GameSearchResponseDTO? result;
         try
@@ -159,7 +163,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         });
     }
 
-	// retrieving all games from the database and projecting them to GameDetailsDTO
+    // retrieving all games from the database and projecting them to GameDetailsDTO
     [HttpGet("all")]
     public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetAll([FromQuery] PaginationDTO pagination, [FromQuery] bool IncludePlaceholders = false)
     {
@@ -230,15 +234,20 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         });
     }
 
-	// searching by the IGDB id the same one used for the IGDB request below
-    [HttpGet("{igdbGameId:long}")]
-    public async Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId)
+    // searching by the IGDB id the same one used for the IGDB request below
+    [HttpGet("{igdbGameId:long}", Order = 1)]
+    public Task<ActionResult<GameDetailsDTO>> GetById(long igdbGameId) => GetGame(igdbGameId.ToString());
+
+    [HttpGet("{igdbGameSlug}", Order = 2)]
+    public Task<ActionResult<GameDetailsDTO>> GetBySlug(string igdbGameSlug) => GetGame($"\"{igdbGameSlug}\"", "Slug");
+
+    private async Task<ActionResult<GameDetailsDTO>> GetGame(string igdbGame, string field = "ID")
     {
         // The service looks for the game in the database first, then at IGDB (one lookup, see point 52)
         GameDetailsDTO? game;
         try
         {
-            game = await ApiService.GetGameAsync(igdbGameId);
+            game = await ApiService.GetGameAsync(igdbGame, field.ToLowerInvariant());
         }
         catch (HttpRequestException)
         {
@@ -246,7 +255,7 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         }
 
         if (game is null)
-            return NotFound($"Game with IGDB ID {igdbGameId} not found.");
+            return NotFound($"Game with IGDB {field} {igdbGame} not found.");
 
         return Ok(game);
     }

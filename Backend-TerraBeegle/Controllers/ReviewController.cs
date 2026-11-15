@@ -54,12 +54,12 @@ public class ReviewUserController(AppDbContext db) : ControllerBase
 }
 
 [ApiController]
-[Route("api/games/{gameId:int}/reviews")]
+[Route("api/games/{gameId:long}/reviews")]
 public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : ControllerBase
 {
     // Lists the reviews of a game
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(int gameId, [FromQuery] PaginationDTO pagination)
+    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(long gameId, [FromQuery] PaginationDTO pagination)
     {
         var totalCount = await db.Reviews.CountAsync(r => r.GameId == gameId);
         var reviews = new List<ReviewResponseDTO>();
@@ -91,72 +91,85 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         ));
     }
 
-    // [Authorize]
-    // [EnableRateLimiting(RateLimitPolicies.UserWrite)]
-    // [HttpPost]
-    // public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(int gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
-    // {
-    //    
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    [HttpPost]
+    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> CreateReview(long gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
+    {
+        var currentUserId = GetCurrentUserId(User);
+        if (currentUserId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
 
-    //     var currentUserId = GetCurrentUserId(User);
-    //     if (currentUserId is null)
-    //     {
-    //         return Unauthorized("User ID not found in token.");
-    //     }
+        var user = await db.Users.FindAsync(currentUserId.Value);
+        if (user is null)
+        {
+            return NotFound("User not found.");
+        }
 
-    //     var user = await db.Users.FindAsync(currentUserId.Value);
-    //     if (user is null)
-    //     {
-    //         return NotFound("User not found.");
-    //     }
+        // Check if the game exists
+        Game? game;
+        try
+        {
+            game = await ApiService.GetOrCreateGameAsync(gameId);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
+        }
 
-    //     // Check if the game exists
-    //     Game? game;
-    //     try
-    //     {
-    //         game = await ApiService.GetOrCreateGameAsync(gameId);
-    //     }
-    //     catch (HttpRequestException)
-    //     {
-    //         return StatusCode(StatusCodes.Status503ServiceUnavailable, "External API is unavailable.");
-    //     }
+        if (game is null)
+        {
+            return NotFound("Game not found.");
+        }
 
-    //     if (game is null)
-    //     {
-    //         return NotFound("Game not found.");
-    //     }
+        if (game.ReleaseDate is not null && game.ReleaseDate > DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            return BadRequest("Cannot review a game that has not been released yet.");
+        }
 
-    //     // Create a new review
-    //     var review = new Review
-    //     {
-    //         Rating = reviewCreateDTO.Rating,
-    //         Content = reviewCreateDTO.Content,
-    //         GameId = game.ApiGameId,
-    //         UserId = currentUserId.Value,
-    //         CreatedAt = DateTime.UtcNow
-    //     };
+        if (await db.Reviews.AnyAsync(r => r.GameId == gameId && r.UserId == currentUserId.Value))
+        {
+            return BadRequest("You have already reviewed this game.");
+        }
 
-    //     db.Reviews.Add(review);
-    //     await db.SaveChangesAsync();
+        // Create a new review
+        var review = new Review
+        {
+            Rating = reviewCreateDTO.Rating,
+            Content = reviewCreateDTO.Content,
+            GameId = game.Id,
+            UserId = currentUserId.Value,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Reviews.Add(review);
+
+        // Update the game's average rating
+        game.Rating = ((game.Rating ?? 0m) * game.RatingCount + review.Rating) / (game.RatingCount + 1); 
+        game.RatingCount += 1; 
+
+        await db.SaveChangesAsync();
         
-    //     // Return the created review
-    //     var createdReview = new ReviewResponseDTO
-    //     {
-    //         Id = review.Id,
-    //         Rating = review.Rating,
-    //         Content = review.Content,
-    //         CreatedAt = review.CreatedAt,
-    //         User = user.Adapt<UserPublicResponseDTO>()
-    //     };
+        // Return the created review
+        var createdReview = new ReviewResponseDTO
+        {
+            Id = review.Id,
+            Rating = review.Rating,
+            Content = review.Content,
+            CreatedAt = review.CreatedAt,
+            User = user.Adapt<UserPublicResponseDTO>()
+        };
 
-    //     return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
-    // }
+        return CreatedAtAction(nameof(GetReviews), new { gameId }, createdReview);
+    }
 
     // Edits your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
-    public async Task<ActionResult<ReviewResponseDTO>> UpdateReview(int gameId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
+    public async Task<ActionResult<ReviewResponseDTO>> UpdateReview(long gameId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
@@ -182,7 +195,13 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             return StatusCode(StatusCodes.Status403Forbidden, "You can only update your own reviews.");
         }
 
+        var game = await db.Games.FindAsync(gameId);
+        if (game is null)
+        {
+            return NotFound("Game not found.");
+        }
         // The rating is required and already validated by [Range] on the DTO
+        game.Rating = ((game.Rating ?? 0m) * game.RatingCount - review.Rating + reviewUpdateDTO.Rating) / game.RatingCount;
         review.Rating = reviewUpdateDTO.Rating;
 
         if (reviewUpdateDTO.Content != null)
@@ -208,7 +227,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteReview(int gameId, long id)
+    public async Task<ActionResult> DeleteReview(long id)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
@@ -217,7 +236,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         }
 
         var review = await db.Reviews.FindAsync(id);
-        if (review is null || review.GameId != gameId)
+        if (review is null)
         {
             return NotFound("Review not found.");
         }
@@ -225,6 +244,23 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         if (review.UserId != currentUserId.Value)
         {
             return StatusCode(StatusCodes.Status403Forbidden, "You can only delete your own reviews.");
+        }
+
+        var game = await db.Games.FindAsync(review.GameId);
+        if (game is null)
+        {
+            return NotFound("Game not found.");
+        }
+
+        if (game.RatingCount <= 1)
+        {
+            game.Rating = null;
+            game.RatingCount = 0;
+        }
+        else
+        {
+            game.Rating = ((game.Rating ?? 0m) * game.RatingCount - review.Rating) / (game.RatingCount - 1);
+            game.RatingCount -= 1;
         }
 
         db.Reviews.Remove(review);
