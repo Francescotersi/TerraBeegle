@@ -76,14 +76,14 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
 {
     // Lists the reviews of a game
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(long ApiGameId, [FromQuery] PaginationDTO pagination)
+    public async Task<ActionResult<PagedResponseDTO<ReviewResponseDTO>>> GetReviews(long gameId, [FromQuery] PaginationDTO pagination)
     {
-        var totalCount = await db.Reviews.CountAsync(r => r.ApiGameId == ApiGameId);
+        var totalCount = await db.Reviews.CountAsync(r => r.ApiGameId == gameId);
         var reviews = new List<ReviewResponseDTO>();
 
         if (totalCount != 0) {
             reviews = await db.Reviews
-                .Where(r => r.ApiGameId == ApiGameId)
+                .Where(r => r.ApiGameId == gameId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ThenByDescending(r => r.Id) // To ensure consistent ordering for reviews created at the same time
                 .Skip((pagination.Page - 1) * pagination.PageSize)
@@ -104,14 +104,14 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             reviews,
             totalCount,
             pagination,
-            page => Url.Action(nameof(GetReviews), new { ApiGameId, Page = page, pagination.PageSize })
+            page => Url.Action(nameof(GetReviews), new { gameId, Page = page, pagination.PageSize })
         ));
     }
 
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPost]
-    public async Task<ActionResult<ReviewResponseDTO>> CreateReview([FromBody] ReviewCreateDTO reviewCreateDTO)
+    public async Task<ActionResult<ReviewResponseDTO>> CreateReview(long gameId, [FromBody] ReviewCreateDTO reviewCreateDTO)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
@@ -129,7 +129,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         Game? game;
         try
         {
-            game = await ApiService.GetOrCreateGameAsync(reviewCreateDTO.ApiGameId);
+            game = await ApiService.GetOrCreateGameAsync(gameId);
         }
         catch (HttpRequestException)
         {
@@ -194,7 +194,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
     [HttpPatch]
-    public async Task<ActionResult<ReviewResponseDTO>> UpdateReview([FromBody] ReviewUpdateDTO reviewUpdateDTO)
+    public async Task<ActionResult<ReviewResponseDTO>> UpdateReview(long gameId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
@@ -203,7 +203,7 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
         }
 
         var review = await db.Reviews.FindAsync(reviewUpdateDTO.Id);
-        if (review is null)
+        if (review is null || review.ApiGameId != gameId)
         {
             return NotFound("Review not found.");
         }
@@ -252,8 +252,8 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
     // Deletes your own review
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.UserWrite)]
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteReview(long id)
+    [HttpDelete("{reviewId}")]
+    public async Task<ActionResult> DeleteReview(long gameId, long reviewId)
     {
         var currentUserId = GetCurrentUserId(User);
         if (currentUserId is null)
@@ -261,8 +261,8 @@ public class ReviewGameController(AppDbContext db, IIGDBService ApiService) : Co
             return Unauthorized("User ID not found in token.");
         }
 
-        var review = await db.Reviews.FindAsync(id);
-        if (review is null)
+        var review = await db.Reviews.FindAsync(reviewId);
+        if (review is null || review.ApiGameId != gameId)
         {
             return NotFound("Review not found.");
         }

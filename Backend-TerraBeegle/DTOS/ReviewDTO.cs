@@ -6,7 +6,6 @@ public record ReviewCreateDTO
 {
     [Range(1, 10)]
     public int Rating { get; init; }               // 1-10
-    public long ApiGameId { get; init; }               // IGDB Id
     public string? Content { get; init; }
 }
 
