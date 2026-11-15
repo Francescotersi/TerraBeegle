@@ -3,13 +3,20 @@ import { Component, signal, OnInit, inject, PLATFORM_ID, DestroyRef } from '@ang
 import { isPlatformBrowser } from '@angular/common';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
 import { SpinnerComponent } from '../../ui/spinner/spinner.component';
+import { CollectionSearchBarComponent } from '../../ui/collection-search-bar/collection-search-bar.component';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
 
 @Component({
   selector: 'app-favorite-page',
   standalone: true,
-  imports: [GridComponent, SpinnerComponent],
+  imports: [GridComponent, SpinnerComponent, CollectionSearchBarComponent],
   template: `
+    <app-collection-search-bar
+      placeholder="Search in favorites..."
+      ariaLabel="Search in favorites"
+      [(query)]="searchQuery"
+    />
+
     @if (isLoading()) {
       <div class="d-flex flex-column align-items-center justify-content-center py-5 my-4">
         <app-spinner size="lg" text="Loading your favorites..." />
@@ -21,7 +28,7 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
       </div>
     } @else {
       <app-grid-component
-        title="Favorites"
+        title=""
         [games]="favoriteGames()"
         [canLoadMore]="hasMore()"
         [isLoadingMore]="isLoadingMore()"
@@ -43,6 +50,7 @@ export class FavoritePageComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
 
   readonly favoriteGames = signal<GridComponentProps[]>([]);
+  readonly searchQuery = signal<string>('');
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string | null>(null);
   private readonly destroyRef = inject(DestroyRef);
