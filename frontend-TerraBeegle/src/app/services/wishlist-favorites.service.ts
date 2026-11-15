@@ -15,10 +15,10 @@ export type { GameCollectionType };
 export class WishlistFavoritesService {
   readonly changes = new Subject<GameCollectionType>();
 
-  // Every page of a list; without userId the logged-in user's, with it a friend's (the backend allows only friends)
-  getAllGames(type: GameCollectionType, userId?: number): Observable<GameCardDTO[]> {
-    return this.getGames(type, 1, 50, userId).pipe(
-      expand(page => page.page < page.totalPages ? this.getGames(type, page.page + 1, 50, userId) : EMPTY),
+  // Every page of a list; without username the logged-in user's, with it a friend's (the backend allows only friends)
+  getAllGames(type: GameCollectionType, username?: string): Observable<GameCardDTO[]> {
+    return this.getGames(type, 1, 50, username).pipe(
+      expand(page => page.page < page.totalPages ? this.getGames(type, page.page + 1, 50, username) : EMPTY),
       reduce((games, page) => [...games, ...page.items], [] as GameCardDTO[])
     );
   }
@@ -27,51 +27,56 @@ export class WishlistFavoritesService {
   private readonly authService = inject(AuthService);
   private readonly alertService = inject(AlertService);
 
-  private getBaseUrl(type: GameCollectionType, userId?: number): string | null {
-    const id = userId ?? this.authService.currentUser()?.id;
-    if (!id) {
+  private getBaseUrl(type: GameCollectionType, username?: string): string | null {
+    const targetUsername = username ?? this.authService.currentUser()?.username;
+    if (!targetUsername) {
       return null;
     }
-    return `/api/users/${id}/${type}`;
+    return `/api/users/${encodeURIComponent(targetUsername)}/${type}`;
   }
 
   getGames(
     type: GameCollectionType,
     page: number = 1,
     pageSize: number = 20,
-    userId?: number
+    username?: string,
+    name?: string
   ): Observable<GameSearchResponse> {
-    const baseUrl = this.getBaseUrl(type, userId);
+    const baseUrl = this.getBaseUrl(type, username);
     if (!baseUrl) {
-      return throwError(() => new Error('User ID is required to fetch collection.'));
+      return throwError(() => new Error('Username is required to fetch collection.'));
     }
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
+    const trimmed = name?.trim();
+    if (trimmed) {
+      params = params.set('name', trimmed);
+    }
     return this.http.get<GameSearchResponse>(baseUrl, { params });
   }
 
-  addGame(type: GameCollectionType, apiGameId: number, userId?: number): Observable<void> {
-    const baseUrl = this.getBaseUrl(type, userId);
+  addGame(type: GameCollectionType, apiGameId: number, username?: string): Observable<void> {
+    const baseUrl = this.getBaseUrl(type, username);
     if (!baseUrl) {
       this.alertService.showAlert(`Please log in to add games to your ${type}.`);
-      return throwError(() => new Error('User ID is required to add game to collection.'));
+      return throwError(() => new Error('Username is required to add game to collection.'));
     }
     return this.http.post<void>(`${baseUrl}/${apiGameId}`, {});
   }
 
-  removeGame(type: GameCollectionType, apiGameId: number, userId?: number): Observable<void> {
-    const baseUrl = this.getBaseUrl(type, userId);
+  removeGame(type: GameCollectionType, apiGameId: number, username?: string): Observable<void> {
+    const baseUrl = this.getBaseUrl(type, username);
     if (!baseUrl) {
       this.alertService.showAlert(`Please log in to remove games from your ${type}.`);
-      return throwError(() => new Error('User ID is required to remove game from collection.'));
+      return throwError(() => new Error('Username is required to remove game from collection.'));
     }
     return this.http.delete<void>(`${baseUrl}/${apiGameId}`);
   }
 
 
-  getFavorites(page?: number, pageSize?: number) {
-    return this.getGames('favorites', page, pageSize);
+  getFavorites(page?: number, pageSize?: number, name?: string) {
+    return this.getGames('favorites', page, pageSize, undefined, name);
   }
 
   addFavorite(apiGameId: number) {
@@ -82,8 +87,8 @@ export class WishlistFavoritesService {
     return this.removeGame('favorites', apiGameId);
   }
 
-  getWishlist(page?: number, pageSize?: number) {
-    return this.getGames('wishlist', page, pageSize);
+  getWishlist(page?: number, pageSize?: number, name?: string) {
+    return this.getGames('wishlist', page, pageSize, undefined, name);
   }
 
   addWishlist(apiGameId: number) {

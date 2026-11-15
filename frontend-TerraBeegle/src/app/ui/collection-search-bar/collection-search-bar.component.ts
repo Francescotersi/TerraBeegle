@@ -1,4 +1,6 @@
-import { Component, input, model } from '@angular/core';
+import { Component, DestroyRef, inject, input, model, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 /** Centered UI search bar for filtering user game collections. */
 @Component({
@@ -9,7 +11,7 @@ import { Component, input, model } from '@angular/core';
       <form
         class="collection-search-form d-flex align-items-center gap-2 w-100"
         role="search"
-        (submit)="$event.preventDefault()"
+        (submit)="$event.preventDefault(); submitNow()"
       >
         <div class="collection-search-field position-relative flex-grow-1">
           <svg
@@ -37,7 +39,7 @@ import { Component, input, model } from '@angular/core';
             [attr.aria-label]="ariaLabel()"
             autocomplete="off"
             [value]="query()"
-            (input)="query.set(searchInput.value)"
+            (input)="onInput(searchInput.value)"
           />
 
           @if (query()) {
@@ -143,9 +145,28 @@ export class CollectionSearchBarComponent {
   readonly placeholder = input<string>('Search games...');
   readonly ariaLabel = input<string>('Search games');
   readonly query = model<string>('');
+  readonly searchSubmit = output<string>();
+
+  private readonly input$ = new Subject<string>();
+
+  constructor() {
+    this.input$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((value) => this.searchSubmit.emit(value));
+  }
+
+  onInput(value: string): void {
+    this.query.set(value);
+    this.input$.next(value);
+  }
+
+  submitNow(): void {
+    this.searchSubmit.emit(this.query());
+  }
 
   clear(inputEl: HTMLInputElement): void {
     this.query.set('');
+    this.searchSubmit.emit('');
     inputEl.focus();
   }
 }

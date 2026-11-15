@@ -15,6 +15,7 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
       placeholder="Search in wishlist..."
       ariaLabel="Search in wishlist"
       [(query)]="searchQuery"
+      (searchSubmit)="onSearch()"
     />
 
     @if (isLoading()) {
@@ -33,7 +34,7 @@ import { WishlistFavoritesService } from '../../services/wishlist-favorites.serv
         [canLoadMore]="hasMore()"
         [isLoadingMore]="isLoadingMore()"
         (loadMore)="loadMore()"
-        emptyMessage="Your wishlist is empty. Add games you want to play later!"
+        [emptyMessage]="searchQuery().trim() ? 'No wishlist games match your search.' : 'Your wishlist is empty. Add games you want to play later!'"
       >
       </app-grid-component>
     }
@@ -69,6 +70,10 @@ export class WishlistPageComponent implements OnInit {
     });
   }
 
+  onSearch(): void {
+    this.loadWishlist();
+  }
+
   loadWishlist(): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.isLoading.set(false);
@@ -82,8 +87,12 @@ export class WishlistPageComponent implements OnInit {
 
   private fetchPage(page: number): void {
     this.isLoadingMore.set(page > 1);
+    const name = this.searchQuery().trim();
+    const request$ = name
+      ? this.wishlistFavoritesService.getWishlist(page, 24, name)
+      : this.wishlistFavoritesService.getWishlist(page, 24);
 
-    this.wishlistFavoritesService.getWishlist(page, 24).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         const mappedGames =
           response?.items?.map((g) => this.wishlistFavoritesService.toGridProps(g)) ?? [];

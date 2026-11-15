@@ -241,7 +241,8 @@ export class FriendListsPage implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
 
     const id = this.friendId();
-    if (!Number.isInteger(id) || id <= 0) {
+    const targetUsername = this.username().trim();
+    if (!Number.isInteger(id) || id <= 0 || !targetUsername) {
       this.isLoading.set(false);
       this.errorMessage.set('This user does not exist.');
       return;
@@ -253,7 +254,7 @@ export class FriendListsPage implements OnInit {
     this.errorMessage.set(null);
     const type = this.selected();
 
-    this.request = this.listsService.getAllGames(type, id).subscribe({
+    this.request = this.listsService.getAllGames(type, targetUsername).subscribe({
       next: (games) => {
         this.games.set(games.map((game) => this.listsService.toGridProps(game)));
         this.isLoading.set(false);

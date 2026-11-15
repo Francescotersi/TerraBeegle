@@ -28,11 +28,19 @@ export class ReviewService {
     return this.http.get<PagedReviewResponse>(`/api/games/${gameId}/reviews`, { params });
   }
 
-  // Reviews written by a user (GET /api/user/{username}/reviews), newest first
-  getUserReviews(username: string, page = 1, pageSize = 10): Observable<PagedReviewResponse> {
-    const params = new HttpParams()
+  // Reviews written by a user (GET /api/user/{username}/reviews)
+  getUserReviews(
+    username: string,
+    page = 1,
+    pageSize = 10,
+    sortBy?: 'date' | 'rating',
+    ascending?: boolean
+  ): Observable<PagedReviewResponse> {
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
+    if (sortBy) params = params.set('sortBy', sortBy);
+    if (ascending !== undefined) params = params.set('ascending', String(ascending));
     return this.http.get<PagedReviewResponse>(`/api/user/${encodeURIComponent(username)}/reviews`, { params });
   }
 

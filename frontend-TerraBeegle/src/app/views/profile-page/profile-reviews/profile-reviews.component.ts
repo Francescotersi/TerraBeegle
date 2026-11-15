@@ -20,39 +20,22 @@ const REVIEW_PREVIEW_LINES = 3;
       <div class="d-flex flex-wrap align-items-center gap-2">
         <select
           class="form-select form-select-sm filter-select"
-          aria-label="Filter by creation date"
-          [value]="dateFilter()"
-          (change)="dateFilter.set($any($event.target).value)"
-        >
-          <option value="all">All dates</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="1y">Last year</option>
-        </select>
-
-        <select
-          class="form-select form-select-sm filter-select"
-          aria-label="Filter by rating"
-          [value]="ratingFilter()"
-          (change)="ratingFilter.set($any($event.target).value)"
-        >
-          <option value="all">All ratings</option>
-          <option value="9-10">9 - 10 ★</option>
-          <option value="7-8">7 - 8 ★</option>
-          <option value="5-6">5 - 6 ★</option>
-          <option value="1-4">1 - 4 ★</option>
-        </select>
-
-        <select
-          class="form-select form-select-sm filter-select"
-          aria-label="Sort reviews"
+          aria-label="Sort reviews by"
           [value]="sortBy()"
-          (change)="sortBy.set($any($event.target).value)"
+          (change)="onSortByChange($any($event.target).value)"
         >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="rating-desc">Highest rating</option>
-          <option value="rating-asc">Lowest rating</option>
+          <option value="date">Creation date</option>
+          <option value="rating">Rating</option>
+        </select>
+
+        <select
+          class="form-select form-select-sm filter-select"
+          aria-label="Sort order"
+          [value]="ascending() ? 'asc' : 'desc'"
+          (change)="onOrderChange($any($event.target).value)"
+        >
+          <option value="desc">{{ sortBy() === 'rating' ? 'Highest first' : 'Newest first' }}</option>
+          <option value="asc">{{ sortBy() === 'rating' ? 'Lowest first' : 'Oldest first' }}</option>
         </select>
       </div>
 
@@ -181,11 +164,10 @@ export class ProfileReviewsComponent implements OnChanges {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly deletingId = signal<number | null>(null);
   protected readonly expandedReviewIds = signal<Record<number, boolean>>({});
-  protected readonly dateFilter = signal<string>('all');
-  protected readonly ratingFilter = signal<string>('all');
-  protected readonly sortBy = signal<string>('newest');
+  protected readonly sortBy = signal<'date' | 'rating'>('date');
+  protected readonly ascending = signal<boolean>(false);
   protected readonly hasActiveFilters = computed(
-    () => this.dateFilter() !== 'all' || this.ratingFilter() !== 'all' || this.sortBy() !== 'newest'
+    () => this.sortBy() !== 'date' || this.ascending() !== false
   );
   protected readonly hasMore = computed(() => this.reviews().length < this.totalCount());
   private page = 1;
@@ -201,10 +183,20 @@ export class ProfileReviewsComponent implements OnChanges {
     this.fetch();
   }
 
+  protected onSortByChange(value: string): void {
+    this.sortBy.set(value === 'rating' ? 'rating' : 'date');
+    this.reload();
+  }
+
+  protected onOrderChange(value: string): void {
+    this.ascending.set(value === 'asc');
+    this.reload();
+  }
+
   protected resetFilters(): void {
-    this.dateFilter.set('all');
-    this.ratingFilter.set('all');
-    this.sortBy.set('newest');
+    this.sortBy.set('date');
+    this.ascending.set(false);
+    this.reload();
   }
 
   protected isLongReview(content: string | null | undefined): boolean {
@@ -265,7 +257,9 @@ export class ProfileReviewsComponent implements OnChanges {
     const version = ++this.requestVersion;
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.reviewService.getUserReviews(this.username(), this.page, PAGE_SIZE).subscribe({
+    this.reviewService
+      .getUserReviews(this.username(), this.page, PAGE_SIZE, this.sortBy(), this.ascending())
+      .subscribe({
       next: (response) => {
         if (version !== this.requestVersion) return;
         this.reviews.update((current) => (this.page === 1 ? response.items : [...current, ...response.items]));
