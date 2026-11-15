@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 import { WishlistFavoritesService } from '../../services/wishlist-favorites.service';
+import { FriendsService } from '../../services/friends.service';
 import { GameCollectionType } from '../../models-services/game.model';
 import { GridComponent, GridComponentProps } from '../grid/grid.component';
 import { SpinnerComponent } from '../../ui/spinner/spinner.component';
@@ -25,7 +26,13 @@ import { SpinnerComponent } from '../../ui/spinner/spinner.component';
 
       <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
         <div class="d-flex align-items-center gap-3 min-w-0">
-          <div class="avatar" aria-hidden="true">{{ initial() }}</div>
+          <div class="avatar" aria-hidden="true">
+            @if (imageProfile(); as image) {
+              <img class="avatar-img" [src]="image" alt="" width="48" height="48" (error)="imageProfile.set(null)" />
+            } @else {
+              {{ initial() }}
+            }
+          </div>
           <div class="min-w-0">
             <h1 class="page-title text-truncate">{{ displayName() }}</h1>
             <p class="page-subtitle">Games your friend loves and wants to play.</p>
@@ -97,6 +104,13 @@ import { SpinnerComponent } from '../../ui/spinner/spinner.component';
       color: var(--tb-accent);
       font-size: 1.2rem;
       font-weight: 800;
+      overflow: hidden;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .page-title {
       margin: 0;
@@ -180,6 +194,10 @@ export class FriendListsPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   private readonly friendId = signal(0);
   private readonly username = signal('');
+  // Profile image of the friend (the link only has the id and the username), null = the initial is shown
+  protected readonly imageProfile = signal<string | null>(null);
+  private readonly friendsService = inject(FriendsService);
+  private profileRequest: Subscription | null = null;
   private request: Subscription | null = null;
 
   protected readonly displayName = computed(() => (this.username() ? `@${this.username()}` : 'Your friend'));
@@ -192,7 +210,22 @@ export class FriendListsPage implements OnInit {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.friendId.set(Number(params.get('id')));
       this.username.set(this.route.snapshot.queryParamMap.get('username') ?? '');
+      this.loadProfileImage();
       this.load();
+    });
+  }
+
+  // GET /api/users/{username}: the public profile, only for its image
+  private loadProfileImage(): void {
+    this.profileRequest?.unsubscribe();
+    this.imageProfile.set(null);
+    if (!isPlatformBrowser(this.platformId) || !this.username()) return;
+
+    const friendId = this.friendId();
+    this.profileRequest = this.friendsService.getUserByUsername(this.username()).subscribe({
+      // The id check: the username in the URL must belong to the friend of this page
+      next: (user) => this.imageProfile.set(user.id === friendId ? user.imageProfile || null : null),
+      error: () => this.imageProfile.set(null), // no image: the initial stays
     });
   }
 
