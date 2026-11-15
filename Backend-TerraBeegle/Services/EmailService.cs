@@ -7,6 +7,7 @@ namespace Backend_TerraBeegle.Services;
 // sends the emails through the SMTP server from the smtp settings (gmail with an app password)
 public class EmailService(IConfiguration config) : IEmailService
 {
+    // Sends an email through the SMTP server
     public async Task SendAsync(string to, string subject, string body)
     {
         var message = new MimeMessage();

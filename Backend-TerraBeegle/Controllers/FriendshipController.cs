@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Backend_TerraBeegle.Enums;
 using System.Linq.Expressions;
+using Backend_TerraBeegle.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using static Backend_TerraBeegle.Utils;
 
 using Npgsql;
 using Mapster;
@@ -14,17 +17,41 @@ namespace Backend_TerraBeegle.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/users/{userId:long}/friendship")]
+[Route("api/users/friendship")]
 public class FriendshipController(AppDbContext db) : ControllerBase
 {
-    // GET api/users/{userId}/friendship?search=friends|sent|received (without search => friends)
-    [HttpGet]
-    public async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships(long userId, [FromQuery] PaginationDTO pagination, [FromQuery] string search = "friends")
-    {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+    // Three list endpoints: /friends, /received and /sent
+    // Lists accepted friends
+    [HttpGet("friends")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetFriends([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "friends");
 
-        Expression<Func<Friendship, bool>>? filter = search.ToLowerInvariant() switch
+    // Lists pending requests received
+    [HttpGet("received")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetReceivedFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "received");
+
+    // Lists pending requests sent
+    [HttpGet("sent")]
+    public Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> 
+    GetSentFriendships([FromQuery] PaginationDTO pagination) => GetFriendships(pagination, "sent");
+
+    // Shared logic: lists friendships of one kind, paginated
+    private async Task<ActionResult<PagedResponseDTO<FriendshipResponseDTO>>> GetFriendships([FromQuery] PaginationDTO pagination, string search)
+    {
+        var userId = GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
+
+        Expression<Func<Friendship, bool>>? filter = search switch
         {
             "friends" => f => (f.User1Id == userId || f.User2Id == userId)
                 && f.Status == FriendshipStatus.Accepted,
@@ -36,7 +63,7 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         };
 
         if (filter is null)
-            return BadRequest("Invalid query parameter. Allowed values are 'friends', 'sent', or 'received'.");
+            return BadRequest("Invalid search parameter. Allowed values are: friends, sent, received.");
         
         var totalCount = await db.Friendships.CountAsync(filter);
         var friendships = new List<FriendshipResponseDTO>();
@@ -44,47 +71,70 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         if (totalCount != 0) {
             friendships = await db.Friendships
             .Where(filter)
-            .OrderBy(f => userId == f.User1Id ? f.User2Id : f.User1Id) // Order by the other user's ID
+            .OrderBy(f => f.User1Id == userId ? f.User2.Username : f.User1.Username) // Order by the other user's username
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select( f => new FriendshipResponseDTO 
+            .Select(f => new FriendshipResponseDTO
             {
                 Id = f.Id,
                 SenderId = f.User1Id == f.ReceiverId ? f.User2Id : f.User1Id,
                 ReceiverId = f.ReceiverId,
                 Status = f.Status.ToString(),
-                UpdatedAt = f.UpdatedAt
+                UpdatedAt = f.UpdatedAt,
+
+                // EF translates the navigations to a JOIN with Users, no Include needed
+                User = f.User1Id == userId ? f.User2.Adapt<UserPublicResponseDTO>() : f.User1.Adapt<UserPublicResponseDTO>()
             })
             .ToListAsync();
         }
 
-        return Ok(Utils.CreatePagedResponse(
+        return Ok(CreatePagedResponse(
             friendships, 
             totalCount, 
             pagination, 
-            page => Url.Action(nameof(GetFriendships), new { userId, search, Page = page, pagination.PageSize })
+            // GetFriendships is private (not an endpoint), so Url.Action(nameof(GetFriendships)) gave null links:
+            // point to the public endpoint of this list instead
+            page => Url.Action(search switch
+            {
+                "friends" => nameof(GetFriends),
+                "received" => nameof(GetReceivedFriendships),
+                _ => nameof(GetSentFriendships)
+            }, new { Page = page, pagination.PageSize })
         ));
     }
 
+    // Sends a friend request
     [HttpPost]
-    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(long userId, FriendshipRequestDTO dto)
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    public async Task<ActionResult<FriendshipResponseDTO>> CreateFriendship(FriendshipCreateDTO dto)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         if (dto.SenderId != userId)
             return BadRequest("SenderId must match the authenticated user's ID.");
 
-        if (dto.SenderId == dto.ReceiverId)
+        if (userId == dto.ReceiverId)
             return BadRequest("Cannot create friendship with oneself.");
 
         var senderExists = await db.Users.AnyAsync(u => u.Id == dto.SenderId);
-        var receiverExists = await db.Users.AnyAsync(u => u.Id == dto.ReceiverId);
+        // Loaded (not only checked), because the response contains the receiver's username and image
+        var receiver = await db.Users.FindAsync(dto.ReceiverId);
 
         if (!senderExists)
             return NotFound("Sender user not found.");
 
-        if (!receiverExists)
+        // An unverified account is hidden from the other users (it cannot log in to answer), so it is "not found"
+        if (receiver is null || !receiver.EmailVerified)
             return NotFound("Receiver user not found.");
 
         var User1Id = Math.Min(dto.SenderId, dto.ReceiverId);
@@ -122,27 +172,56 @@ public class FriendshipController(AppDbContext db) : ControllerBase
         {
             return Conflict("Cannot create friendship due to database constraints.");
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two requests at the same time between the same users: the unique (User1Id, User2Id) index stopped the second one
+            return Conflict("Friendship already exists.");
+        }
 
-        var createdFriendship = friendship.Adapt<Friendship, FriendshipResponseDTO>();
-        createdFriendship.SenderId = dto.SenderId;
+        var createdFriendship = new FriendshipResponseDTO
+        {
+            Id = friendship.Id,
+            SenderId = dto.SenderId,
+            ReceiverId = dto.ReceiverId,
+            Status = friendship.Status.ToString(),
+            UpdatedAt = friendship.UpdatedAt
+        };
 
-        return CreatedAtAction(nameof(GetFriendships), new { userId, search = "sent" }, createdFriendship);
+        return CreatedAtAction(nameof(GetSentFriendships), null, createdFriendship);
     }
 
+    // Accepts or rejects a friend request
     [HttpPatch]
-    public async Task<ActionResult<FriendshipDTO>> UpdateFriendship(long userId, FriendshipDTO dto)
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    public async Task<ActionResult<FriendshipResponseDTO>> UpdateFriendship(FriendshipUpdateDTO dto)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         if (dto.Status != FriendshipStatus.Accepted && dto.Status != FriendshipStatus.Rejected)
             return BadRequest("Invalid status. Only 'Accepted' or 'Rejected' are allowed.");
 
-        var friendship = await db.Friendships.FindAsync(dto.Id);
+        // Users included: the response contains the other user (FindAsync left User1 / User2 null)
+        var friendship = await db.Friendships
+            .Include(f => f.User1)
+            .Include(f => f.User2)
+            .FirstOrDefaultAsync(f => f.Id == dto.Id);
+        var user1Id = Math.Min(dto.SenderId, dto.ReceiverId);
+        var user2Id = Math.Max(dto.SenderId, dto.ReceiverId);
+
         if (friendship is null)
             return NotFound("Friendship not found.");
 
-        if (friendship.User1Id != userId && friendship.User2Id != userId)
+        if (friendship.User1Id != user1Id || friendship.User2Id != user2Id)
             // Forbid("...") expects an authentication scheme name, not a message, so StatusCode(403, ...) is used
             return StatusCode(StatusCodes.Status403Forbidden, "Only the users involved in the friendship can update it.");
 
@@ -165,14 +244,32 @@ public class FriendshipController(AppDbContext db) : ControllerBase
             return Conflict("Cannot update friendship due to database constraints.");
         }
 
-        return Ok(friendship.Adapt<FriendshipDTO>());
+        return Ok(new FriendshipResponseDTO {
+            Id = friendship.Id,
+            SenderId = friendship.User1Id == friendship.ReceiverId ? friendship.User2Id : friendship.User1Id,
+            ReceiverId = friendship.ReceiverId,
+            Status = friendship.Status.ToString(),
+            UpdatedAt = friendship.UpdatedAt,
+            User = friendship.User1Id == userId ? friendship.User2.Adapt<UserPublicResponseDTO>() : friendship.User1.Adapt<UserPublicResponseDTO>()
+        });
     }
 
+    // Removes a friend or cancels a sent request
     [HttpDelete("{id:long}")]
-    public async Task<ActionResult> DeleteFriendship(long userId, long id)
+    [EnableRateLimiting(RateLimitPolicies.UserWrite)]
+    public async Task<ActionResult> DeleteFriendship(long id)
     {
-        if (!Utils.IsCurrentUser(User, userId))
-            return Forbid();
+        var userId = GetCurrentUserId(User);
+        if (userId is null)
+        {
+            return Unauthorized("User ID not found in token.");
+        }
+
+        var userExists = await db.Users.AnyAsync(u => u.Id == userId && u.EmailVerified);
+        if (!userExists)
+        {
+            return NotFound("User not found.");
+        }
         
         var friendship = await db.Friendships.FindAsync(id);
         if (friendship is null)

@@ -2,69 +2,68 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class GameResponseDTO
+public record GameCardDTO
 {
-    public int RawgGameId { get; set; }
-    public string Name { get; set; } = null!;
-    public string NameOriginal { get; set; } = null!;
-    public string Slug { get; set; } = null!;
-    public string Description { get; set; } = null!;
-    public string? BackgroundImage { get; set; }
-    public DateOnly? ReleaseDate { get; set; }
-    public bool Tba { get; set; }
-    public string Website { get; set; } = null!;
-    public double? Rating { get; set; }
-    public int? Metacritic { get; set; }
-    public string? Developer { get; set; }
-    public string? Publisher { get; set; }
-    public List<GenreDTO> Genres { get; set; } = [];
-    public List<PlatformDTO> Platforms { get; set; } = [];
+    public long ApiGameId { get; init; }
+    public string Name { get; init; } = null!;
+    public string Slug { get; init; } = null!;
+    public string? Cover { get; init; }
+    public decimal? Rating { get; init; }
+    public int? CriticRating { get; init; }
+    public string? GameType { get; init; }
+    public string? GameStatus { get; init; }
+    public DateOnly? ReleaseDate { get; init; }
+    public List<ApiObjectDTO>? Genres { get; init; } = [];
+    public List<PlatformDTO>? Platforms { get; init; } = [];
+    public List<ApiObjectDTO>? Themes { get; init; } = [];
+    public string? Trailer { get; init; }               // YouTube video id, played on the card hover (null = only the cover)
 }
 
-public class GameCardDTO
+public record GameDetailsDTO
 {
-    public int RawgGameId { get; set; }
-    public string Title { get; set; } = null!;
-    public string? BackgroundImage { get; set; }
-    public double? Rating { get; set; }
-    public DateOnly? ReleaseDate { get; set; }
-    public bool Tba { get; set; }
-    public List<GenreDTO> Genres { get; set; } = [];
-    public List<PlatformDTO> Platforms { get; set; } = [];
-    //public List<ParentPlatformDTO> ParentPlatforms { get; set; } = [];
-}
-
-public class GameSearchDTO
-{
-    [Range(1, 1000000)]
-    public int? Page { get; set; } = 1;
-
-    [Range(1, 40)]
-    public int? PageSize { get; set; } = 20;
-    public bool SearchPrecise { get; set; } = false;
-    public bool SearchExact { get; set; } = false;
-
-    [StringLength(12)]
-    [RegularExpression(@"^(?i:name|released|added|created|updated|rating|metacritic)$", 
-        ErrorMessage = "Invalid sort parameter. Allowed values are 'name', 'released', 'added', 'created', 'updated', 'rating', or 'metacritic'.")]
-    public string? SortBy { get; set; }
-    public bool Ascending { get; set; } = true;
-
-    public string? Title { get; set; }
-    public string? ParentPlatforms { get; set; }
-    public string? Platforms { get; set; }
-    public string? Stores { get; set; }
-    public string? Developers { get; set; }
-    public string? Publishers { get; set; }
-    public string? Creators { get; set; }
-    public string? Genres { get; set; }
-    public string? Tags { get; set; }
-    public string? ReleaseDate { get; set; }
-    public string? Updated { get; set; }
-    public int? PlatformsCount { get; set; }
-    public string? Metacritic { get; set; }
-    public bool? ExcludeAdditions { get; set; }
-    public bool? ExcludeParents { get; set; }
-    public bool? ExcludeGameSeries { get; set; }
-    public string? ExcludeStores { get; set; }
+    public long ApiGameId { get; init; }
+    public string Name { get; init; } = null!;
+    public string? PegiRating { get; init; }
+    public IEnumerable<string>? PegiRatingDescription { get; init; }
+    public int? CriticRating { get; init; }
+    public int? CriticRatingCount { get; init; }
+    public IEnumerable<string>? Artworks { get; init; }
+    public string? Cover { get; init; }
+    public DateOnly? ReleaseDate { get; init; }
+    public IEnumerable<ApiObjectDTO>? Franchises { get; init; }
+    public IEnumerable<ApiObjectDTO>? GameModes { get; init; }
+    public string? GameStatus { get; init; }
+    public IEnumerable<ApiObjectDTO>? Genres { get; init; }
+    public List<CompanyDTO>? Developers { get; init; }
+    public List<CompanyDTO>? Publishers { get; init; }
+    public IEnumerable<ApiObjectDTO>? Keywords { get; init; }
+    public IEnumerable<PlatformDTO>? Platforms { get; init; }
+    public IEnumerable<ApiObjectDTO>? Perspectives { get; init; }
+    public decimal? Rating { get; init; }
+    public int? RatingCount { get; init; }
+    public IEnumerable<ReleaseDateDTO>? ReleaseDates { get; init; }
+    public IEnumerable<string>? Screenshots { get; init; }
+    public string Slug { get; init; } = null!;
+    public string? Summary { get; init; } = null!;
+    public string? Storyline { get; init; } = null!;
+    public IEnumerable<ApiObjectDTO>? Themes { get; init; }
+    public IEnumerable<VideoDTO>? Videos { get; init; }
+    public string? OfficialWebsite { get; init; }
+    public IEnumerable<WebsiteDTO>? Websites { get; init; }
+    public IEnumerable<WebsiteDTO>? Stores { get; init; }
+    public IEnumerable<LanguageSupportDTO>? LanguageSupports { get; init; }
+    public IEnumerable<SerieDTO>? Series { get; init; }
+    public string? GameType { get; init; }
+    public IEnumerable<GameCardDTO>? Bundles { get; init; }
+    public IEnumerable<GameCardDTO>? Dlcs { get; init; }
+    public IEnumerable<GameCardDTO>? ExpandedGames { get; init; }
+    public IEnumerable<GameCardDTO>? Expansions { get; init; }
+    public IEnumerable<GameCardDTO>? Forks { get; init; }
+    public GameCardDTO? ParentGame { get; init; }
+    public IEnumerable<GameCardDTO>? Ports { get; init; }
+    public IEnumerable<GameCardDTO>? SimilarGames { get; init; }
+    public IEnumerable<GameCardDTO>? StandaloneExpansions { get; init; }
+    public IEnumerable<GameCardDTO>? Remakes { get; init; }
+    public IEnumerable<GameCardDTO>? Remasters { get; init; }
+    public GameCardDTO? VersionParent { get; init; }
 }

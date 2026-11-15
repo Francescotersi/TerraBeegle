@@ -1,0 +1,182 @@
+import { Injectable , inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { Observable, tap } from 'rxjs';
+
+import { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload} from '../models-services/user.model';
+
+export type { User, RegisterPayload, LoginPayload, AuthResponse, TwoFactorLoginPayload, OtpContext, UpdateUserPayload, UpdateEmailPayload, ConfirmEmailPayload, UpdatePasswordPayload, ForgotPasswordPayload } from '../models-services/user.model';
+
+const TOKEN_KEY = 'tb_token';
+const USER_KEY = 'tb_user';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  readonly currentUser = signal<User | null>(this.getStoredUser());
+  readonly isLoggedIn = computed(() => !!this.currentUser());
+  readonly pendingOtpContext = signal<OtpContext | null>(null);
+
+  setOtpContext(context: OtpContext): void {
+    this.pendingOtpContext.set(context);
+  }
+
+  clearOtpContext(): void {
+    this.pendingOtpContext.set(null);
+  }
+
+  register(data: RegisterPayload): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/auth/register', data);
+  }
+
+  login(data: LoginPayload): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/auth/login', data).pipe(
+      tap((response) => {
+        if (response.token && response.user) {
+          this.saveSession(response.token, response.user);
+        }
+      })
+    );
+  }
+
+  loginTwoFactor(data: TwoFactorLoginPayload): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/auth/login/2fa', data).pipe(
+      tap((response) => {
+        if (response.token && response.user) {
+          this.saveSession(response.token, response.user);
+        }
+      })
+    );
+  }
+
+  resendTwoFactorCode(challengeToken: string): Observable<string> {
+    return this.http.post('/api/auth/login/2fa/resend', { challengeToken }, { responseType: 'text' });
+  }
+
+  resendEmail(email: string): Observable<string> {
+    return this.http.post('/api/auth/resend-email', { email }, { responseType: 'text' });
+  }
+
+  logout(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+    this.currentUser.set(null);
+    this.router.navigate(['/login']);
+  }
+
+  // Returns the JWT of the logged-in user
+  getToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(TOKEN_KEY);
+    }
+    return null;
+  }
+
+  private saveSession(token: string, user: User): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
+    this.currentUser.set(user);
+  }
+
+  private getStoredUser(): User | null {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(USER_KEY);
+      if (stored) {
+        try {
+          return JSON.parse(stored) as User;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  enableTwoFactor(password: string): Observable<string> {
+    return this.http.post('/api/users/2fa/enable', { password }, { responseType: 'text' }).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updatedUser: User = { ...user, twoFactorEnabled: true };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          }
+          this.currentUser.set(updatedUser);
+        }
+      })
+    );
+  }
+
+  disableTwoFactor(password: string): Observable<string> {
+    return this.http.post('/api/users/2fa/disable', { password }, { responseType: 'text' }).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updatedUser: User = { ...user, twoFactorEnabled: false };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          }
+          this.currentUser.set(updatedUser);
+        }
+      })
+    );
+  }
+
+  forgotPasswordRequest(email: string): Observable<string> {
+    return this.http.post(
+      '/api/auth/forgot-password-request',
+      { email: email.trim().toLowerCase() },
+      { responseType: 'text' }
+    );
+  }
+
+  forgotPassword(payload: ForgotPasswordPayload): Observable<string> {
+    return this.http.patch(
+      '/api/auth/forgot-password',
+      payload,
+      {responseType: 'text'},
+    )
+  }
+
+  updateUser(data: UpdateUserPayload): Observable<User> {
+    return this.http.patch<User>('/api/users', data).pipe(
+      tap((updateUser) => {
+        if(typeof window !== 'undefined'){
+          localStorage.setItem(USER_KEY, JSON.stringify(updateUser));
+        }
+
+        this.currentUser.set(updateUser);
+      })
+    )
+  }
+
+  changeEmail(data: UpdateEmailPayload): Observable<string> {
+    return this.http.patch('/api/users/email', data, { responseType: 'text' });
+  }
+
+  confirmEmail(data: ConfirmEmailPayload, newEmail: string): Observable<string> {
+    return this.http.post('/api/users/email/confirm', data, { responseType: 'text' }).pipe(
+      tap(() => {
+        const user = this.currentUser();
+        if (user) {
+          const updatedUser: User = { ...user, email: newEmail };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          }
+          this.currentUser.set(updatedUser);
+        }
+      })
+    );
+  }
+
+  changePassword(data: UpdatePasswordPayload): Observable<string> {
+    return this.http.patch('/api/users/password', data, { responseType: 'text' });
+  }
+}

@@ -2,27 +2,26 @@ using Backend_TerraBeegle.Enums;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class FriendshipDTO
+public record FriendshipCreateDTO
 {
-    public long Id { get; set; }
-    public long User1Id { get; set; }
-    public long User2Id { get; set; }
-    public long ReceiverId { get; set; }
-    public FriendshipStatus Status { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public long SenderId { get; init; }
+    public long ReceiverId { get; init; }
 }
 
-public class FriendshipRequestDTO
+public record FriendshipUpdateDTO
 {
-    public long SenderId { get; set; }
-    public long ReceiverId { get; set; }
+    public long Id { get; init; }
+    public long SenderId { get; init; }
+    public long ReceiverId { get; init; }
+    public FriendshipStatus Status { get; init; }
 }
 
-public class FriendshipResponseDTO
+public record FriendshipResponseDTO
 {
-    public long Id { get; set; }
-    public long SenderId { get; set; }
-    public long ReceiverId { get; set; }
-    public string Status { get; set; } = null!;
-    public DateTime UpdatedAt { get; set; }
+    public long Id { get; init; }
+    public long SenderId { get; init; }
+    public long ReceiverId { get; init; }
+    public string Status { get; init; } = null!;
+    public DateTime UpdatedAt { get; init; }
+    public UserPublicResponseDTO User { get; init; } = null!;  // The user not the logged in: the friend, the receiver or the sender
 }

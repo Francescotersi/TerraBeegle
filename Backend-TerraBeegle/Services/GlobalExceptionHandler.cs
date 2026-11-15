@@ -6,6 +6,7 @@ namespace Backend_TerraBeegle.Services;
 // Catches every unhandled exception: the full error goes to the log, the client gets a clean ProblemDetails
 public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
+    // Logs the error and returns a clean 500 response
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)

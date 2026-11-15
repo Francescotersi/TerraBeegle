@@ -2,22 +2,22 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend_TerraBeegle.DTOS;
 
-public class PaginationDTO
+public record PaginationDTO
 {
     [Range(1, 10000)]
-    public int Page { get; set; } = 1;
+    public int Page { get; init; } = 1;
     
-    [Range(1, 50)]
-    public int PageSize { get; set; } = 20;
+    [Range(1, 500)]
+    public int PageSize { get; init; } = 24;
 }
 
-public class PagedResponseDTO<T>
+public record PagedResponseDTO<T>
 {
-    public List<T> Items { get; set; } = [];
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalCount { get; set; }
-    public int TotalPages { get; set; }
-    public string? PreviousPageUrl { get; set; }
-    public string? NextPageUrl { get; set; }
+    public List<T> Items { get; init; } = [];
+    public int Page { get; init; }
+    public int PageSize { get; init; }
+    public int TotalCount { get; init; }
+    public int TotalPages { get; init; }
+    public string? PreviousPageUrl { get; init; }
+    public string? NextPageUrl { get; init; }
 }

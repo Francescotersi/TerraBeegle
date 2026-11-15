@@ -5,12 +5,10 @@ using Backend_TerraBeegle.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Backend_TerraBeegle.Services;
+using Backend_TerraBeegle.Enums;
 using Microsoft.AspNetCore.RateLimiting;
+using Backend_TerraBeegle.RateLimiting;
 using Npgsql;
-using System.Security.Claims;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Cryptography;
 
 using Mapster;
 
@@ -19,12 +17,13 @@ namespace Backend_TerraBeegle.Controllers;
 [ApiController]
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHasher,
-                            ITokenService tokenService, IEmailVerificationService emailVerificationService, 
-                            ILogger<AuthController> logger) : ControllerBase
+    ITokenService tokenService, IEmailVerificationService emailVerificationService, 
+    ITwoFactorService twoFactorService, ILogger<AuthController> logger) : ControllerBase
 {
-    [EnableRateLimiting("register")]
+    // Creates an account and emails a verification code
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
+    public async Task<ActionResult<UserResponseDTO>> Register(RegisterDTO dto)
     {
         // Checking if the email or username already exists
         var email = dto.Email.Trim().ToLowerInvariant();
@@ -37,11 +36,12 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
             return Conflict("Email already exists.");
         if(UsernameExists)
             return Conflict("Username already exists.");
+
+        var name = dto.Name.Trim();
+        var familyName = dto.FamilyName.Trim();
         
         // Creating the user with a hashed password
         var user = dto.Adapt<User>();
-        user.Email = email;
-        user.Username = username;
         user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
         
         // Adding the user to the database and saving changes
@@ -60,96 +60,173 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
                 : Conflict("Username already exists.");
         }
 
-        string token = tokenService.CreateToken(user);
-
         try
         {
-            await emailVerificationService.SendCodeAsync(user.Email, code);
+            await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.Register);
         }
         catch(Exception ex)
         {
             logger.LogError(ex, "Error sending verification code to {Email}", user.Email);
         }
         
-        return CreatedAtAction(nameof(UserController.GetById), "User", new { id = user.Id },  new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        return CreatedAtAction(nameof(UserController.GetByUsername), "User", new { username = user.Username }, user.Adapt<UserResponseDTO>());
     }
     
-    [EnableRateLimiting("login")]
+    // Logs in; returns a JWT, or a 2FA challenge if 2FA is on
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {
         var email = dto.EmailOrUsername.Trim().ToLowerInvariant();
         var username = dto.EmailOrUsername.Trim();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
-        if(user == null)
-            return Unauthorized("Invalid credentials.");
 
+        if (user is null || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
+            return Unauthorized("Invalid credentials.");
+        
+        // The code is checked only after the password, so only the owner of the account can use up its attempts
         if (!user.EmailVerified)
-            return Unauthorized("Account not verified. Please check your email for the verification token.");
+        {
+            if (dto.Code is null)
+                return StatusCode(StatusCodes.Status403Forbidden, "Email not verified. Please enter the code sent to your email.");
 
-        if (passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid credentials.");
+            var result = emailVerificationService.VerifyCode(user, dto.Code);
 
-        string token = tokenService.CreateToken(user);
-        return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+            // Saved in every case: a wrong code increases the attempts, a correct one marks the email as verified
+            await db.SaveChangesAsync();
+
+            if (result != CodeVerificationResult.Valid)
+            {
+                return result switch
+                {
+                    CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+                    CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+                    CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+                    _ => throw new InvalidOperationException("Unexpected code verification result.")
+                };
+            }
+        }
+
+        if (!user.TwoFactorEnabled)
+        {
+	        string token = tokenService.CreateToken(user);
+	        return Ok(new AuthResponseDTO { Token = token, User = user.Adapt<UserResponseDTO>() });
+        }
+        
+        var (challenge, challengeToken, code) = twoFactorService.CreateChallenge(user);
+
+        if (user.LoginChallenge is null)
+        {
+            db.LoginChallenges.Add(challenge);
+        }
+        user.LoginChallenge = challenge;
+
+        await db.SaveChangesAsync();
+
+        try
+        {
+	        await twoFactorService.SendCodeAsync(user.Email, code);
+        }
+        catch (Exception ex)
+        {
+	        logger.LogError(ex, "Failed to send 2FA challenge to {Email}", user.Email);
+        }
+        return Ok(new AuthResponseDTO { Requires2FA = true, ChallengeToken = challengeToken });
     }
 
-	[Authorize]
-	[HttpPost("verify-email")]
-	public async Task<IActionResult> VerifyEmail(VerifyEmailDTO dto)
-	{
-		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-		
-		if(!long.TryParse(sub, out var tokenId))
-			return Unauthorized("Invalid token.");
+    // Finishes a 2FA login with the emailed code and returns a JWT
+    [EnableRateLimiting(RateLimitPolicies.LoginTwoFactor)]
+    [HttpPost("login/2fa")]
+    public async Task<ActionResult<AuthResponseDTO>> LoginTwoFactor(TwoFactorLoginDTO dto)
+    {
+        var tokenHash = twoFactorService.HashToken(dto.ChallengeToken);
+        var challenge = await db.LoginChallenges
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.TokenHash == tokenHash);
 
-		var user = await db.Users.FindAsync(tokenId);
-        if(user is null)
-            return NotFound();
+        if (challenge is null)
+            return Unauthorized("Login expired. Please log in again.");
 
-		if(user.EmailVerified)
-			return Conflict("Already verified.");
+        var result = twoFactorService.VerifyChallenge(challenge, dto.Code);
 
-		if(user.EmailVerificationCodeHash is null || user.EmailVerificationCodeExpiration < DateTime.UtcNow)
-			return BadRequest("The code has expired. Ask for a new one.");
-		
-		if(user.EmailVerificationAttempts >= 5)
-			return BadRequest("Too many attempts. Ask for a new code.");
+        if (result == CodeVerificationResult.Invalid)
+        {
+            await db.SaveChangesAsync();
+            return BadRequest("Invalid code. Please try again.");
+        }
 
-		var hash = emailVerificationService.HashCode(dto.Code);
-		if(CryptographicOperations.FixedTimeEquals(Convert.FromHexString(user.EmailVerificationCodeHash), Convert.FromHexString(hash)))
-		{
-			user.EmailVerified = true;
-			user.EmailVerificationAttempts = 0;
-			user.EmailVerificationCodeHash = null;
-			user.EmailVerificationCodeExpiration = null;
-			await db.SaveChangesAsync();
+        if (result != CodeVerificationResult.Valid)
+        {
+            db.LoginChallenges.Remove(challenge);
+            await db.SaveChangesAsync();
 
-			return Ok();
-		}
+            return Unauthorized(result == CodeVerificationResult.TooManyAttempts
+                ? "Too many attempts. Please log in again."
+                : "Login expired. Please log in again.");
+        }
 
-		user.EmailVerificationAttempts++;
-		await db.SaveChangesAsync();
+        db.LoginChallenges.Remove(challenge);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Unauthorized("Login expired. Please log in again.");
+        }
 
-		return BadRequest("Invalid code.");
-	}
+        string token = tokenService.CreateToken(challenge.User);
+        return Ok(new AuthResponseDTO { Token = token, User = challenge.User.Adapt<UserResponseDTO>() });
+    }
 
-	[Authorize]
-	[EnableRateLimiting("resend-email")]
+    // Sends a new 2FA code for an active login challenge
+    [EnableRateLimiting(RateLimitPolicies.LoginTwoFactorResend)]
+    [HttpPost("login/2fa/resend")]
+    public async Task<IActionResult> ResendTwoFactorCode(TwoFactorResendDTO dto)
+    {
+        var tokenHash = twoFactorService.HashToken(dto.ChallengeToken);
+        var challenge = await db.LoginChallenges
+            .Include(c => c.User)
+            .FirstOrDefaultAsync(c => c.TokenHash == tokenHash);
+
+        if (challenge is null)
+            return Unauthorized("Login expired. Please log in again.");
+
+        if (challenge.TokenExpiration < DateTime.UtcNow)
+        {
+            db.LoginChallenges.Remove(challenge);
+            await db.SaveChangesAsync();
+            return Unauthorized("Login expired. Please log in again.");
+        }
+
+        var code = twoFactorService.RenewCode(challenge);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            await twoFactorService.SendCodeAsync(challenge.User.Email, code);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resending 2FA code to {Email}", challenge.User.Email);
+        }
+
+        return Ok("A new code has been sent to your email.");
+    }
+
+	// Sends a new email verification code
+	[EnableRateLimiting(RateLimitPolicies.ResendEmail)]
 	[HttpPost("resend-email")]
-	public async Task<IActionResult> ResendEmail()
+	public async Task<IActionResult> ResendEmail(SendEmailDTO dto)
 	{
-		var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-		
-		if(!long.TryParse(sub, out var tokenId))
-			return Unauthorized("Invalid token.");
+		// The same answer in every case, so the endpoint cannot be used to find out which emails are registered
+		const string message = "If the account exists and is not verified, a new code has been sent.";
 
-		var user = await db.Users.FindAsync(tokenId);
-        if(user is null)
-            return NotFound();
+		var email = dto.Email.Trim().ToLowerInvariant();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
 
-		if(user.EmailVerified)
-			return Conflict("Already verified.");
+		if(user is null || user.EmailVerified)
+			return Ok(message);
 
 		var code = emailVerificationService.SetNewCode(user);
 
@@ -157,14 +234,79 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> passwordHashe
 
 		try
 		{
-			await emailVerificationService.SendCodeAsync(user.Email, code);
+			await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.ResendVerification);
 		}
 		catch(Exception ex)
 		{
 			logger.LogError(ex, "Error resending verification code to {Email}", user.Email);
-			return StatusCode(StatusCodes.Status503ServiceUnavailable, "Failed to send code. Try again later.");
 		}
 
-		return Ok("The code has been resent.");
+		return Ok(message);
 	}
+
+	// Emails a password reset code
+	[EnableRateLimiting(RateLimitPolicies.ForgotPasswordRequest)]
+	[HttpPost("forgot-password-request")]
+	public async Task<IActionResult> ForgotPasswordRequest(SendEmailDTO dto)
+	{
+		const string message = "If the account exists, a code has been sent to reset the password.";
+
+		var email = dto.Email.Trim().ToLowerInvariant();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+		if(user is null)
+			return Ok(message);
+
+        user.ForgotPasswordRequested = true;
+		user.PendingEmail = null;
+		var code = emailVerificationService.SetNewCode(user);
+
+		await db.SaveChangesAsync();
+
+		try
+		{
+			await emailVerificationService.SendCodeAsync(user.Email, code, EmailCodePurpose.ForgotPassword);
+		}
+		catch(Exception ex)
+		{
+			logger.LogError(ex, "Error sending password reset code to {Email}", user.Email);
+		}
+
+		return Ok(message);
+	}
+
+    // Resets the password using the emailed code
+    [EnableRateLimiting(RateLimitPolicies.ForgotPassword)]
+    [HttpPatch("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDTO dto)
+    {
+        var email = dto.EmailOrUsername.Trim().ToLowerInvariant();
+        var username = dto.EmailOrUsername.Trim();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email || u.Username == username);
+
+        // 400 like a wrong code: an error status (not 200), and the same answer whether the account exists or not
+        if(user is null || !user.ForgotPasswordRequested)
+            return BadRequest("Invalid code.");
+
+        var result = emailVerificationService.VerifyCode(user, dto.Code);
+
+        if(result != CodeVerificationResult.Valid)
+        {
+            await db.SaveChangesAsync();
+
+            return result switch
+            {
+                CodeVerificationResult.Expired => BadRequest("The code has expired. Ask for a new one."),
+                CodeVerificationResult.TooManyAttempts => BadRequest("Too many attempts. Ask for a new code."),
+                CodeVerificationResult.Invalid => BadRequest("Invalid code."),
+                _ => throw new InvalidOperationException("Unexpected code verification result.")
+            };
+        }
+
+        user.ForgotPasswordRequested = false;
+        user.PasswordHash = passwordHasher.HashPassword(user, dto.NewPassword);
+        await db.SaveChangesAsync();
+
+        return Ok("Password has been reset successfully.");
+    }
 }
