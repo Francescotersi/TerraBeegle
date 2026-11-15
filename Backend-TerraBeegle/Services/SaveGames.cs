@@ -125,36 +125,16 @@ public static class SaveGames
         
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74219031)");
         
+        // Only what a placeholder can already have: its cover, and the series it was saved in (a series is saved
+        // with its games, so the game_series rows may exist; not loading them gave "duplicate key PK_game_series").
+        // Everything else of a placeholder is empty, so the new lists below are plain inserts, and a full game is
+        // returned as it is. The old query with ~28 Includes in ONE JOIN multiplied every list
+        // (keywords x images x languages...): for a big game it ran 30 s and timed out (500), and every other
+        // save waited behind the lock
         var game = await db.Games
-            .Include(g => g.PegiDescriptions)
-            .Include(g => g.ReleaseDates)
             .Include(g => g.Images)
-            .Include(g => g.Videos)
-            .Include(g => g.ParentGame)
-            .Include(g => g.VersionParent)
-            .Include(g => g.Bundles)
-            .Include(g => g.DLCs)
-            .Include(g => g.ExpandedGames)
-            .Include(g => g.Expansions)
-            .Include(g => g.Forks)
-            .Include(g => g.Ports)
-            .Include(g => g.SimilarGames)
-            .Include(g => g.StandaloneExpansions)
-            .Include(g => g.Remakes)
-            .Include(g => g.Remasters)
-            .Include(g => g.Franchises)
             .Include(g => g.Series)
-            .Include(g => g.Platforms)
-            .Include(g => g.Genres)
-            .Include(g => g.Themes)
-            .Include(g => g.Keywords)
-            .Include(g => g.GameModes)
-            .Include(g => g.Perspectives)
-            .Include(g => g.LanguageSupports)
-            .Include(g => g.Websites)
-            .Include(g => g.Developers)
-            .Include(g => g.Publishers)
-            .Include(g => g.Reviews)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId);
        
         if (game is { IsPlaceholder: false })

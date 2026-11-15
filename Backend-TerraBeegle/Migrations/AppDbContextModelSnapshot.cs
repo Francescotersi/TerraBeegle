@@ -538,8 +538,8 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -1007,10 +1007,9 @@ namespace Backend_TerraBeegle.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Url")
-                        .IsUnique();
+                    b.HasIndex("GameId", "Type");
 
-                    b.HasIndex("GameId", "Type")
+                    b.HasIndex("GameId", "Url")
                         .IsUnique();
 
                     b.ToTable("Websites");

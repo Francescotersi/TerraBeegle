@@ -67,6 +67,9 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             filters.Add($"{field}<={(convertToUnix ? YearToUnixTimestamp((int)MaxVal, false) : MaxVal)}");
     }
 
+    // 7.5 out of 10 -> 75 out of 100
+    static long? ToIgdbRating(decimal? rating) => rating is {} r ? (long)Math.Round(r * 10) : null;
+
     static void AddPagination(int page, int pageSize, List<string> paginationQuery)
     {
         if (page > 1)
@@ -129,14 +132,13 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
         AddFilterRange("first_release_date", search.ReleaseYearMin, search.ReleaseYearMax, filters, true);
 
         // The user rating comes out of 10, IGDB stores it out of 100
-        // 0 = no minimum (a search by name must find games without votes or critic reviews too)
-        AddFilterRange("rating", search.RatingMin, search.RatingMax, filters, false);
-        if (search.RatingMin > 0)
-            AddFilterRange("rating_count", search.MinRatingCount, null, filters, false);
-
+        AddFilterRange("rating", ToIgdbRating(search.RatingMin), ToIgdbRating(search.RatingMax), filters, false);
         AddFilterRange("aggregated_rating", search.CriticRatingMin, search.CriticRatingMax, filters, false);
-        if (search.CriticRatingMin > 0)
-            AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount, null, filters, false);
+
+        // Minimum number of votes, always applied when > 0: the home page sends 300 so "top rated" is not led by
+        // unknown games rated 100 by 2 people. 0 = no minimum (a search by name must find games without votes too)
+        AddFilterRange("rating_count", search.MinRatingCount > 0 ? search.MinRatingCount : null, null, filters, false);
+        AddFilterRange("aggregated_rating_count", search.MinCriticRatingCount > 0 ? search.MinCriticRatingCount : null, null, filters, false);
 
         GameSearchResponseDTO? result;
         try
@@ -173,19 +175,26 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ThenBy(g => g.Slug) // Secondary ordering by slug to ensure consistent ordering for games with the same name
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .ProjectToType<GameDetailsDTO>()
+            // ProjectToType<GameDetailsDTO>() no longer matched the model (cover in Images, DB ids instead of IGDB ids,
+            // rating out of 10): load the main data and use the same mapping as GET /api/games/{id}
+            .Include(g => g.Images)
+            .Include(g => g.Genres)
+            .Include(g => g.Themes)
+            .Include(g => g.Platforms!).ThenInclude(p => p.PlatformLogo)
+            .AsSplitQuery()
+            .AsNoTracking()
             .ToListAsync();
 
         return Ok(CreatePagedResponse(
-            games,
-            await db.Games.CountAsync(),
+            games.Select(DBToGameDTO.DBToGameDetailsDTO).ToList(),
+            await db.Games.CountAsync(g => !g.IsPlaceholder || IncludePlaceholders), // same filter as the page, otherwise TotalPages counted the hidden placeholders
             pagination,
             page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));
     }
 
     [HttpGet("coming-soon")]
-    public async Task<ActionResult<PagedResponseDTO<GameDetailsDTO>>> GetComingSoon([FromQuery] PaginationDTO pagination, [FromQuery] GameComingSoonSearchDTO search)
+    public async Task<ActionResult<PagedResponseDTO<GameCardDTO>>> GetComingSoon([FromQuery] PaginationDTO pagination, [FromQuery] GameComingSoonSearchDTO search)
     {
         List<string> filters = [];
         List<string> paginationQuery = [];

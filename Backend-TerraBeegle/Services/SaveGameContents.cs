@@ -166,6 +166,8 @@ public static class SaveGameContents
         if (releaseDates?.Values is null)
             return [];
 
+        // IGDB has one release date per REGION (EU, NA, JP...) for the same platform and status, but the table allows
+        // one row per (game, platform, status): keep the first release, otherwise saving the game failed with 500
         return [.. releaseDates.Values
             .Where(rd => rd.Platform?.Value?.Name is not null)
             .Select(rd => new Models.ReleaseDate
@@ -173,7 +175,9 @@ public static class SaveGameContents
                 Date = rd.Date.HasValue ? DateOnly.FromDateTime(rd.Date.Value.UtcDateTime) : null,
                 Platform = rd.Platform.Value.Name,
                 Status = rd.Status?.Value?.Name ?? "Unknown"
-            })];
+            })
+            .GroupBy(rd => (rd.Platform, rd.Status))
+            .Select(group => group.OrderBy(rd => rd.Date ?? DateOnly.MaxValue).First())];
     }
 
     public static List<Models.LanguageSupport> SaveLanguageSupports(IdentitiesOrValues<IGDB.Models.LanguageSupport>? supports)

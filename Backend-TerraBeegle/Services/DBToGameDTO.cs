@@ -9,13 +9,25 @@ namespace Backend_TerraBeegle.Services;
 public static class DBToGameDTO
 {
    
-    private static List<ApiObjectDTO>? MapApiObjectList<T>(IEnumerable<T>? items) where T : class
+    // Adapt<ApiObjectDTO>() copied our DB Id into ApiObjectDTO.Id; the frontend needs the IGDB id (same as the IGDB path),
+    // so every type says which property holds its IGDB id
+    private static List<ApiObjectDTO>? MapApiObjectList<T>(IEnumerable<T>? items, Func<T, long> apiId, Func<T, string> name, Func<T, string> slug)
     {
         if (items is null)
             return null;
 
-        return [.. items.Select(apiObject => apiObject.Adapt<ApiObjectDTO>())];
+        return [.. items.Select(item => new ApiObjectDTO { Id = apiId(item), Name = name(item), Slug = slug(item) })];
     }
+
+    private static List<ApiObjectDTO>? MapGenres(IEnumerable<Genre>? items) => MapApiObjectList(items, x => x.ApiGenreId, x => x.Name, x => x.Slug);
+    private static List<ApiObjectDTO>? MapThemes(IEnumerable<Theme>? items) => MapApiObjectList(items, x => x.ApiThemeId, x => x.Name, x => x.Slug);
+    private static List<ApiObjectDTO>? MapKeywords(IEnumerable<Keyword>? items) => MapApiObjectList(items, x => x.ApiKeywordId, x => x.Name, x => x.Slug);
+    private static List<ApiObjectDTO>? MapGameModes(IEnumerable<GameMode>? items) => MapApiObjectList(items, x => x.ApiGameModeId, x => x.Name, x => x.Slug);
+    private static List<ApiObjectDTO>? MapPerspectives(IEnumerable<Perspective>? items) => MapApiObjectList(items, x => x.ApiPerspectiveId, x => x.Name, x => x.Slug);
+    private static List<ApiObjectDTO>? MapFranchises(IEnumerable<Franchise>? items) => MapApiObjectList(items, x => x.ApiFranchiseId, x => x.Name, x => x.Slug);
+
+    // The DB stores the user rating out of 10 (so user reviews 1-10 can be averaged in); the API answers out of 100 like IGDB
+    private static decimal? RatingOutOf100(decimal? rating) => rating * 10;
 
     private static List<PlatformDTO>? MapPlatformList(IEnumerable<Platform>? items)
     {
@@ -24,14 +36,14 @@ public static class DBToGameDTO
 
         return [.. items.Select(p => new PlatformDTO
         {
-            ApiPlatformId = p.Id,
+            ApiPlatformId = p.ApiPlatformId,
             Name = p.Name,
             Slug = p.Slug,
             Abbreviation = p.Abbreviation,
             Logo = IGDBToGameDTO.ImageUrl(p.PlatformLogo?.ApiImageId, ImageSize.LogoMed),
             PlatformFamily = p.PlatformFamily is not null ? new PlatformFamilyDTO
             {
-                ApiPlatformFamilyId = p.PlatformFamily.Id,
+                ApiPlatformFamilyId = p.PlatformFamily.ApiPlatformFamilyId,
                 Name = p.PlatformFamily.Name,
                 Slug = p.PlatformFamily.Slug
             } : null
@@ -52,12 +64,12 @@ public static class DBToGameDTO
         })];
     }
 
-    private static List<string>? MapImageList(IEnumerable<Image>? images, ImageType type)
+    private static List<string>? MapImageList(IEnumerable<Image>? images, ImageType type, ImageSize? size = null)
     {
         if (images is null)
             return null;
 
-        return [.. images.Where(i => i.Type == type).Select(i => IGDBToGameDTO.ImageUrl(i.ApiImageId, ImageSize.HD720)).OfType<string>()];
+        return [.. images.Where(i => i.Type == type).Select(i => IGDBToGameDTO.ImageUrl(i.ApiImageId, size ?? ImageSize.HD720)).OfType<string>()];
     }
 
     public static GameCardDTO DBToGameCardDTO(Game g) => new ()
@@ -65,14 +77,14 @@ public static class DBToGameDTO
         ApiGameId = g.ApiGameId,
         Name = g.Name,
         Slug = g.Slug,
-        Cover = MapImageList(g.Images, ImageType.Cover)?.FirstOrDefault(),
-        Rating = g.Rating,
+        Cover = MapImageList(g.Images, ImageType.Cover, ImageSize.CoverBig)?.FirstOrDefault(),
+        Rating = RatingOutOf100(g.Rating),
         CriticRating = g.AggregatedRating,
         ReleaseDate = g.ReleaseDate,
         GameType = g.GameType,
-        Genres = MapApiObjectList(g.Genres),
+        Genres = MapGenres(g.Genres),
         Platforms = MapPlatformList(g.Platforms),
-        Themes = MapApiObjectList(g.Themes),
+        Themes = MapThemes(g.Themes),
         GameStatus = g.GameStatus,
     };
 
@@ -91,20 +103,20 @@ public static class DBToGameDTO
         Artworks = MapImageList(g.Images, ImageType.Artwork),
         Cover = MapImageList(g.Images, ImageType.Cover)?.FirstOrDefault(),
         ReleaseDate = g.ReleaseDate,
-        Franchises = MapApiObjectList(g.Franchises),
-        GameModes = MapApiObjectList(g.GameModes),
+        Franchises = MapFranchises(g.Franchises),
+        GameModes = MapGameModes(g.GameModes),
         GameStatus = g.GameStatus,
-        Genres = MapApiObjectList(g.Genres),
+        Genres = MapGenres(g.Genres),
         Developers = MapCompanyList(g.Developers),
         Publishers = MapCompanyList(g.Publishers),
-        Keywords = MapApiObjectList(g.Keywords),
+        Keywords = MapKeywords(g.Keywords),
         Platforms = MapPlatformList(g.Platforms),
-        Perspectives = MapApiObjectList(g.Perspectives),
-        Rating = g.Rating,
+        Perspectives = MapPerspectives(g.Perspectives),
+        Rating = RatingOutOf100(g.Rating),
         RatingCount = g.RatingCount,
         ReleaseDates = g.ReleaseDates?.Select(rd => new ReleaseDateDTO
         {
-            Date = rd.Date.Adapt<DateTime?>(),
+            Date = rd.Date?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
             PlatformName = rd.Platform,
             Status = rd.Status
         }).ToList(),
@@ -112,7 +124,7 @@ public static class DBToGameDTO
         Slug = g.Slug,
         Summary = g.Summary,
         Storyline = g.Storyline,
-        Themes = MapApiObjectList(g.Themes),
+        Themes = MapThemes(g.Themes),
         Videos = g.Videos?.Select(v => new VideoDTO
         {
             Name = v.Name,
@@ -128,7 +140,7 @@ public static class DBToGameDTO
         }).ToList(),
         Series = g.Series?.Select(s => new SerieDTO
         {
-            ApiSerieId = s.Id,
+            ApiSerieId = s.ApiSerieId,
             Name = s.Name,
             Slug = s.Slug,
             Games = DBToGameCardDTOList(s.Games) ?? [],

@@ -9,7 +9,8 @@ public class PegiDescriptionConfiguration : IEntityTypeConfiguration<PegiDescrip
 {
     public void Configure(EntityTypeBuilder<PegiDescription> entity)
     {
-        entity.Property(p => p.Description).HasMaxLength(16);
+        // IGDB descriptions are longer than 16 ("In-Game Purchases (Includes Random Items)"): saving GTA V gave 500
+        entity.Property(p => p.Description).HasMaxLength(255);
         entity.HasIndex(p => p.Description).IsUnique();
     }
 }

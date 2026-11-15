@@ -10,7 +10,10 @@ public class WebsiteConfiguration : IEntityTypeConfiguration<Website>
     {
         entity.Property(v => v.Url).HasMaxLength(500);
 
-        entity.HasIndex(v => new { v.GameId, v.Type }).IsUnique();
-        entity.HasIndex(v => v.Url).IsUnique();
+        // A link is unique per game, not in the whole table: different games share links (the studio's Twitter,
+        // the franchise site...) and one game can have several links of the same type. The old unique indexes on
+        // Url and on (GameId, Type) made saving those games fail with 500
+        entity.HasIndex(v => new { v.GameId, v.Url }).IsUnique();
+        entity.HasIndex(v => new { v.GameId, v.Type });
     }
 }

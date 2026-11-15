@@ -148,22 +148,33 @@ export class GridGameActionsService {
     if (this.pending.has(key)) return;
     const userId = this.authService.currentUser()?.id;
     const added = (type === 'wishlist' ? this.wishlistedIds : this.favoritedIds)().has(gameId);
+    const updateLocal = (add: boolean) =>
+      type === 'wishlist' ? this.updateWishlistLocal(gameId, add) : this.updateFavoriteLocal(gameId, add);
     this.pending.add(key);
+
+    // Optimistic update: the heart and the message change right away. The first time a game is added the
+    // backend also downloads it from IGDB and saves it, which can take a few seconds; on error we undo it
+    this.collectionVersions[type]++;
+    updateLocal(!added);
+    this.alertService.showSuccess(added ? `Removed from ${type}.` : `Added to ${type}.`);
+
     const request = added ? this.wishlistService.removeGame(type, gameId) : this.wishlistService.addGame(type, gameId);
     request.subscribe({
       next: () => {
         this.pending.delete(key);
         if (this.authService.currentUser()?.id !== userId) return;
-        this.collectionVersions[type]++;
-        if (type === 'wishlist') this.updateWishlistLocal(gameId, !added);
-        else this.updateFavoriteLocal(gameId, !added);
         this.wishlistService.changes.next(type);
-        this.alertService.showSuccess(added ? `Removed from ${type}.` : `Added to ${type}.`);
       },
       error: () => {
         this.pending.delete(key);
+        const currentUser = this.authService.currentUser();
+        // Undo the optimistic change, also after a logout (but not on the lists of another user who logged in)
+        if (!currentUser || currentUser.id === userId) {
+          this.collectionVersions[type]++;
+          updateLocal(added);
+        }
         // The interceptor already explains expired sessions and redirects to login.
-        if (this.authService.currentUser()?.id !== userId) return;
+        if (currentUser?.id !== userId) return;
         this.alertService.showAlert(`Could not update your ${type}. Please try again.`);
       },
     });
