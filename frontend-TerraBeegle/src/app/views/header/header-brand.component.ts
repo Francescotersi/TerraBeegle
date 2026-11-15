@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   template: `
     <a class="navbar-brand me-0 d-flex align-items-center" routerLink="/" (click)="clicked.emit()">
-      <img src="./Logo.ico" alt="TerraBeegle" class="site-logo" width="40" height="40">
+      <img src="./Logo-header.webp" alt="TerraBeegle" class="site-logo" width="40" height="40">
     </a>
   `,
   styles: `

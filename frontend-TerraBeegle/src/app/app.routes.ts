@@ -1,17 +1,10 @@
 import { Routes } from '@angular/router';
 import { Home } from './views/home/home.component';
-import { LogInUser } from './views/user/log-in-user/log-in-user.component';
-import { RegisterUser } from './views/user/register-user/register-user.component';
-import { OtpComponent } from './views/user/otp/otp.component';
 import { authGuard } from './guards/auth.guard';
-import { ProfilePageComponent } from './views/profile-page/profile-page.component';
-import { FavoritePageComponent } from './views/favorite-page/favorite-page.component';
 import { CatalogPage } from './views/catalog-page/catalog-page.component';
-import { WishlistPageComponent } from './views/wishlist-page/wishlist-page.component';
-import { ForgotPasswordComponent } from './views/user/forgot-password/forgot-password.component';
-import { GameDetailsPage } from './views/game-details-page/game-details-page.component';
-import { FriendListsPage } from './views/friend-lists-page/friend-lists-page.component';
 
+// Home + CatalogPage (the grid) are loaded right away.
+// Every other page is lazy-loaded: its code is downloaded only when you navigate to it.
 export const routes: Routes = [
     {
         path:'',
@@ -23,45 +16,45 @@ export const routes: Routes = [
             },
             {
                 path: 'game/:id',
-                component: GameDetailsPage,
+                loadComponent: () => import('./views/game-details-page/game-details-page.component').then(m => m.GameDetailsPage),
             },
             {
                 path: 'favorites',
-                component: FavoritePageComponent,
+                loadComponent: () => import('./views/favorite-page/favorite-page.component').then(m => m.FavoritePageComponent),
                 canActivate: [authGuard],
             },
             {
                 path: 'wishlist',
-                component: WishlistPageComponent,
+                loadComponent: () => import('./views/wishlist-page/wishlist-page.component').then(m => m.WishlistPageComponent),
                 canActivate: [authGuard],
             },
         ]
     },
     {
         path:'login',
-        component: LogInUser,
+        loadComponent: () => import('./views/user/log-in-user/log-in-user.component').then(m => m.LogInUser),
     },
     {
         path:'register',
-        component: RegisterUser
+        loadComponent: () => import('./views/user/register-user/register-user.component').then(m => m.RegisterUser),
     },
     {
         path: 'otp',
-        component: OtpComponent,
+        loadComponent: () => import('./views/user/otp/otp.component').then(m => m.OtpComponent),
     },
     {
         path: 'forgot-password',
-        component: ForgotPasswordComponent,
+        loadComponent: () => import('./views/user/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent),
     },
     {
         path: 'profile',
-        component: ProfilePageComponent,
+        loadComponent: () => import('./views/profile-page/profile-page.component').then(m => m.ProfilePageComponent),
         canActivate: [authGuard],
     },
     {
         // A friend's favorites and wishlist (only for accepted friends)
         path: 'friends/:id',
-        component: FriendListsPage,
+        loadComponent: () => import('./views/friend-lists-page/friend-lists-page.component').then(m => m.FriendListsPage),
         canActivate: [authGuard],
     }
 ];
