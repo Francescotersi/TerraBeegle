@@ -24,6 +24,7 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
         entity.HasIndex(g => g.AggregatedRating);
         entity.HasIndex(g => g.PegiRating);
         entity.HasIndex(g => g.GameStatus);
+        entity.HasIndex(g => g.GameType);
         
         // 1-to-many relationships on Game entity
         entity.HasOne(g => g.ParentGame)
