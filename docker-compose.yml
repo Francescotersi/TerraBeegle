@@ -47,6 +47,9 @@ services:
       - "4200:4200"
     environment:
       BACKEND_URL: http://backend:8080
+    volumes:
+      - ./frontend-TerraBeegle:/app
+      - /app/node_modules
     depends_on:
       - backend
 
