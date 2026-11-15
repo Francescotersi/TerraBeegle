@@ -41,6 +41,9 @@ public class Game
     public ICollection<Game>? ExpandedGames { get; set; }
     public ICollection<Game>? Expansions { get; set; }
     public ICollection<Game>? Forks { get; set; }
+    public ICollection<Game>? Ports { get; set; }
+    public ICollection<Game>? SimilarGames { get; set; }
+    public ICollection<Game>? StandaloneExpansions { get; set; }
     public ICollection<Game>? Remakes { get; set; }
     public ICollection<Game>? Remasters { get; set; }
 

@@ -8,7 +8,7 @@ public record GameCardDTO
     public string Name { get; init; } = null!;
     public string Slug { get; init; } = null!;
     public string? Cover { get; init; }
-    public double? Rating { get; init; }
+    public decimal? Rating { get; init; }
     public int? CriticRating { get; init; }
     public string? GameType { get; init; }
     public string? GameStatus { get; init; }
@@ -38,7 +38,7 @@ public record GameDetailsDTO
     public IEnumerable<ApiObjectDTO>? Keywords { get; init; }
     public IEnumerable<PlatformDTO>? Platforms { get; init; }
     public IEnumerable<ApiObjectDTO>? Perspectives { get; init; }
-    public double? Rating { get; init; }
+    public decimal? Rating { get; init; }
     public int? RatingCount { get; init; }
     public IEnumerable<ReleaseDateDTO>? ReleaseDates { get; init; }
     public IEnumerable<string>? Screenshots { get; init; }

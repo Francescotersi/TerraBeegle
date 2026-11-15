@@ -28,12 +28,12 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
         // 1-to-many relationships on Game entity
         entity.HasOne(g => g.ParentGame)
             .WithMany(g => g.GamesAsParent)
-            .HasForeignKey("ParentGameId")
+            .HasForeignKey(g => g.ParentGameId)
             .OnDelete(DeleteBehavior.Restrict);
             
         entity.HasOne(g => g.VersionParent)
             .WithMany(g => g.GamesAsVersionParent)
-            .HasForeignKey("VersionParentId")
+            .HasForeignKey(g => g.VersionParentId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Many-to-many relationships on Game entity
@@ -56,6 +56,18 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
         entity.HasMany(g => g.Forks)
             .WithMany()
             .UsingEntity(j => j.ToTable("game_forks"));
+        
+        entity.HasMany(g => g.Ports)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("game_ports"));
+        
+        entity.HasMany(g => g.SimilarGames)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("game_similar_games"));
+
+        entity.HasMany(g => g.StandaloneExpansions)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("game_standalone_expansions"));
         
         entity.HasMany(g => g.Remakes)
             .WithMany()

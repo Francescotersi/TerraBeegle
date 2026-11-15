@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Backend_TerraBeegle.Data;
-using Mapster;
 using IGDB;
 using IGDB.Models;
 
@@ -57,7 +56,7 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
         }
 
         return new GameSearchResponseDTO {
-            Results = response.Select(ToGameCardDTO),
+            Results = response.Select(IGDBToGameDTO.ToGameCardDTO),
             Count = totalCount.Count
         };
     }
@@ -153,13 +152,13 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
         var existing = await db.Games.FirstOrDefaultAsync(filter);
         if (existing is not null)
-            return convertToGameDetailsDTO(existing);
+            return DBToGameDTO.DBToGameDetailsDTO(existing);
 
         var response = await FetchGameAsync(GameField, field);
         if (response is null)
             return null;
 
-        return ToGameDetailsDTO(response);
+        return IGDBToGameDTO.ToGameDetailsDTO(response);
     }
 
     // Import only the fields needed by saved collections. Shared taxonomy rows are reused.
@@ -184,162 +183,4 @@ public class IGDBService(AppDbContext db, IGDBClient igdb) : IIGDBService
 
         return await SaveGames.SaveGame(db, response[0], igdbGameId);
     }
-
-    private static List<ApiObjectDTO>? MapApiObjectList<T>(IdentitiesOrValues<T>? items) where T : class
-    {
-        if (items?.Values is null)
-            return null;
-
-        return items.Values?.Select(apiObject => apiObject.Adapt<ApiObjectDTO>()).ToList();
-    }
-
-    private static List<PlatformDTO>? MapPlatformList(IdentitiesOrValues<Platform>? items)
-    {
-        if (items?.Values is null)
-            return null;
-
-        return items.Values?.Select(platform => new PlatformDTO
-        {
-            ApiPlatformId = platform.Id ?? 0,
-            Name = platform.Name,
-            Slug = platform.Slug,
-            Abbreviation = platform.Abbreviation,
-            Logo = ImageUrl(platform.PlatformLogo?.Value?.ImageId, ImageSize.LogoMed),
-            PlatformFamily = platform.PlatformFamily?.Value is { } pf ? new PlatformFamilyDTO
-            {
-                ApiPlatformFamilyId = pf.Id ?? 0,
-                Name = pf.Name,
-                Slug = pf.Slug
-            } : null,
-        }).ToList();
-    }
-
-    private static List<CompanyDTO>? MapCompanyList(IdentitiesOrValues<InvolvedCompany>? items, bool isDev)
-    {
-        if (items?.Values is null)
-            return null;
-
-        bool filter(InvolvedCompany ic) => isDev ? ic.Developer == true : ic.Publisher == true;
-
-        return items.Values?.Where(ic => ic.Company?.Value is not null && filter(ic)).Select(ic => new CompanyDTO
-        {
-            ApiCompanyId = ic.Company.Value.Id ?? 0,
-            Name = ic.Company.Value.Name ?? null!,
-            Slug = ic.Company.Value.Slug ?? null!,
-            Logo = ImageUrl(ic.Company.Value?.Logo?.Value?.ImageId, ImageSize.LogoMed)
-        }).ToList();
-    }
-
-    private static List<string>? MapImageList<T>(IdentitiesOrValues<T>? items, ImageSize size) where T : class
-    {
-        if (items?.Values is null)
-            return null;
-
-       return [.. items.Values
-            .Select((dynamic img) => ImageUrl((string?)img.ImageId, size))
-            .OfType<string>()];
-    }
-
-    private static readonly HashSet<int> StorefrontIds = [10, 11, 12, 13, 15, 16, 17, 22, 23, 24, 25, 26];
-
-    private static List<WebsiteDTO>? MapWebsiteList(IdentitiesOrValues<Website>? items, bool getStores)
-    {
-        if (items?.Values is null)
-            return null;
-
-        bool filter(Website w, int id) => getStores ? StorefrontIds.Contains(id) : !StorefrontIds.Contains(id);
-
-        return items.Values?.Where(w => w.Url is not null && w.Type?.Id is {} id && id != 1 && filter(w, (int)id)).Select(w => new WebsiteDTO
-        {
-            Type = w.Type.Id ?? 0,
-            Url = w.Url
-        }).ToList();
-    }
-
-    // Full https URL of an IGDB image, or null when the game has no such image
-    private static string? ImageUrl(string? imageId, ImageSize size) => string.IsNullOrWhiteSpace(imageId) ? null : "https:" + ImageHelper.GetImageUrl(imageId, size, false);
-
-    private static GameCardDTO ToGameCardDTO (Game g) => new ()
-    {
-        ApiGameId = g.Id ?? 0,
-        Name = g.Name,
-        Slug = g.Slug,
-        Cover = ImageUrl(g.Cover?.Value?.ImageId, ImageSize.CoverBig),
-        Rating = g.Rating,
-        CriticRating = g.AggregatedRating is not null ? (int)Math.Round(g.AggregatedRating.Value) : null,
-        ReleaseDate = g.FirstReleaseDate.HasValue ? DateOnly.FromDateTime(g.FirstReleaseDate.Value.UtcDateTime) : null,
-        GameType = g.GameType?.Value?.Type,
-        Genres = MapApiObjectList(g.Genres),
-        Platforms = MapPlatformList(g.Platforms),
-        Themes = MapApiObjectList(g.Themes),
-        GameStatus = g.GameStatus?.Value?.Status
-    };
-
-    private static GameDetailsDTO ToGameDetailsDTO (Game g) => new ()
-    {
-        ApiGameId = g.Id ?? 0,
-        Name = g.Name,
-        PegiRating = g.AgeRatings?.Values?.FirstOrDefault(ar => ar.Organization?.Id == 2)?.RatingCategory?.Value?.Rating,
-        PegiRatingDescription = g.AgeRatings?.Values?.FirstOrDefault(ar => ar.Organization?.Id == 2)?.RatingContentDescriptions?.Values?.Select(desc => desc.Description).ToList(),
-        CriticRating = g.AggregatedRating is not null ? (int)Math.Round(g.AggregatedRating.Value) : null,
-        CriticRatingCount = g.AggregatedRatingCount,
-        Artworks = MapImageList(g.Artworks, ImageSize.HD720),
-        Cover = ImageUrl(g.Cover?.Value?.ImageId, ImageSize.HD720),
-        ReleaseDate = g.FirstReleaseDate.HasValue ? DateOnly.FromDateTime(g.FirstReleaseDate.Value.UtcDateTime) : null,
-        Franchises = MapApiObjectList(g.Franchises),
-        GameModes = MapApiObjectList(g.GameModes),
-        GameStatus = g.GameStatus?.Value?.Status,
-        Genres = MapApiObjectList(g.Genres),
-        Developers = MapCompanyList(g.InvolvedCompanies, true),
-        Publishers = MapCompanyList(g.InvolvedCompanies, false),
-        Keywords = MapApiObjectList(g.Keywords),
-        Platforms = MapPlatformList(g.Platforms),
-        Perspectives = MapApiObjectList(g.PlayerPerspectives),
-        Rating = g.Rating,
-        RatingCount = g.RatingCount,
-        ReleaseDates = g.ReleaseDates?.Values?.Select(rd => new ReleaseDateDTO
-        {
-            Date = rd.Date?.UtcDateTime,
-            PlatformName = rd.Platform?.Value?.Name,
-            Status = rd.Status?.Value?.Name
-        }).ToList(),
-        Screenshots = MapImageList(g.Screenshots, ImageSize.HD720),
-        Slug = g.Slug,
-        Summary = g.Summary,
-        Storyline = g.Storyline,
-        Themes = MapApiObjectList(g.Themes),
-        Videos = g.Videos?.Values?.Select(v => new VideoDTO
-        {
-            Name = v.Name,
-            VideoUrl = $"https://www.youtube.com/watch?v={v.VideoId}"
-        }).ToList(),
-        OfficialWebsite = g.Websites?.Values?.FirstOrDefault(w => w.Type?.Id == 1)?.Url,
-        Websites = MapWebsiteList(g.Websites, false),
-        Stores = MapWebsiteList(g.Websites, true),
-        LanguageSupports = g.LanguageSupports?.Values?.Select(ls => new LanguageSupportDTO
-        {
-            Language = ls.Language?.Value?.Name,
-            LanguageSupportType = ls.LanguageSupportType?.Value?.Name
-        }).ToList(),
-        Series = g.Collections?.Values?.Select(c => new SerieDTO
-        {
-            ApiSerieId = c.Id ?? 0,
-            Name = c.Name,
-            Slug = c.Slug,
-            Games = c.Games?.Values?.Select(ToGameCardDTO).ToList() ?? [],
-        }).ToList(),
-        GameType = g.GameType?.Value?.Type,
-        Bundles = g.Bundles?.Values?.Select(ToGameCardDTO).ToList(),
-        Dlcs = g.Dlcs?.Values?.Select(ToGameCardDTO).ToList(),
-        ExpandedGames = g.ExpandedGames?.Values?.Select(ToGameCardDTO).ToList(),
-        Expansions = g.Expansions?.Values?.Select(ToGameCardDTO).ToList(),
-        Forks = g.Forks?.Values?.Select(ToGameCardDTO).ToList(),
-        ParentGame = g.ParentGame?.Value is not null ? ToGameCardDTO(g.ParentGame.Value) : null,
-        Ports = g.Ports?.Values?.Select(ToGameCardDTO).ToList(),
-        SimilarGames = g.SimilarGames?.Values?.Select(ToGameCardDTO).ToList(),
-        StandaloneExpansions = g.StandaloneExpansions?.Values?.Select(ToGameCardDTO).ToList(),
-        Remakes = g.Remakes?.Values?.Select(ToGameCardDTO).ToList(),
-        Remasters = g.Remasters?.Values?.Select(ToGameCardDTO).ToList(),
-        VersionParent = g.VersionParent?.Value is not null ? ToGameCardDTO(g.VersionParent.Value) : null
-    };
 }

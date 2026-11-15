@@ -10,23 +10,6 @@ namespace Backend_TerraBeegle.Services;
 
 public static class SaveGames
 {
-    public static GameCardDTO Map(Models.Game game) => new()
-    {
-        ApiGameId = game.ApiGameId,
-        Name = game.Name,
-        Slug = game.Slug,
-        Cover = game.Images.FirstOrDefault(i => i.Type == ImageType.Cover) is {} cover ? $"https://images.igdb.com/igdb/image/upload/t_cover_big/{cover.ApiImageId}.jpg" : null,
-        Rating = game.Rating.HasValue ? (double)game.Rating.Value : null,
-        CriticRating = game.AggregatedRating,
-        ReleaseDate = game.ReleaseDate,
-        GameType = game.GameType?.ToString(),
-        GameStatus = game.GameStatus?.ToString(),
-        Genres = [.. game.Genres.Select(g => new ApiObjectDTO { Id = g.ApiGenreId, Name = g.Name, Slug = g.Slug })],
-        Platforms = [.. game.Platforms?.Select(p => new PlatformDTO
-        { ApiPlatformId = p.ApiPlatformId, Name = p.Name, Slug = p.Slug, Abbreviation = p.Abbreviation }) ?? []],
-        Themes = [.. game.Themes.Select(t => new ApiObjectDTO { Id = t.ApiThemeId, Name = t.Name, Slug = t.Slug })]
-    };
-
     // Serialize imports so concurrent saves can reuse games, genres, platforms and images safely.
     public static async Task<Models.Game?> SaveGamePlaceholder(AppDbContext db, IGDB.Models.Game? source)
     {
@@ -143,29 +126,34 @@ public static class SaveGames
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74219031)");
         
         var game = await db.Games
-            .Include(g => g.Platforms)
-            .Include(g => g.Genres)
-            .Include(g => g.Keywords)
-            .Include(g => g.Themes)
-            .Include(g => g.GameModes)
-            .Include(g => g.Perspectives)
             .Include(g => g.PegiDescriptions)
-            .Include(g => g.Franchises)
-            .Include(g => g.Series)
+            .Include(g => g.ReleaseDates)
             .Include(g => g.Images)
             .Include(g => g.Videos)
-            .Include(g => g.Websites)
-            .Include(g => g.ReleaseDates)
-            .Include(g => g.LanguageSupports)
-            .Include(g => g.Developers)
-            .Include(g => g.Publishers)
+            .Include(g => g.ParentGame)
+            .Include(g => g.VersionParent)
             .Include(g => g.Bundles)
             .Include(g => g.DLCs)
             .Include(g => g.ExpandedGames)
             .Include(g => g.Expansions)
             .Include(g => g.Forks)
+            .Include(g => g.Ports)
+            .Include(g => g.SimilarGames)
+            .Include(g => g.StandaloneExpansions)
             .Include(g => g.Remakes)
             .Include(g => g.Remasters)
+            .Include(g => g.Franchises)
+            .Include(g => g.Series)
+            .Include(g => g.Platforms)
+            .Include(g => g.Genres)
+            .Include(g => g.Themes)
+            .Include(g => g.Keywords)
+            .Include(g => g.GameModes)
+            .Include(g => g.Perspectives)
+            .Include(g => g.LanguageSupports)
+            .Include(g => g.Websites)
+            .Include(g => g.Developers)
+            .Include(g => g.Publishers)
             .Include(g => g.Reviews)
             .FirstOrDefaultAsync(g => g.ApiGameId == igdbGameId);
        
@@ -227,6 +215,9 @@ public static class SaveGames
         game.ExpandedGames = await SaveGamesList(db, source.ExpandedGames);
         game.Expansions = await SaveGamesList(db, source.Expansions);
         game.Forks = await SaveGamesList(db, source.Forks);
+        game.Ports = await SaveGamesList(db, source.Ports);
+        game.SimilarGames = await SaveGamesList(db, source.SimilarGames);
+        game.StandaloneExpansions = await SaveGamesList(db, source.StandaloneExpansions);
         game.Remakes = await SaveGamesList(db, source.Remakes);
         game.Remasters = await SaveGamesList(db, source.Remasters);
 
