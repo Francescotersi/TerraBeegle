@@ -13,7 +13,7 @@ public class Platform
 
     public Image? PlatformLogo { get; set; }
 
-    public long? PlatformFamilyId { get; set; }
+    public long? ApiPlatformFamilyId { get; set; }
     public PlatformFamily? PlatformFamily { get; set; }
 
     public ICollection<Game> Games { get; set; } = [];

@@ -41,7 +41,7 @@ public class LoginDTO
     public string Password { get; init; } = string.Empty;
 
     // Only needed when the email is not verified yet (the code sent on register / resend-email)
-    [StringLength(8, MinimumLength = 8)]
+    [StringLength(8, MinimumLength = 8, ErrorMessage = "Verification code must be 8 characters long.")]
     public string? Code { get; init; }
 }
 

@@ -175,19 +175,11 @@ public class GameController(AppDbContext db, IIGDBService ApiService) : Controll
             .ThenBy(g => g.Slug) // Secondary ordering by slug to ensure consistent ordering for games with the same name
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            // ProjectToType<GameDetailsDTO>() no longer matched the model (cover in Images, DB ids instead of IGDB ids,
-            // rating out of 10): load the main data and use the same mapping as GET /api/games/{id}
-            .Include(g => g.Images)
-            .Include(g => g.Genres)
-            .Include(g => g.Themes)
-            .Include(g => g.Platforms!).ThenInclude(p => p.PlatformLogo)
-            .AsSplitQuery()
-            .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(); // Projecting to GameDetailsDTO
 
         return Ok(CreatePagedResponse(
-            games.Select(DBToGameDTO.DBToGameDetailsDTO).ToList(),
-            await db.Games.CountAsync(g => !g.IsPlaceholder || IncludePlaceholders), // same filter as the page, otherwise TotalPages counted the hidden placeholders
+            [.. games.Select(DBToGameDTO.DBToGameDetailsDTO)],
+            await db.Games.CountAsync(),
             pagination,
             page => Url.Action(nameof(GetAll), new { Page = page, pagination.PageSize, IncludePlaceholders })
         ));

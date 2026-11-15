@@ -58,8 +58,8 @@ public static class DBToGameDTO
         return [.. items.Select(ic => new CompanyDTO
         {
             ApiCompanyId = ic.ApiCompanyId,
-            Name = ic.Name ?? null!,
-            Slug = ic.Slug ?? null!,
+            Name = ic.Name,
+            Slug = ic.Slug,
             Logo = IGDBToGameDTO.ImageUrl(ic?.CompanyLogo?.ApiImageId, ImageSize.LogoMed)
         })];
     }
