@@ -1,16 +1,26 @@
-import { Component, DestroyRef, ElementRef, HostListener, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { GameService } from '../../services/game.service';
 import { GameGenreItem } from '../../models-services/game.model';
-import { CatalogFiltersService, CatalogSortBy, MAX_YEAR, MIN_TO_YEAR, MIN_YEAR } from '../../services/catalog-filters.service';
+import { CatalogFiltersService, CatalogSortBy } from '../../services/catalog-filters.service';
 import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.component';
+import { SidebarCategoryListComponent, SidebarCategorySection } from './sidebar-category-list.component';
+import { SidebarRangeFiltersComponent } from './sidebar-range-filters.component';
 
+/** Catalog sidebar with search, sorting, taxonomy accordions, range filters, and mobile drawer. */
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, NgTemplateOutlet, LiquidGlassComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    NgTemplateOutlet,
+    LiquidGlassComponent,
+    SidebarCategoryListComponent,
+    SidebarRangeFiltersComponent,
+  ],
   template: `
     <ng-template #filtersContent>
       <div class="mb-3">
@@ -43,7 +53,6 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
         }
       </div>
 
-      <!-- Sorting -->
       <div class="category-group mb-3">
         <label class="filter-label" for="sidebar-sort">Sort by</label>
         <div class="d-flex gap-2">
@@ -69,276 +78,52 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
         </div>
       </div>
 
-      @for (section of orderedSections(); track section.key) {
-        <div class="category-group mb-2">
-          <button
-            class="category-btn d-flex justify-content-between align-items-center w-100 py-2 px-2 rounded-3 border-0"
-            type="button"
-            (click)="toggleSection(section.key)"
-            [attr.aria-expanded]="isSectionOpen(section.key)"
-          >
-            <span class="fw-bold small text-uppercase">
-              {{ section.label }}
-              @if (section.selectedIds.length) {
-                <span class="count-badge">{{ section.selectedIds.length }}</span>
-              }
-            </span>
-            <span class="chevron" [class.open]="isSectionOpen(section.key)">▾</span>
-          </button>
-          <div class="collapse" [class.show]="isSectionOpen(section.key)">
-            <ul class="category-list list-unstyled mb-0 py-1">
-              @for (item of section.items; track item.id) {
-                <li class="category-item">
-                  <button
-                    type="button"
-                    class="sidebar-list-link d-flex align-items-center justify-content-between rounded-2"
-                    [class.active]="section.selectedIds.includes(item.id)"
-                    [attr.aria-pressed]="section.selectedIds.includes(item.id)"
-                    (click)="filtersService.toggle(section.key, item.id)"
-                  >
-                    <span class="text-start">{{ item.name }}</span>
-                    @if (section.selectedIds.includes(item.id)) {
-                      <span aria-hidden="true">✓</span>
-                    }
-                  </button>
-                </li>
-              }
-              @if (section.items.length === 0) {
-                <li class="text-muted small px-3 py-1">{{ listsError() ? section.errorLabel : section.emptyLabel }}</li>
-              }
-            </ul>
-          </div>
-        </div>
-      }
+      <app-sidebar-category-list
+        [sections]="orderedSections()"
+        [openSections]="openSections()"
+        [hasSearchQuery]="searchQuery().trim().length > 0"
+        [listsError]="listsError()"
+        (toggleSection)="toggleSection($event)"
+        (toggleItem)="filtersService.toggle($event.key, $event.id)"
+      />
 
-      <!-- Release year -->
-      <div class="category-group mb-3 mt-3">
-        <span class="filter-label">Release year</span>
-        <div class="d-flex align-items-center gap-2">
-          <div class="year-select-wrap">
-            <button
-              type="button"
-              class="year-select-trigger sidebar-search"
-              aria-label="Released from year"
-              [attr.aria-expanded]="openYearMenu() === 'yearMin'"
-              (click)="toggleYearMenu('yearMin', $event)"
-            >
-              <span>{{ filters().yearMin ?? 'From' }}</span>
-              <span class="year-caret" aria-hidden="true">▾</span>
-            </button>
-            @if (openYearMenu() === 'yearMin') {
-              <ul class="year-dropdown list-unstyled mb-0" role="listbox" aria-label="From year">
-                <li>
-                  <button
-                    type="button"
-                    class="year-option"
-                    [class.active]="filters().yearMin === null"
-                    (click)="selectYear('yearMin', null)"
-                  >
-                    From
-                  </button>
-                </li>
-                @for (year of years; track year) {
-                  <li>
-                    <button
-                      type="button"
-                      class="year-option"
-                      [class.active]="filters().yearMin === year"
-                      (click)="selectYear('yearMin', year)"
-                    >
-                      {{ year }}
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
-          </div>
-
-          <span class="text-body-secondary small">–</span>
-
-          <div class="year-select-wrap">
-            <button
-              type="button"
-              class="year-select-trigger sidebar-search"
-              aria-label="Released until year"
-              [attr.aria-expanded]="openYearMenu() === 'yearMax'"
-              (click)="toggleYearMenu('yearMax', $event)"
-            >
-              <span>{{ filters().yearMax ?? 'To' }}</span>
-              <span class="year-caret" aria-hidden="true">▾</span>
-            </button>
-            @if (openYearMenu() === 'yearMax') {
-              <ul class="year-dropdown list-unstyled mb-0" role="listbox" aria-label="To year">
-                <li>
-                  <button
-                    type="button"
-                    class="year-option"
-                    [class.active]="filters().yearMax === null"
-                    (click)="selectYear('yearMax', null)"
-                  >
-                    To
-                  </button>
-                </li>
-                @for (year of toYears(); track year) {
-                  <li>
-                    <button
-                      type="button"
-                      class="year-option"
-                      [class.active]="filters().yearMax === year"
-                      (click)="selectYear('yearMax', year)"
-                    >
-                      {{ year }}
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
-          </div>
-        </div>
-      </div>
-
-      <div class="category-group mb-3" role="group" aria-label="User rating range">
-        <div class="filter-label d-flex justify-content-between align-items-center">
-          <span>User rating</span>
-          <span class="rating-value">{{ ratingDraft() }} – {{ ratingMaxDraft() }}</span>
-        </div>
-        <div class="dual-slider" [style.--range-start]="(ratingDraft() * 10) + '%'"
-          [style.--range-end]="(ratingMaxDraft() * 10) + '%'">
-          <div class="dual-slider-track" aria-hidden="true"></div>
-          <input type="range" class="rating-slider range-min" min="0" max="10" step="0.1"
-            aria-label="Minimum user rating" [value]="ratingDraft()"
-            [style.z-index]="ratingDraft() > 5 ? 3 : 1"
-            [attr.aria-valuemax]="ratingMaxDraft()"
-            (input)="onScoreInput('rating', true, $event)"
-            (change)="applyScoreRange('rating')" />
-          <input type="range" class="rating-slider range-max" min="0" max="10" step="0.1"
-            aria-label="Maximum user rating" [value]="ratingMaxDraft()"
-            [attr.aria-valuemin]="ratingDraft()"
-            (input)="onScoreInput('rating', false, $event)"
-            (change)="applyScoreRange('rating')" />
-        </div>
-        <div class="rating-limits" aria-hidden="true"><span>0</span><span>10</span></div>
-      </div>
-
-      <div class="category-group mb-2" role="group" aria-label="Critic score range">
-        <div class="filter-label d-flex justify-content-between align-items-center">
-          <span>Critic score</span>
-          <span class="rating-value">{{ criticDraft() }} – {{ criticMaxDraft() }}</span>
-        </div>
-        <div class="dual-slider" [style.--range-start]="(criticDraft() * 1) + '%'"
-          [style.--range-end]="(criticMaxDraft() * 1) + '%'">
-          <div class="dual-slider-track" aria-hidden="true"></div>
-          <input type="range" class="rating-slider range-min" min="0" max="100" step="1"
-            aria-label="Minimum critic score" [value]="criticDraft()"
-            [style.z-index]="criticDraft() > 50 ? 3 : 1"
-            [attr.aria-valuemax]="criticMaxDraft()"
-            (input)="onScoreInput('critic', true, $event)"
-            (change)="applyScoreRange('critic')" />
-          <input type="range" class="rating-slider range-max" min="0" max="100" step="1"
-            aria-label="Maximum critic score" [value]="criticMaxDraft()"
-            [attr.aria-valuemin]="criticDraft()"
-            (input)="onScoreInput('critic', false, $event)"
-            (change)="applyScoreRange('critic')" />
-        </div>
-        <div class="rating-limits" aria-hidden="true"><span>0</span><span>100</span></div>
-      </div>
+      <app-sidebar-range-filters />
     </ng-template>
 
-    <!-- ==================== DESKTOP VIEW ==================== -->
     <div class="d-none d-lg-block w-100 sidebar-desktop-card">
-      <app-liquid-glass
-        borderRadius="24px"
-        blur="2px"
-        [scale]="85"
-      >
+      <app-liquid-glass borderRadius="24px" blur="2px" [scale]="85">
         <nav class="sidebar-content p-3 w-100">
           <ng-container *ngTemplateOutlet="filtersContent" />
         </nav>
       </app-liquid-glass>
     </div>
 
-    <!-- ==================== MOBILE VIEW ==================== -->
     <div class="mobile-filter-bar d-lg-none">
-      <button
-        class="mobile-filter-btn"
-        type="button"
-        (click)="openMobileDrawer()"
-        aria-label="Filter the catalog"
-      >
-        <svg
-          class="filter-icon"
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
+      <button class="mobile-filter-btn" type="button" (click)="openMobileDrawer()" aria-label="Filter the catalog">
+        <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
         </svg>
       </button>
     </div>
 
-    <div
-      class="sidebar-mobile-backdrop d-lg-none"
-      [class.show]="isMobileDrawerOpen()"
-      (click)="closeMobileDrawer()"
-      aria-hidden="true"
-    ></div>
+    <div class="sidebar-mobile-backdrop d-lg-none" [class.show]="isMobileDrawerOpen()" (click)="closeMobileDrawer()" aria-hidden="true"></div>
 
     <div class="sidebar-drawer-clip d-lg-none">
-      <div
-        class="sidebar-menu-panel"
-        [class.show]="isMobileDrawerOpen()"
-        aria-label="Navigation Filters"
-      >
+      <div class="sidebar-menu-panel" [class.show]="isMobileDrawerOpen()" aria-label="Navigation Filters">
         <div class="sidebar-panel-header d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
           <div class="d-flex align-items-center gap-2">
-            <svg
-              class="filter-header-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
+            <svg class="filter-header-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
             <span class="fw-bold fs-6">Filters</span>
           </div>
-          <button
-            type="button"
-            class="sidebar-close-btn"
-            (click)="closeMobileDrawer()"
-            aria-label="Close filters"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
+          <button type="button" class="sidebar-close-btn" (click)="closeMobileDrawer()" aria-label="Close filters">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </div>
-
         <div class="sidebar-panel-scroll">
           <nav class="sidebar-content w-100 py-1">
             <ng-container *ngTemplateOutlet="filtersContent" />
@@ -347,33 +132,86 @@ import { LiquidGlassComponent } from '../../ui/liquid-glass/liquid-glass.compone
       </div>
     </div>
   `,
-  styleUrl: './sidebar.component.css',
+  styles: `
+    :host { display: block; width: 100%; }
+    .sidebar-desktop-card { position: relative; }
+    :host-context([data-bs-theme="light"]) .sidebar-desktop-card { filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.12)); }
+    .mobile-filter-bar { display: flex; align-items: center; margin-bottom: 0.75rem; }
+    .mobile-filter-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1.15rem; border-radius: 20px;
+      background: var(--tb-glass-bg); backdrop-filter: blur(12px) saturate(180%); -webkit-backdrop-filter: blur(12px) saturate(180%);
+      border: 1px solid var(--tb-glass-border); color: var(--tb-text); font-weight: 600; font-size: 0.88rem;
+      box-shadow: 0 4px 14px var(--tb-glass-shadow); transition: all 0.25s ease; cursor: pointer; outline: none;
+    }
+    .mobile-filter-btn:hover {
+      background: var(--tb-accent-subtle); border-color: var(--tb-accent); color: var(--tb-accent);
+      transform: translateY(-1px); box-shadow: 0 6px 18px var(--tb-glass-shadow);
+    }
+    .mobile-filter-btn:focus-visible { box-shadow: 0 0 0 3px var(--tb-accent-glow); }
+    .mobile-filter-btn .filter-icon { color: var(--tb-accent); transition: transform 0.25s ease; }
+    .mobile-filter-btn:hover .filter-icon { transform: scale(1.12); }
+    .sidebar-mobile-backdrop {
+      position: fixed; inset: 0; z-index: 1040; background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.32s ease, visibility 0.32s ease;
+    }
+    .sidebar-mobile-backdrop.show { opacity: 1; visibility: visible; pointer-events: auto; }
+    .sidebar-drawer-clip { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 1060; }
+    .sidebar-menu-panel {
+      position: absolute; top: 5.5rem; left: 1rem; width: min(340px, calc(100vw - 2rem)); max-height: calc(100dvh - 6.75rem);
+      z-index: 1060; display: flex; flex-direction: column; padding: 1.25rem; border-radius: 28px;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(22px) saturate(190%); -webkit-backdrop-filter: blur(22px) saturate(190%);
+      border: 1px solid var(--tb-glass-border);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.16), 0 4px 16px rgba(0, 0, 0, 0.08), inset 1px 1px 2px rgba(255, 255, 255, 0.9);
+      transform: translateX(calc(-100% - 2rem)); opacity: 0; visibility: hidden; pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease, visibility 0.4s;
+    }
+    :host-context([data-bs-theme="dark"]) .sidebar-menu-panel {
+      background: rgba(7, 31, 73, 0.92); box-shadow: 0 22px 48px rgba(0, 0, 0, 0.65), inset 1px 1px 2px rgba(46, 217, 231, 0.2);
+    }
+    .sidebar-menu-panel.show { transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto; }
+    .sidebar-panel-header { border-color: var(--bs-border-color) !important; flex-shrink: 0; }
+    .filter-header-icon { color: var(--tb-accent); }
+    .sidebar-close-btn {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--tb-input-bg); border: 1px solid var(--tb-glass-border);
+      color: var(--tb-text); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; outline: none;
+    }
+    .sidebar-close-btn:hover { background: var(--tb-accent-subtle); color: var(--tb-accent); border-color: var(--tb-accent); transform: scale(1.05); }
+    .sidebar-panel-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--tb-accent) transparent; padding-right: 0.25rem; }
+    .sidebar-panel-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar-panel-scroll::-webkit-scrollbar-thumb { background: var(--tb-accent-glow); border-radius: 4px; }
+    .sidebar-content { background: transparent; width: 100%; }
+    .sidebar-search {
+      background-color: var(--tb-input-bg); border: 1px solid var(--tb-input-border); border-radius: 20px;
+      font-size: 0.85rem; padding: 0.4rem 0.75rem; color: var(--tb-text); transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar-search::placeholder { color: var(--tb-text-muted); opacity: 0.8; }
+    .sidebar-search:focus { background-color: var(--tb-input-bg-focus); border-color: var(--tb-accent); box-shadow: 0 0 0 0.25rem var(--tb-accent-glow); color: var(--tb-text); }
+    :host-context([data-bs-theme="light"]) .sidebar-search { background-color: rgba(255, 255, 255, 0.85); border-color: rgba(51, 65, 85, 0.32); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+    :host-context([data-bs-theme="light"]) .border-light-subtle { border-color: rgba(51, 65, 85, 0.35) !important; }
+    .sidebar-item { color: var(--tb-text); padding: 0.5rem 0.75rem; text-decoration: none; display: flex; transition: all 0.15s ease; }
+    .sidebar-item:hover { background-color: var(--tb-accent-subtle); color: var(--tb-accent); }
+    .sidebar-item.active { background-color: var(--tb-accent-subtle); color: var(--tb-accent); font-weight: 600; }
+    .filter-label { display: block; margin-bottom: 0.4rem; padding-left: 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tb-text); }
+    .clear-btn { flex-shrink: 0; border: 1px solid var(--tb-accent); border-radius: 20px; background: transparent; color: var(--tb-accent); font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.65rem; white-space: nowrap; transition: all 0.2s ease; }
+    .clear-btn:hover { background: var(--tb-btn-gradient); border-color: transparent; color: #fff; }
+    .direction-btn { flex-shrink: 0; width: 34px; border: 1px solid var(--tb-input-border); border-radius: 20px; background: var(--tb-input-bg); color: var(--tb-text); font-weight: 700; transition: all 0.2s ease; }
+    .direction-btn:hover { border-color: var(--tb-accent); color: var(--tb-accent); }
+  `,
 })
-// Catalog filters (advanced search): sorting, genres, themes, platforms, release year and ratings, saved in the URL
 export class SidebarComponent implements OnInit {
   protected readonly filtersService = inject(CatalogFiltersService);
   private readonly gameService = inject(GameService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly hostEl = inject(ElementRef<HTMLElement>);
 
   protected readonly filters = this.filtersService.filters;
   protected readonly searchQuery = signal('');
   protected readonly isMobileDrawerOpen = signal(false);
-  protected readonly openYearMenu = signal<'yearMin' | 'yearMax' | null>(null);
   protected readonly themes = signal<GameGenreItem[]>([]);
   protected readonly genres = signal<GameGenreItem[]>([]);
   protected readonly platforms = signal<GameGenreItem[]>([]);
   protected readonly listsError = signal(false);
-
-  protected readonly years = Array.from(
-    { length: MAX_YEAR - MIN_YEAR + 1 },
-    (_, i) => MAX_YEAR - i
-  );
-  protected readonly toYears = computed(() => {
-    const min = Math.max(MIN_TO_YEAR, this.filters().yearMin ?? MIN_TO_YEAR);
-    return this.years.filter((year) => year >= min);
-  });
 
   protected readonly sortOptions: { value: CatalogSortBy; label: string }[] = [
     { value: 'rating', label: 'User rating' },
@@ -381,20 +219,6 @@ export class SidebarComponent implements OnInit {
     { value: 'released', label: 'Release date' },
     { value: 'name', label: 'Name' },
   ];
-  protected readonly ratingDraft = signal(this.filters().ratingMin ?? 0);
-  protected readonly ratingMaxDraft = signal(this.filters().ratingMax ?? 10);
-  protected readonly criticMaxDraft = signal(this.filters().criticMax ?? 100);
-  protected readonly criticDraft = signal(this.filters().criticMin ?? 0);
-
-  constructor() {
-    effect(() => {
-      const filters = this.filters();
-      this.ratingDraft.set(filters.ratingMin ?? 0);
-      this.criticDraft.set(filters.criticMin ?? 0);
-      this.ratingMaxDraft.set(filters.ratingMax ?? 10);
-      this.criticMaxDraft.set(filters.criticMax ?? 100);
-    });
-  }
 
   protected readonly openSections = signal<Record<string, boolean>>({
     genres: false,
@@ -402,7 +226,6 @@ export class SidebarComponent implements OnInit {
     platforms: false,
   });
 
-  // How many filters are on (shown on "Clear filters")
   protected readonly activeCount = computed(() => {
     const f = this.filters();
     return (
@@ -419,13 +242,12 @@ export class SidebarComponent implements OnInit {
   protected readonly filteredGenres = computed(() => this.byName(this.genres()));
   protected readonly filteredPlatforms = computed(() => this.byName(this.platforms()));
 
-  // Orders dropdown sections by search match accuracy when a query is active (exact > prefix > substring)
-  protected readonly orderedSections = computed(() => {
+  protected readonly orderedSections = computed<SidebarCategorySection[]>(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const f = this.filters();
-    const sections = [
+    const sections: SidebarCategorySection[] = [
       {
-        key: 'genres' as const,
+        key: 'genres',
         label: 'Genres',
         items: this.filteredGenres(),
         selectedIds: f.genres,
@@ -433,7 +255,7 @@ export class SidebarComponent implements OnInit {
         errorLabel: 'Could not load the genres.',
       },
       {
-        key: 'themes' as const,
+        key: 'themes',
         label: 'Themes',
         items: this.filteredThemes(),
         selectedIds: f.themes,
@@ -441,7 +263,7 @@ export class SidebarComponent implements OnInit {
         errorLabel: 'Could not load the themes.',
       },
       {
-        key: 'platforms' as const,
+        key: 'platforms',
         label: 'Platforms',
         items: this.filteredPlatforms(),
         selectedIds: f.platforms,
@@ -458,7 +280,6 @@ export class SidebarComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // During SSR the relative /api URL cannot be called; the browser loads the lists after hydration
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
@@ -475,27 +296,6 @@ export class SidebarComponent implements OnInit {
       });
   }
 
-  protected onScoreInput(score: 'rating' | 'critic', isMinimum: boolean, event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const minimum = score === 'rating' ? this.ratingDraft : this.criticDraft;
-    const maximum = score === 'rating' ? this.ratingMaxDraft : this.criticMaxDraft;
-    const value = isMinimum
-      ? Math.min(input.valueAsNumber, maximum())
-      : Math.max(input.valueAsNumber, minimum());
-    (isMinimum ? minimum : maximum).set(value);
-    input.value = String(value);
-  }
-
-  protected applyScoreRange(score: 'rating' | 'critic'): void {
-    if (score === 'rating') {
-      this.filtersService.update({ ratingMin: this.ratingDraft() || null,
-        ratingMax: (this.ratingMaxDraft() * 10) === 10 ? null : this.ratingMaxDraft() });
-    } else {
-      this.filtersService.update({ criticMin: this.criticDraft() || null,
-        criticMax: this.criticMaxDraft() === 100 ? null : this.criticMaxDraft() });
-    }
-  }
-
   protected openMobileDrawer(): void {
     this.isMobileDrawerOpen.set(true);
   }
@@ -509,37 +309,9 @@ export class SidebarComponent implements OnInit {
     this.searchQuery.set(input.value);
   }
 
-  // A new sorting gets its natural direction: names A-Z, everything else best / newest first
   protected onSortChange(event: Event): void {
     const sortBy = (event.target as HTMLSelectElement).value as CatalogSortBy;
     this.filtersService.update({ sortBy, ascending: sortBy === 'name' });
-  }
-
-  protected toggleYearMenu(key: 'yearMin' | 'yearMax', event: Event): void {
-    event.stopPropagation();
-    this.openYearMenu.update((current) => (current === key ? null : key));
-  }
-
-  protected selectYear(key: 'yearMin' | 'yearMax', year: number | null): void {
-    this.openYearMenu.set(null);
-    const currentMax = this.filters().yearMax;
-    if (key === 'yearMin' && year !== null && currentMax !== null && year > currentMax) {
-      this.filtersService.update({ yearMin: year, yearMax: null });
-      return;
-    }
-    this.filtersService.update({ [key]: year });
-  }
-
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: Event): void {
-    if (this.openYearMenu() && !this.hostEl.nativeElement.contains(event.target as Node)) {
-      this.openYearMenu.set(null);
-    }
-  }
-
-  @HostListener('document:keydown.escape')
-  protected onEscape(): void {
-    this.openYearMenu.set(null);
   }
 
   protected toggleSection(section: string): void {
@@ -547,21 +319,6 @@ export class SidebarComponent implements OnInit {
       ...prev,
       [section]: !prev[section],
     }));
-  }
-
-  protected isSectionOpen(sectionKey: string): boolean {
-    if (this.searchQuery().trim().length > 0) {
-      switch (sectionKey) {
-        case 'genres':
-          return this.filteredGenres().length > 0;
-        case 'themes':
-          return this.filteredThemes().length > 0;
-        case 'platforms':
-          return this.filteredPlatforms().length > 0;
-      }
-      return true;
-    }
-    return !!this.openSections()[sectionKey];
   }
 
   private byName(items: GameGenreItem[]): GameGenreItem[] {

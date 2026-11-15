@@ -5,14 +5,16 @@ import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switc
 import { GameService } from '../../services/game.service';
 import { CatalogFiltersService } from '../../services/catalog-filters.service';
 import { GameCardDTO } from '../../models-services/game.model';
+import { GameSearchDropdownComponent } from './game-search-dropdown.component';
 
 const MIN_LENGTH = 2;
 const MAX_SUGGESTIONS = 6;
 
-// Header search bar with live suggestions (like Steam): typing shows a few games, Enter shows all the results
+/** Header search bar with debounced live game suggestions and keyboard navigation. */
 @Component({
   selector: 'app-game-search-box',
   standalone: true,
+  imports: [GameSearchDropdownComponent],
   template: `
     <form
       class="search-form d-flex align-items-center"
@@ -39,46 +41,15 @@ const MAX_SUGGESTIONS = 6;
         />
 
         @if (isOpen()) {
-          <div class="suggestions" id="game-search-suggestions" role="listbox" aria-label="Game suggestions">
-            @if (suggestions().length > 0) {
-              @for (game of suggestions(); track game.apiGameId; let i = $index) {
-                <button
-                  type="button"
-                  class="suggestion d-flex align-items-center gap-2 w-100"
-                  role="option"
-                  [id]="'game-suggestion-' + i"
-                  [class.active]="activeIndex() === i"
-                  [attr.aria-selected]="activeIndex() === i"
-                  (mouseenter)="activeIndex.set(i)"
-                  (click)="openGame(game)"
-                >
-                  @if (game.cover) {
-                    <img class="suggestion-cover" [src]="game.cover" [alt]="''" width="36" height="48" loading="lazy" />
-                  } @else {
-                    <span class="suggestion-cover placeholder-cover" aria-hidden="true">🎮</span>
-                  }
-                  <span class="suggestion-text d-flex flex-column text-start">
-                    <span class="suggestion-name" [title]="game.name">{{ game.name }}</span>
-                    <span class="suggestion-meta">
-                      @if (game.releaseDate) {
-                        {{ game.releaseDate.slice(0, 4) }}
-                      }
-                      @if (game.rating != null) {
-                        <span class="suggestion-rating">★ {{ toTen(game.rating) }}</span>
-                      }
-                    </span>
-                  </span>
-                </button>
-              }
-              <button type="button" class="see-all w-100" (click)="onSubmit()" [title]="'See all results for ' + term().trim()">
-                See all results for “{{ term().trim() }}”
-              </button>
-            } @else if (isSearching()) {
-              <div class="suggestions-state">Searching games...</div>
-            } @else {
-              <div class="suggestions-state text-truncate">No games found for “{{ term().trim() }}”.</div>
-            }
-          </div>
+          <app-game-search-dropdown
+            [suggestions]="suggestions()"
+            [activeIndex]="activeIndex()"
+            [isSearching]="isSearching()"
+            [term]="term()"
+            (activeIndexChange)="activeIndex.set($event)"
+            (selectGame)="openGame($event)"
+            (seeAll)="onSubmit()"
+          />
         }
       </div>
 
@@ -94,7 +65,6 @@ const MAX_SUGGESTIONS = 6;
       position: relative;
     }
 
-    /* Same look as the old header search bar */
     .search-input {
       background: var(--tb-input-bg);
       border: 1px solid var(--tb-input-border);
@@ -135,115 +105,6 @@ const MAX_SUGGESTIONS = 6;
       transform: translateY(-1px);
     }
 
-    /* Dropdown in the same style as the friend search autocomplete */
-    .suggestions {
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      width: min(340px, 90vw);
-      z-index: 1100;
-      padding: 4px;
-      border-radius: 14px;
-      background: var(--bs-body-bg);
-      border: 1px solid var(--tb-glass-border);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
-      animation: dropIn 0.18s ease;
-    }
-    :host-context([data-bs-theme="dark"]) .suggestions {
-      background: #0d1e3d;
-      border-color: rgba(46, 217, 231, 0.35);
-    }
-
-    .suggestion {
-      min-width: 0;
-      overflow: hidden;
-      padding: 6px 8px;
-      border: none;
-      border-radius: 10px;
-      background: none;
-      color: var(--tb-text);
-      transition: background 0.15s ease;
-    }
-    .suggestion.active {
-      background: var(--tb-accent-subtle);
-    }
-
-    .suggestion-cover {
-      width: 36px;
-      height: 48px;
-      flex-shrink: 0;
-      object-fit: cover;
-      border-radius: 6px;
-      border: 1px solid var(--tb-glass-border);
-    }
-    .placeholder-cover {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--tb-accent-subtle);
-      font-size: 1rem;
-    }
-
-    /* A flex child does not shrink under its text without min-width: 0, so long names overflowed the list */
-    .suggestion-text {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    /* Long names end with "..." (the full name is in the tooltip) */
-    .suggestion-name {
-      display: block;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      font-size: 0.88rem;
-      font-weight: 600;
-    }
-    .suggestion-meta {
-      display: flex;
-      gap: 8px;
-      font-size: 0.75rem;
-      color: var(--tb-text-muted);
-    }
-    .suggestion-rating {
-      color: #e6a700;
-      font-weight: 700;
-    }
-
-    .see-all {
-      margin-top: 2px;
-      padding: 8px;
-      border: none;
-      border-top: 1px solid var(--tb-glass-border);
-      border-radius: 0 0 10px 10px;
-      background: none;
-      color: var(--tb-accent);
-      font-size: 0.82rem;
-      font-weight: 600;
-      text-align: center;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .see-all:hover {
-      background: var(--tb-accent-subtle);
-    }
-
-    .suggestions-state {
-      padding: 12px;
-      text-align: center;
-      font-size: 0.85rem;
-      color: var(--tb-text-muted);
-    }
-
-    @keyframes dropIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Mobile menu: the bar takes the whole width, so the dropdown too */
     @media (max-width: 991.98px) {
       .search-field {
         flex: 1;
@@ -251,11 +112,6 @@ const MAX_SUGGESTIONS = 6;
       .search-input,
       .search-input:focus {
         width: 100% !important;
-      }
-      .suggestions {
-        left: 0;
-        right: auto;
-        width: min(340px, calc(100vw - 2rem));
       }
     }
 
@@ -282,7 +138,6 @@ export class GameSearchBoxComponent implements OnInit {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Emitted after a search or a click on a game (the header closes the mobile menu)
   readonly navigated = output<void>();
 
   protected readonly term = signal('');
@@ -294,7 +149,6 @@ export class GameSearchBoxComponent implements OnInit {
   private readonly input$ = new Subject<string>();
 
   ngOnInit(): void {
-    // 300 ms after the last key; switchMap cancels the previous request, so old results never replace new ones
     this.input$
       .pipe(
         map((value) => value.trim()),
@@ -316,7 +170,6 @@ export class GameSearchBoxComponent implements OnInit {
                   pageSize: MAX_SUGGESTIONS,
                   sortBy: 'rating',
                   ascending: false,
-                  // No minimum of votes / critic reviews: every game with that name can be suggested
                   minRatingCount: 0,
                   minCriticRatingCount: 0,
                 })
@@ -334,25 +187,18 @@ export class GameSearchBoxComponent implements OnInit {
       });
   }
 
-  // Every key typed in the bar
   protected onInput(value: string): void {
     this.term.set(value);
-    if (value.trim().length < MIN_LENGTH) {
-      this.isOpen.set(false);
-    } else {
-      this.isOpen.set(true);
-    }
+    this.isOpen.set(value.trim().length >= MIN_LENGTH);
     this.input$.next(value);
   }
 
-  // Shows the last suggestions again when the bar gets the focus back
   protected onFocus(): void {
     if (this.term().trim().length >= MIN_LENGTH) {
       this.isOpen.set(true);
     }
   }
 
-  // Arrows move through the suggestions, Enter opens the selected one, Escape closes the list
   protected onKeydown(event: KeyboardEvent): void {
     const count = this.suggestions().length;
 
@@ -371,7 +217,6 @@ export class GameSearchBoxComponent implements OnInit {
     }
   }
 
-  // Enter or "Search": the catalog with all the results (/?search=...), the sidebar filters stay
   protected onSubmit(): void {
     const search = this.term().trim();
     this.close();
@@ -379,23 +224,16 @@ export class GameSearchBoxComponent implements OnInit {
     this.navigated.emit();
   }
 
-  // A suggestion: straight to the details page
   protected openGame(game: GameCardDTO): void {
     this.close();
     this.term.set('');
     this.suggestions.set([]);
-    // Also reset the stream, otherwise typing the same text again would be ignored by distinctUntilChanged
     this.input$.next('');
     this.gameService.rememberGameSlug(game.slug, game.apiGameId);
     this.router.navigate(['/game', game.slug || game.apiGameId]);
     this.navigated.emit();
   }
 
-  protected toTen(rating: number): number {
-    return Math.round(rating) / 10;
-  }
-
-  // A click anywhere outside the search bar closes the list
   @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     if (!this.elementRef.nativeElement.contains(event.target as Node)) {
